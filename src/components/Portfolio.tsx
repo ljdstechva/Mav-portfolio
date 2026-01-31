@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ArrowLeft, 
@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import ChromaGrid from "./ChromaGrid";
+import FlowingMenu from "./FlowingMenu";
+import CircularGallery from "./CircularGallery";
 
 // --- Types ---
 type Project = {
@@ -262,6 +264,24 @@ function ClientList({ industry, onSelect, onBack }: { industry: Industry, onSele
      )
   }
 
+  const menuItems = industry.clients.map((client) => ({
+    link: "#",
+    text: client.name,
+    image: client.projects[0]?.image ?? client.logo ?? "/images/About.png",
+  }));
+  const itemHeight = 100;
+  const menuHeight = menuItems.length * itemHeight;
+  const [activeClient, setActiveClient] = useState<Client | null>(null);
+  const galleryItems = useMemo(
+    () =>
+      activeClient?.projects.map((project) => ({
+        image: project.image,
+        text: project.title,
+      })) ??
+      [],
+    [activeClient]
+  );
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -272,26 +292,66 @@ function ClientList({ industry, onSelect, onBack }: { industry: Industry, onSele
          <ArrowLeft size={20} /> Back to Industries
        </button>
 
-       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-         {industry.clients.map((client, index) => (
-            <motion.div
-              key={client.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.1 }}
-              onClick={() => onSelect(client)}
-              className="cursor-pointer group bg-white p-8 rounded-3xl border border-ink/5 hover:border-sienna/30 hover:shadow-lg transition-all"
-            >
-               <div className="flex justify-between items-start mb-4">
-                 <h3 className="text-2xl font-bold text-ink group-hover:text-sienna transition-colors">{client.name}</h3>
-                 <span className="bg-sand px-3 py-1 rounded-full text-xs font-bold text-ink/60 uppercase tracking-wide">
-                   {client.projects.length} Projects
-                 </span>
-               </div>
-               <p className="text-ink/70 leading-relaxed">{client.description}</p>
-            </motion.div>
-         ))}
+       <div
+         className="relative rounded-[28px] border border-ink/10 overflow-hidden bg-white shadow-[0_25px_80px_-45px_rgba(6,0,16,0.25)]"
+         style={{ height: menuHeight }}
+       >
+         <FlowingMenu
+           items={menuItems}
+           speed={14}
+           textColor="#1a1511"
+           bgColor="#ffffff"
+           marqueeBgColor="#0b0b0b"
+           marqueeTextColor="#ffffff"
+           borderColor="rgba(0,0,0,0.1)"
+           itemHeight={itemHeight}
+           onItemClick={(item) => {
+             const selected = industry.clients.find((client) => client.name === item.text);
+             if (selected) {
+               setActiveClient(selected);
+             }
+           }}
+         />
        </div>
+
+       <AnimatePresence>
+         {activeClient && (
+           <motion.div
+             initial={{ opacity: 0, y: 20 }}
+             animate={{ opacity: 1, y: 0 }}
+             exit={{ opacity: 0, y: 20 }}
+             transition={{ duration: 0.4, ease: "easeOut" }}
+             className="mt-10 rounded-[28px] border border-ink/10 bg-white p-6 shadow-[0_20px_60px_-45px_rgba(6,0,16,0.25)]"
+           >
+             <div className="flex flex-wrap items-center justify-between gap-4">
+               <div>
+                 <h3 className="text-2xl font-bold text-ink">{activeClient.name}</h3>
+                 <p className="text-sm text-ink/60">{activeClient.description}</p>
+               </div>
+               <div className="text-xs uppercase tracking-[0.25em] text-ink/50">
+                 {galleryItems.length} pieces
+               </div>
+             </div>
+
+             <div className="mt-6 h-[360px] md:h-[440px] overflow-hidden rounded-[24px] border border-ink/10 bg-[#060010]">
+               {galleryItems.length > 0 ? (
+                 <CircularGallery
+                   items={galleryItems}
+                   bend={1}
+                   borderRadius={0.06}
+                   scrollSpeed={2}
+                   scrollEase={0.05}
+                   textColor="#ffffff"
+                 />
+               ) : (
+                 <div className="flex h-full items-center justify-center text-sm text-white/70">
+                   No project images yet.
+                 </div>
+               )}
+             </div>
+           </motion.div>
+         )}
+       </AnimatePresence>
     </motion.div>
   );
 }
