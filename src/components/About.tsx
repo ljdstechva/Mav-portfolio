@@ -55,26 +55,26 @@ export function About() {
           >
             <div className="space-y-2">
               <span className="text-sienna font-bold uppercase tracking-widest text-sm">About Me</span>
-              <h2 className="text-4xl md:text-5xl font-serif text-ink leading-tight">
-                Crafting Digital <br />
-                <span className="italic text-terracotta">Masterpieces.</span>
-              </h2>
+            <h2 className="text-4xl md:text-5xl font-serif text-ink leading-tight">
+              Strategy-First Social <br />
+              <span className="italic text-terracotta">That Looks Good.</span>
+            </h2>
             </div>
 
             <p className="text-lg text-ink/70 leading-relaxed">
-              Hello! I'm Mav, a passionate creative dedicated to transforming abstract concepts into tangible, stunning digital realities. With a keen eye for detail and a heart for design, I specialize in building brands that don't just stand out—they resonate.
+              Hi, I'm Mav, a Social Media Manager and Graphic Design Content Creator who helps brands show up consistently with clear strategy and scroll-stopping visuals. I turn your message into content that feels cohesive, on-brand, and built for engagement.
             </p>
 
             <p className="text-ink/70 leading-relaxed">
-              My journey is fueled by a curiosity for new trends and a commitment to timeless aesthetics. Whether it's a complete brand overhaul or a targeted campaign, I bring a blend of strategic thinking and artistic flair to every project.
+              From content planning to design and publishing, I focus on audience-first storytelling, strong visual systems, and measurable growth. Whether you need a full content refresh or ongoing management, I create posts that look beautiful and perform.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
               {[
-                "Strategic Brand Identity",
-                "UI/UX Design Excellence",
-                "Compelling Visual Storytelling",
-                "Interactive Web Experiences"
+                "Content Strategy & Calendars",
+                "Social Media Management",
+                "Graphic Design & Templates",
+                "Campaigns, Reels, & Carousels"
               ].map((item, index) => (
                 <div key={index} className="flex items-center gap-3">
                   <CheckCircle2 className="text-sienna shrink-0" size={20} />

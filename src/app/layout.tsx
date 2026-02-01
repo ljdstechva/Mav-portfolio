@@ -17,9 +17,12 @@ const body = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Mav Studio | Social Media + Graphic Design",
+  title: "MAV STUDIO",
   description:
     "Portfolio for a social media manager and graphic design creator crafting intentional content and brand visuals.",
+  icons: {
+    icon: "/favicon.png",
+  },
 };
 
 export default function RootLayout({

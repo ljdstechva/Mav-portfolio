@@ -383,6 +383,7 @@ interface AppConfig {
   font?: string;
   scrollSpeed?: number;
   scrollEase?: number;
+  onItemClick?: (item: { image: string; text: string }, index: number) => void;
 }
 
 class App {
@@ -403,6 +404,7 @@ class App {
   planeGeometry!: Plane;
   medias: Media[] = [];
   mediasImages: { image: string; text: string }[] = [];
+  onItemClick?: (item: { image: string; text: string }, index: number) => void;
   screen!: { width: number; height: number };
   viewport!: { width: number; height: number };
   raf: number = 0;
@@ -415,6 +417,10 @@ class App {
 
   isDown: boolean = false;
   start: number = 0;
+  startY: number = 0;
+  lastX: number = 0;
+  lastY: number = 0;
+  hasMoved: boolean = false;
 
   constructor(
     container: HTMLElement,
@@ -425,13 +431,15 @@ class App {
       borderRadius = 0,
       font = 'bold 30px Figtree',
       scrollSpeed = 2,
-      scrollEase = 0.05
+      scrollEase = 0.05,
+      onItemClick
     }: AppConfig
   ) {
     document.documentElement.classList.remove('no-js');
     this.container = container;
     this.scrollSpeed = scrollSpeed;
     this.scroll = { ease: scrollEase, current: 0, target: 0, last: 0 };
+    this.onItemClick = onItemClick;
     this.onCheckDebounce = debounce(this.onCheck.bind(this), 200);
     this.createRenderer();
     this.createCamera();
@@ -554,18 +562,60 @@ class App {
     this.isDown = true;
     this.scroll.position = this.scroll.current;
     this.start = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    this.startY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    this.lastX = this.start;
+    this.lastY = this.startY;
+    this.hasMoved = false;
   }
 
   onTouchMove(e: MouseEvent | TouchEvent) {
     if (!this.isDown) return;
     const x = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const y = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    this.lastX = x;
+    this.lastY = y;
+    if (Math.abs(x - this.start) > 8 || Math.abs(y - this.startY) > 8) {
+      this.hasMoved = true;
+    }
     const distance = (this.start - x) * (this.scrollSpeed * 0.025);
     this.scroll.target = (this.scroll.position ?? 0) + distance;
   }
 
   onTouchUp() {
     this.isDown = false;
+    if (!this.hasMoved) {
+      this.handleClick(this.lastX, this.lastY);
+    }
     this.onCheck();
+  }
+
+  handleClick(x: number, y: number) {
+    if (!this.onItemClick || !this.medias.length) return;
+    const rect = this.container.getBoundingClientRect();
+    const localX = x - rect.left;
+    const localY = y - rect.top;
+    if (localX < 0 || localY < 0 || localX > rect.width || localY > rect.height) return;
+    const worldX = (localX / this.screen.width - 0.5) * this.viewport.width;
+    const worldY = (0.5 - localY / this.screen.height) * this.viewport.height;
+    let closestIndex = -1;
+    let closestDistance = Infinity;
+
+    this.medias.forEach((media, index) => {
+      const dx = worldX - media.plane.position.x;
+      const dy = worldY - media.plane.position.y;
+      const withinX = Math.abs(dx) <= media.plane.scale.x / 2;
+      const withinY = Math.abs(dy) <= media.plane.scale.y / 2;
+      if (!withinX || !withinY) return;
+      const distance = Math.hypot(dx, dy);
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestIndex = index;
+      }
+    });
+
+    if (closestIndex >= 0) {
+      this.onItemClick(this.mediasImages[closestIndex], closestIndex);
+    }
   }
 
   onWheel(e: Event) {
@@ -654,6 +704,7 @@ interface CircularGalleryProps {
   font?: string;
   scrollSpeed?: number;
   scrollEase?: number;
+  onItemClick?: (item: { image: string; text: string }, index: number) => void;
 }
 
 export default function CircularGallery({
@@ -663,7 +714,8 @@ export default function CircularGallery({
   borderRadius = 0.05,
   font = 'bold 30px Figtree',
   scrollSpeed = 2,
-  scrollEase = 0.05
+  scrollEase = 0.05,
+  onItemClick
 }: CircularGalleryProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -675,11 +727,12 @@ export default function CircularGallery({
       borderRadius,
       font,
       scrollSpeed,
-      scrollEase
+      scrollEase,
+      onItemClick
     });
     return () => {
       app.destroy();
     };
-  }, [items, bend, textColor, borderRadius, font, scrollSpeed, scrollEase]);
+  }, [items, bend, textColor, borderRadius, font, scrollSpeed, scrollEase, onItemClick]);
   return <div className="w-full h-full overflow-hidden cursor-grab active:cursor-grabbing" ref={containerRef} />;
 }
