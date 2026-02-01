@@ -591,6 +591,15 @@ class App {
 
   handleClick(x: number, y: number) {
     if (!this.onItemClick || !this.medias.length) return;
+    
+    // Check if there is an open modal on top (rough check for overlay)
+    // This prevents clicking through if an overlay is present but not blocking events correctly
+    const elementFromPoint = document.elementFromPoint(x, y);
+    if (elementFromPoint && elementFromPoint !== this.renderer.gl.canvas) {
+        // If the element clicked is not the canvas, don't trigger gallery item
+        return;
+    }
+
     const rect = this.container.getBoundingClientRect();
     const localX = x - rect.left;
     const localY = y - rect.top;
