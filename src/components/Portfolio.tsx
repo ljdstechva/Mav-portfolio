@@ -237,7 +237,7 @@ function IndustryGallery({ industry, onBack }: { industry: Industry, onBack: () 
     () =>
       industry.projects.map((project) => ({
         image: project.image,
-        text: project.title,
+        text: "", // Removed text
       })) ?? [],
     [industry]
   );
@@ -362,7 +362,7 @@ function IndustryGallery({ industry, onBack }: { industry: Industry, onBack: () 
                </button>
                <div
                  className="relative w-full bg-sand"
-                 style={{ aspectRatio: "4 / 3" }} // Adjusted aspect ratio for gallery view
+                 style={{ aspectRatio: "4 / 5" }} // Adjusted aspect ratio for gallery view
                  onTouchStart={(event) => {
                    const touch = event.touches[0];
                    swipeStartX.current = touch.clientX;
@@ -398,7 +398,7 @@ function IndustryGallery({ industry, onBack }: { industry: Industry, onBack: () 
                    </motion.div>
                  </AnimatePresence>
                </div>
-               <div className="bg-white p-4 text-center">
+               <div className="bg-white p-4 text-center hidden">
                   <h4 className="text-xl font-bold text-ink">{selectedMedia.text}</h4>
                </div>
              </motion.div>

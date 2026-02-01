@@ -304,14 +304,7 @@ class Media {
   }
 
   createTitle() {
-    this.title = new Title({
-      gl: this.gl,
-      plane: this.plane,
-      renderer: this.renderer,
-      text: this.text,
-      textColor: this.textColor,
-      font: this.font
-    });
+    return;
   }
 
   update(scroll: { current: number; last: number }, direction: 'right' | 'left') {
