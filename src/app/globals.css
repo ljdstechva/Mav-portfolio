@@ -70,3 +70,24 @@ body {
   font-family: var(--font-body-family), sans-serif;
   min-height: 100%;
 }
+
+/* Global Interactive Styles */
+a, button, [role="button"] {
+  cursor: pointer;
+  transition-property: transform, opacity, background-color, border-color, color;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+/* Exclude elements that already handle their own scaling or shouldn't scale */
+a:not(.no-scale):hover, 
+button:not(:disabled):not(.no-scale):hover, 
+[role="button"]:not(.no-scale):hover {
+  transform: scale(1.05);
+}
+
+a:not(.no-scale):active, 
+button:not(:disabled):not(.no-scale):active, 
+[role="button"]:not(.no-scale):active {
+  transform: scale(0.95);
+}

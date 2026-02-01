@@ -208,7 +208,7 @@ export function Hero() {
               duration: 5, 
               ease: [0.45, 0, 0.55, 1] // Custom smooth bezier
             }}
-            className="absolute top-[20%] right-[5%] md:right-[10%] bg-white p-4 rounded-xl shadow-lg border border-ink/5 z-20 max-w-[180px]"
+            className="absolute top-[30%] lg:top-[35%] xl:top-[25%] right-[-1rem] xl:right-[-1rem] 2xl:right-[10%] bg-white p-4 rounded-xl shadow-lg border border-ink/5 z-30 max-w-[180px]"
           >
              <div className="flex items-center gap-2 mb-2">
                 <div className="p-1.5 bg-green-100 rounded-full text-green-600">

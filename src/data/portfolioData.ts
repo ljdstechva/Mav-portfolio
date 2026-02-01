@@ -82,8 +82,8 @@ export const INDUSTRIES: Industry[] = [
     color: "bg-pink-100 text-pink-600",
     projects: [
         { id: "b1", title: "Skincare Campaign", image: "https://images.unsplash.com/photo-1616683693504-3ea7e9ad6fec?q=80&w=600&auto=format&fit=crop", category: "Social Media" },
-        { id: "b2", title: "Spa Branding", image: "https://images.unsplash.com/photo-1556228720-1957be982260?q=80&w=600&auto=format&fit=crop", category: "Branding" },
-        { id: "b3", title: "Product Shoot", image: "https://images.unsplash.com/photo-1596462502278-27bfdd403cc2?q=80&w=600&auto=format&fit=crop", category: "Photography" },
+        { id: "b2", title: "Spa Branding", image: "https://images.unsplash.com/photo-1552693673-1bf958298935?q=80&w=600&auto=format&fit=crop", category: "Branding" },
+        { id: "b3", title: "Product Shoot", image: "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=600&auto=format&fit=crop", category: "Photography" },
         { id: "b4", title: "Wellness App", image: "https://images.unsplash.com/photo-1600334089648-b0d9d3028eb2?q=80&w=600&auto=format&fit=crop", category: "UI/UX" },
         { id: "b5", title: "Organic Packaging", image: "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=600&auto=format&fit=crop", category: "Packaging" },
         { id: "b6", title: "Beauty Blog", image: "https://images.unsplash.com/photo-1552693673-1bf958298935?q=80&w=600&auto=format&fit=crop", category: "Web Design" },

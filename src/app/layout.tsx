@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Fraunces, Space_Grotesk } from "next/font/google";
 import SmoothScrolling from "@/components/SmoothScrolling";
 import FluidCursor from "@/components/FluidCursor";
+import Preloader from "@/components/Preloader";
 import "./globals.css";
 
 const display = Fraunces({
@@ -33,6 +34,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${body.variable} ${display.variable} antialiased`}>
+        <Preloader />
         <FluidCursor />
         <SmoothScrolling />
         {children}

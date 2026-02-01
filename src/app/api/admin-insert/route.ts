@@ -5,62 +5,28 @@ export const runtime = "nodejs";
 
 type AllowedTable =
   | "industries"
-  | "clients"
-  | "projects"
-  | "portfolio_assets"
-  | "testimonials"
-  | "credentials"
-  | "profiles";
+  | "graphic_designs"
+  | "carousels"
+  | "carousel_images"
+  | "reels"
+  | "copywriting"
+  | "photo_editing"
+  | "testimonials";
 
 const TABLE_COLUMNS: Record<AllowedTable, string[]> = {
-  industries: ["name", "slug", "display_order"],
-  clients: [
-    "industry_id",
-    "name",
-    "slug",
-    "description",
-    "thumbnail_url",
-    "website_url",
-  ],
-  projects: [
-    "title",
-    "description",
-    "image_url",
-    "link",
-    "category",
-    "time_saved",
-    "cost_saved",
-    "tags",
-    "video_url",
-    "preview_image",
-    "detailed_description",
-  ],
-  portfolio_assets: [
-    "client_id",
-    "asset_url",
-    "caption",
-    "format",
-    "display_order",
-  ],
-  testimonials: ["client_id", "client_name", "quote", "rating"],
-  credentials: [
-    "title",
-    "issuer",
-    "date_issued",
-    "image_url",
-    "link",
-    "credential_id",
-    "categories",
-    "skills",
-    "external_url",
-    "provider",
-  ],
-  profiles: ["username", "full_name", "bio", "avatar_url", "social_links"],
+  industries: ["name"],
+  graphic_designs: ["industry_id", "title", "client", "category", "image_url"],
+  carousels: ["industry_id", "client", "title", "description"],
+  carousel_images: ["carousel_id", "image_url", "position"],
+  reels: ["industry_id", "client", "title", "video_url"],
+  copywriting: ["industry_id", "client", "title", "body"],
+  photo_editing: ["industry_id", "client", "title", "before_image_url", "after_image_url"],
+  testimonials: ["client_name", "role", "company", "quote", "avatar_url"],
 };
 
-const ARRAY_FIELDS = new Set(["tags", "detailed_description", "categories", "skills"]);
-const NUMBER_FIELDS = new Set(["display_order", "rating"]);
-const JSON_FIELDS = new Set(["social_links"]);
+const ARRAY_FIELDS = new Set([] as string[]);
+const NUMBER_FIELDS = new Set(["position"]);
+const JSON_FIELDS = new Set([] as string[]);
 
 async function ensureAuthed(request: Request) {
   const authHeader = request.headers.get("authorization") ?? "";

@@ -3,72 +3,102 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabaseClient } from "@/lib/supabaseClient";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  LayoutDashboard,
+  Palette,
+  Layers,
+  Image as ImageIcon,
+  Video,
+  FileText,
+  Aperture,
+  MessageSquareQuote,
+  LogOut,
+  Plus,
+  Loader2,
+  Trash2,
+  UploadCloud,
+  X,
+  ChevronRight,
+  Search
+} from "lucide-react";
+import clsx from "clsx";
 
-type ProjectItem = {
+// --- Types ---
+
+type GraphicDesignItem = {
   id: string;
   title: string;
+  industry_id?: string | null;
+  client?: string | null;
   category?: string | null;
   image_url?: string | null;
-  link?: string | null;
-  description?: string | null;
   created_at?: string | null;
 };
 
 type IndustryItem = {
   id: string;
   name: string;
-  slug: string;
-  display_order?: number | null;
 };
 
-type ClientItem = {
+type CarouselItem = {
   id: string;
   industry_id?: string | null;
-  name: string;
-  slug: string;
+  client?: string | null;
+  title: string;
   description?: string | null;
-  thumbnail_url?: string | null;
-  website_url?: string | null;
 };
 
-type AssetItem = {
+type CarouselImageItem = {
   id: string;
-  client_id?: string | null;
-  asset_url: string;
-  caption?: string | null;
-  format?: string | null;
-  display_order?: number | null;
+  carousel_id?: string | null;
+  image_url?: string | null;
+  position?: number | null;
+};
+
+type ReelItem = {
+  id: string;
+  industry_id?: string | null;
+  client?: string | null;
+  title: string;
+  video_url?: string | null;
+};
+
+type CopywritingItem = {
+  id: string;
+  industry_id?: string | null;
+  client?: string | null;
+  title: string;
+  body?: string | null;
+};
+
+type PhotoEditingItem = {
+  id: string;
+  industry_id?: string | null;
+  client?: string | null;
+  title: string;
+  before_image_url?: string | null;
+  after_image_url?: string | null;
 };
 
 type TestimonialItem = {
   id: string;
-  client_id?: string | null;
   client_name: string;
+  role?: string | null;
+  company?: string | null;
   quote: string;
-  rating?: number | null;
-};
-
-type CredentialItem = {
-  id: string;
-  title: string;
-  issuer?: string | null;
-  date_issued?: string | null;
-};
-
-type ProfileItem = {
-  id: string;
-  username: string;
-  full_name?: string | null;
+  avatar_url?: string | null;
 };
 
 type TableKey =
   | "industries"
-  | "clients"
-  | "projects"
-  | "portfolio_assets"
-  | "testimonials"
-  | "credentials"
-  | "profiles";
+  | "graphic_designs"
+  | "carousels"
+  | "carousel_images"
+  | "reels"
+  | "copywriting"
+  | "photo_editing"
+  | "testimonials";
 
 type FieldConfig = {
   name: string;
@@ -79,95 +109,93 @@ type FieldConfig = {
   required?: boolean;
 };
 
-const TABLE_FIELDS: Record<TableKey, FieldConfig[]> = {
-  industries: [
-    { name: "name", label: "Industry name", required: true },
-    { name: "slug", label: "Slug", helper: "e.g. beauty" },
-    { name: "display_order", label: "Display order", type: "number" },
-  ],
-  clients: [
-    { name: "industry_id", label: "Industry ID" },
-    { name: "name", label: "Client name", required: true },
-    { name: "slug", label: "Slug", helper: "e.g. glow-cosmetics" },
-    { name: "description", label: "Description", type: "textarea" },
-    { name: "thumbnail_url", label: "Thumbnail URL", type: "url" },
-    { name: "website_url", label: "Website URL", type: "url" },
-  ],
-  projects: [
-    { name: "title", label: "Project title", required: true },
-    { name: "description", label: "Description", type: "textarea" },
-    { name: "category", label: "Category" },
-    { name: "image_url", label: "Image URL", type: "url" },
-    { name: "link", label: "Project link", type: "url" },
-    { name: "time_saved", label: "Time saved" },
-    { name: "cost_saved", label: "Cost saved" },
-    {
-      name: "tags",
-      label: "Tags",
-      helper: "Comma-separated",
-    },
-    { name: "video_url", label: "Video URL", type: "url" },
-    { name: "preview_image", label: "Preview image", type: "url" },
-    {
-      name: "detailed_description",
-      label: "Detailed description",
-      helper: "Comma-separated",
-      type: "textarea",
-    },
-  ],
-  portfolio_assets: [
-    { name: "client_id", label: "Client ID" },
-    { name: "asset_url", label: "Asset URL", type: "url", required: true },
-    { name: "caption", label: "Caption" },
-    { name: "format", label: "Format" },
-    { name: "display_order", label: "Display order", type: "number" },
-  ],
-  testimonials: [
-    { name: "client_id", label: "Client ID" },
-    { name: "client_name", label: "Client name", required: true },
-    { name: "quote", label: "Quote", type: "textarea", required: true },
-    { name: "rating", label: "Rating", type: "number" },
-  ],
-  credentials: [
-    { name: "title", label: "Credential title", required: true },
-    { name: "issuer", label: "Issuer" },
-    { name: "date_issued", label: "Date issued", type: "date" },
-    { name: "image_url", label: "Image URL", type: "url" },
-    { name: "link", label: "Link", type: "url" },
-    { name: "credential_id", label: "Credential ID" },
-    {
-      name: "categories",
-      label: "Categories",
-      helper: "Comma-separated",
-    },
-    {
-      name: "skills",
-      label: "Skills",
-      helper: "Comma-separated",
-    },
-    { name: "external_url", label: "External URL", type: "url" },
-    { name: "provider", label: "Provider" },
-  ],
-  profiles: [
-    { name: "username", label: "Username", required: true },
-    { name: "full_name", label: "Full name" },
-    { name: "bio", label: "Bio", type: "textarea" },
-    { name: "avatar_url", label: "Avatar URL", type: "url" },
-    {
-      name: "social_links",
-      label: "Social links (JSON)",
-      helper: "{" + '"instagram": "..."' + "}",
-      type: "textarea",
-    },
-  ],
+const TABLE_CONFIG: Record<TableKey, { label: string; icon: React.ElementType; fields: FieldConfig[] }> = {
+  industries: {
+    label: "Industries",
+    icon: LayoutDashboard,
+    fields: [
+      { name: "name", label: "Industry Name", required: true, placeholder: "e.g. Beauty & Wellness" },
+    ],
+  },
+  graphic_designs: {
+    label: "Graphic Designs",
+    icon: Palette,
+    fields: [
+      { name: "industry_id", label: "Industry ID" }, // In a real app, this would be a select dropdown
+      { name: "title", label: "Design Title", required: true },
+      { name: "client", label: "Client Name" },
+      { name: "category", label: "Category", placeholder: "e.g. Social Media, Branding" },
+      { name: "image_url", label: "Image", type: "url", required: true },
+    ],
+  },
+  carousels: {
+    label: "Carousels",
+    icon: Layers,
+    fields: [
+      { name: "industry_id", label: "Industry ID" },
+      { name: "client", label: "Client Name" },
+      { name: "title", label: "Carousel Title", required: true },
+      { name: "description", label: "Description", type: "textarea" },
+    ],
+  },
+  carousel_images: {
+    label: "Carousel Images",
+    icon: ImageIcon,
+    fields: [
+      { name: "carousel_id", label: "Carousel ID", required: true },
+      { name: "image_url", label: "Image", type: "url", required: true },
+      { name: "position", label: "Position (Order)", type: "number" },
+    ],
+  },
+  reels: {
+    label: "Reels",
+    icon: Video,
+    fields: [
+      { name: "industry_id", label: "Industry ID" },
+      { name: "client", label: "Client Name" },
+      { name: "title", label: "Reel Title", required: true },
+      { name: "video_url", label: "Video URL", type: "url", required: true },
+    ],
+  },
+  copywriting: {
+    label: "Copywriting",
+    icon: FileText,
+    fields: [
+      { name: "industry_id", label: "Industry ID" },
+      { name: "client", label: "Client Name" },
+      { name: "title", label: "Copy Title", required: true },
+      { name: "body", label: "Copy Content", type: "textarea", required: true },
+    ],
+  },
+  photo_editing: {
+    label: "Photo Editing",
+    icon: Aperture,
+    fields: [
+      { name: "industry_id", label: "Industry ID" },
+      { name: "client", label: "Client Name" },
+      { name: "title", label: "Edit Title", required: true },
+      { name: "before_image_url", label: "Before Image", type: "url", required: true },
+      { name: "after_image_url", label: "After Image", type: "url", required: true },
+    ],
+  },
+  testimonials: {
+    label: "Testimonials",
+    icon: MessageSquareQuote,
+    fields: [
+      { name: "client_name", label: "Client Name", required: true },
+      { name: "role", label: "Role", placeholder: "e.g. CEO" },
+      { name: "company", label: "Company" },
+      { name: "quote", label: "Quote", type: "textarea", required: true },
+      { name: "avatar_url", label: "Avatar Image", type: "url" },
+    ],
+  },
 };
 
 const IMAGE_FIELDS = new Set([
   "image_url",
-  "thumbnail_url",
-  "asset_url",
+  "before_image_url",
+  "after_image_url",
   "avatar_url",
-  "preview_image",
 ]);
 
 type LoginState = "idle" | "loading" | "error";
@@ -176,99 +204,79 @@ type UploadState = "idle" | "loading" | "error" | "success";
 export function AdminPage() {
   const [session, setSession] = useState<Session | null>(null);
   const authed = useMemo(() => Boolean(session), [session]);
+  
+  // Data State
+  const [industries, setIndustries] = useState<IndustryItem[]>([]);
+  const [graphicDesigns, setGraphicDesigns] = useState<GraphicDesignItem[]>([]);
+  const [carousels, setCarousels] = useState<CarouselItem[]>([]);
+  const [carouselImages, setCarouselImages] = useState<CarouselImageItem[]>([]);
+  const [reels, setReels] = useState<ReelItem[]>([]);
+  const [copywriting, setCopywriting] = useState<CopywritingItem[]>([]);
+  const [photoEditing, setPhotoEditing] = useState<PhotoEditingItem[]>([]);
+  const [testimonials, setTestimonials] = useState<TestimonialItem[]>([]);
+  
+  const [adminLoaded, setAdminLoaded] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // UI State
   const [loginState, setLoginState] = useState<LoginState>("idle");
   const [loginError, setLoginError] = useState("");
-  const [projects, setProjects] = useState<ProjectItem[]>([]);
-  const [industries, setIndustries] = useState<IndustryItem[]>([]);
-  const [clients, setClients] = useState<ClientItem[]>([]);
-  const [assets, setAssets] = useState<AssetItem[]>([]);
-  const [testimonials, setTestimonials] = useState<TestimonialItem[]>([]);
-  const [credentials, setCredentials] = useState<CredentialItem[]>([]);
-  const [profiles, setProfiles] = useState<ProfileItem[]>([]);
-  const [projectsLoaded, setProjectsLoaded] = useState(false);
-  const [adminLoaded, setAdminLoaded] = useState(false);
-  const [selectedTable, setSelectedTable] = useState<TableKey>("projects");
-  const [fieldUpload, setFieldUpload] = useState<{ field: string; message: string } | null>(null);
+  const [selectedTable, setSelectedTable] = useState<TableKey>("graphic_designs");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // For mobile responsiveness if needed
+  const [showCreateForm, setShowCreateForm] = useState(false);
+
+  // Upload State
+  const [uploadState, setUploadState] = useState<UploadState>("idle");
+  const [uploadMessage, setUploadMessage] = useState("");
   const [uploadingField, setUploadingField] = useState<string | null>(null);
   const [dragOverField, setDragOverField] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<Record<string, string>>({});
+  
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
-  const [uploadState, setUploadState] = useState<UploadState>("idle");
-  const [uploadMessage, setUploadMessage] = useState("");
 
-  const fetchProjects = useCallback(async () => {
-    try {
-      const response = await fetch("/api/projects", {
-        cache: "no-store",
-        headers: session
-          ? { Authorization: `Bearer ${session.access_token}` }
-          : undefined,
-      });
-      if (!response.ok) {
-        throw new Error("Failed to load projects");
-      }
-      const data = (await response.json()) as ProjectItem[];
-      setProjects(data);
-      setProjectsLoaded(true);
-    } catch (error) {
-      setProjectsLoaded(true);
-    }
-  }, [session]);
+  // --- Auth & Data Fetching ---
 
   const fetchAdminData = useCallback(async () => {
     try {
+      setIsRefreshing(true);
       const response = await fetch("/api/admin-data", {
         cache: "no-store",
         headers: session
           ? { Authorization: `Bearer ${session.access_token}` }
           : undefined,
       });
-      if (!response.ok) {
-        throw new Error("Failed to load admin data");
-      }
-      const data = (await response.json()) as {
-        industries: IndustryItem[];
-        clients: ClientItem[];
-        projects: ProjectItem[];
-        assets: AssetItem[];
-        testimonials: TestimonialItem[];
-        credentials: CredentialItem[];
-        profiles: ProfileItem[];
-      };
+      if (!response.ok) throw new Error("Failed to load admin data");
+      const data = await response.json();
+      
       setIndustries(data.industries);
-      setClients(data.clients);
-      setProjects(data.projects);
-      setAssets(data.assets);
+      setGraphicDesigns(data.graphicDesigns);
+      setCarousels(data.carousels);
+      setCarouselImages(data.carouselImages);
+      setReels(data.reels);
+      setCopywriting(data.copywriting);
+      setPhotoEditing(data.photoEditing);
       setTestimonials(data.testimonials);
-      setCredentials(data.credentials);
-      setProfiles(data.profiles);
+      
       setAdminLoaded(true);
     } catch (error) {
+      console.error(error);
       setAdminLoaded(true);
+    } finally {
+      setIsRefreshing(false);
     }
   }, [session]);
 
   useEffect(() => {
     let mounted = true;
-
     const init = async () => {
       const { data } = await supabaseClient.auth.getSession();
-      if (mounted) {
-        setSession(data.session ?? null);
-      }
+      if (mounted) setSession(data.session ?? null);
     };
-
     void init();
-
-    const {
-      data: { subscription },
-    } = supabaseClient.auth.onAuthStateChange((_event, newSession) => {
-      if (mounted) {
-        setSession(newSession);
-      }
+    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((_event, newSession) => {
+      if (mounted) setSession(newSession);
     });
-
     return () => {
       mounted = false;
       subscription.unsubscribe();
@@ -276,31 +284,22 @@ export function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (authed && !projectsLoaded) {
-      void fetchProjects();
-    }
     if (authed && !adminLoaded) {
       void fetchAdminData();
     }
-  }, [authed, adminLoaded, fetchAdminData, fetchProjects, projectsLoaded]);
+  }, [authed, adminLoaded, fetchAdminData]);
 
   const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoginState("loading");
     setLoginError("");
-
     const form = new FormData(event.currentTarget);
     const username = String(form.get("username") ?? "").trim();
     const password = String(form.get("password") ?? "").trim();
 
     try {
-      const { error } = await supabaseClient.auth.signInWithPassword({
-        email: username,
-        password,
-      });
-      if (error) {
-        throw error;
-      }
+      const { error } = await supabaseClient.auth.signInWithPassword({ email: username, password });
+      if (error) throw error;
       setLoginState("idle");
     } catch (error) {
       setLoginState("error");
@@ -310,26 +309,29 @@ export function AdminPage() {
 
   const handleLogout = async () => {
     await supabaseClient.auth.signOut();
-    setProjects([]);
-    setProjectsLoaded(false);
-    setIndustries([]);
-    setClients([]);
-    setAssets([]);
+    // Clear local state
+    setGraphicDesigns([]);
+    setCarousels([]);
+    setCarouselImages([]);
+    setReels([]);
+    setCopywriting([]);
+    setPhotoEditing([]);
     setTestimonials([]);
-    setCredentials([]);
-    setProfiles([]);
+    setIndustries([]);
     setAdminLoaded(false);
   };
+
+  // --- Upload Logic ---
 
   const handleUpload = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setUploadState("loading");
     setUploadMessage("");
-
     const form = new FormData(event.currentTarget);
+
     try {
       const values: Record<string, string> = {};
-      TABLE_FIELDS[selectedTable].forEach((field) => {
+      TABLE_CONFIG[selectedTable].fields.forEach((field) => {
         values[field.name] = String(form.get(field.name) ?? "").trim();
       });
 
@@ -343,353 +345,426 @@ export function AdminPage() {
       });
 
       if (!response.ok) {
-        const payload = (await response.json()) as { message?: string };
+        const payload = await response.json();
         throw new Error(payload.message ?? "Upload failed");
       }
 
       setUploadState("success");
-      setUploadMessage("Record saved.");
+      setUploadMessage("Record saved successfully.");
       event.currentTarget.reset();
-      await fetchProjects();
+      setImagePreview({});
       await fetchAdminData();
+      
+      // Close form after short delay on success
+      setTimeout(() => {
+        setShowCreateForm(false);
+        setUploadState("idle");
+        setUploadMessage("");
+      }, 1500);
+
     } catch (error) {
       setUploadState("error");
       setUploadMessage(error instanceof Error ? error.message : "Upload failed");
     }
   };
 
-  const handleImagePick = (fieldName: string) => {
-    fileInputRefs.current[fieldName]?.click();
-  };
-
   const handleImageUpload = async (fieldName: string, file: File | null) => {
-    if (!file) {
-      return;
-    }
-
+    if (!file) return;
     setUploadingField(fieldName);
-    setFieldUpload(null);
 
     try {
       const extension = file.name.split(".").pop() || "png";
       const filePath = `${selectedTable}/${fieldName}/${crypto.randomUUID()}.${extension}`;
-      const { error } = await supabaseClient.storage
-        .from("portfolio")
-        .upload(filePath, file, {
-          cacheControl: "3600",
-          upsert: false,
-          contentType: file.type || "image/png",
-        });
+      
+      const { error } = await supabaseClient.storage.from("portfolio").upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: file.type || "image/png",
+      });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      const { data } = supabaseClient.storage
-        .from("portfolio")
-        .getPublicUrl(filePath);
+      const { data } = supabaseClient.storage.from("portfolio").getPublicUrl(filePath);
 
       if (data.publicUrl) {
-        const input = inputRefs.current[fieldName];
-        if (input) {
-          input.value = data.publicUrl;
-        }
+        if (inputRefs.current[fieldName]) inputRefs.current[fieldName]!.value = data.publicUrl;
         setImagePreview((prev) => ({ ...prev, [fieldName]: data.publicUrl }));
-        setFieldUpload({ field: fieldName, message: "Image uploaded." });
       }
     } catch (error) {
-      setFieldUpload({
-        field: fieldName,
-        message: error instanceof Error ? error.message : "Upload failed",
-      });
+      console.error(error);
+      alert("Image upload failed: " + (error instanceof Error ? error.message : "Unknown error"));
     } finally {
       setUploadingField(null);
     }
   };
 
-  const handleDragOver = (event: React.DragEvent<HTMLDivElement>, fieldName: string) => {
-    event.preventDefault();
-    setDragOverField(fieldName);
-  };
-
-  const handleDragLeave = (fieldName: string) => {
-    if (dragOverField === fieldName) {
-      setDragOverField(null);
+  const getTableData = () => {
+    switch (selectedTable) {
+      case "industries": return industries;
+      case "graphic_designs": return graphicDesigns;
+      case "carousels": return carousels;
+      case "carousel_images": return carouselImages;
+      case "reels": return reels;
+      case "copywriting": return copywriting;
+      case "photo_editing": return photoEditing;
+      case "testimonials": return testimonials;
+      default: return [];
     }
   };
 
-  const handleDrop = (event: React.DragEvent<HTMLDivElement>, fieldName: string) => {
-    event.preventDefault();
-    setDragOverField(null);
-    const file = event.dataTransfer.files?.[0] ?? null;
-    void handleImageUpload(fieldName, file);
-  };
-
-  const handleImageUrlChange = (fieldName: string, value: string) => {
-    const trimmed = value.trim();
-    if (!trimmed) {
-      setImagePreview((prev) => {
-        const next = { ...prev };
-        delete next[fieldName];
-        return next;
-      });
-      return;
-    }
-    setImagePreview((prev) => ({ ...prev, [fieldName]: trimmed }));
-  };
-
-  const clearImagePreview = (fieldName: string) => {
-    setImagePreview((prev) => {
-      const next = { ...prev };
-      delete next[fieldName];
-      return next;
-    });
-    const input = inputRefs.current[fieldName];
-    if (input) {
-      input.value = "";
-    }
-  };
+  // --- Render Helpers ---
 
   if (!authed) {
     return (
-      <main className="min-h-screen bg-sand text-ink flex items-center justify-center px-6 py-16">
-        <div className="w-full max-w-md rounded-3xl border border-ink/10 bg-white/80 p-8 shadow-xl">
-          <h1 className="text-2xl font-semibold">Admin Login</h1>
-          <p className="text-sm text-ink/60 mt-2">
-            Sign in to manage your portfolio projects.
-          </p>
-          <form className="mt-6 grid gap-4" onSubmit={handleLogin}>
-            <input
-              type="email"
-              name="username"
-              placeholder="Email"
-              className="rounded-2xl border border-ink/15 bg-sand px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-terracotta/60"
-              required
-            />
-            <input
-              type="password"
-              name="password"
-              placeholder="Password"
-              className="rounded-2xl border border-ink/15 bg-sand px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-terracotta/60"
-              required
-            />
+      <main className="min-h-screen bg-sand flex items-center justify-center p-6">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md bg-white rounded-[32px] p-8 shadow-2xl border border-ink/5"
+        >
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-ink mb-2">MAV STUDIO</h1>
+            <p className="text-ink/50 uppercase tracking-widest text-xs">Admin Access</p>
+          </div>
+          
+          <form className="space-y-4" onSubmit={handleLogin}>
+            <div>
+              <input
+                type="email"
+                name="username"
+                placeholder="Email Address"
+                className="w-full bg-sand/50 border border-ink/10 rounded-2xl px-5 py-4 text-ink placeholder:text-ink/30 focus:outline-none focus:ring-2 focus:ring-ink/20 transition-all"
+                required
+              />
+            </div>
+            <div>
+              <input
+                type="password"
+                name="password"
+                placeholder="Password"
+                className="w-full bg-sand/50 border border-ink/10 rounded-2xl px-5 py-4 text-ink placeholder:text-ink/30 focus:outline-none focus:ring-2 focus:ring-ink/20 transition-all"
+                required
+              />
+            </div>
             <button
               type="submit"
-              className="rounded-full bg-ink px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-sand transition hover:bg-ink/90"
               disabled={loginState === "loading"}
+              className="w-full bg-ink text-white rounded-2xl py-4 font-bold uppercase tracking-widest text-sm hover:bg-ink/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {loginState === "loading" ? "Signing in..." : "Sign in"}
+              {loginState === "loading" && <Loader2 className="animate-spin" size={16} />}
+              {loginState === "loading" ? "Authenticating..." : "Enter Dashboard"}
             </button>
             {loginState === "error" && (
-              <p className="text-sm text-red-600">{loginError}</p>
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-center text-sm mt-2">
+                {loginError}
+              </motion.p>
             )}
           </form>
-        </div>
+        </motion.div>
       </main>
     );
   }
 
+  const currentData = getTableData();
+  const CurrentIcon = TABLE_CONFIG[selectedTable].icon;
+
   return (
-    <main className="min-h-screen bg-sand text-ink px-6 py-12">
-      <div className="mx-auto w-full max-w-5xl">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-semibold">Admin Dashboard</h1>
-            <p className="text-sm text-ink/60 mt-1">
-              Upload projects and manage client showcases.
-            </p>
-          </div>
-          <button
+    <div className="min-h-screen bg-sand text-ink flex">
+      {/* Sidebar */}
+      <aside className={clsx("fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-ink/10 transition-transform duration-300 transform lg:translate-x-0 lg:static", 
+        !isSidebarOpen && "-translate-x-full"
+      )}>
+        <div className="p-8 border-b border-ink/5">
+          <h1 className="font-bold text-2xl tracking-tighter">MAV<span className="font-normal text-ink/40">ADMIN</span></h1>
+        </div>
+        
+        <nav className="p-4 space-y-1 overflow-y-auto max-h-[calc(100vh-160px)]">
+          {Object.entries(TABLE_CONFIG).map(([key, config]) => {
+            const Icon = config.icon;
+            const isActive = selectedTable === key;
+            return (
+              <button
+                key={key}
+                onClick={() => {
+                  setSelectedTable(key as TableKey);
+                  setShowCreateForm(false);
+                }}
+                className={clsx(
+                  "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-sm font-medium",
+                  isActive ? "bg-ink text-white shadow-lg shadow-ink/20" : "text-ink/60 hover:bg-sand hover:text-ink"
+                )}
+              >
+                <Icon size={18} />
+                {config.label}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="absolute bottom-0 left-0 w-full p-4 border-t border-ink/5 bg-white">
+          <button 
             onClick={handleLogout}
-            className="rounded-full border border-ink/20 px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-ink/70 hover:border-ink"
+            className="w-full flex items-center justify-center gap-2 text-red-500 hover:bg-red-50 px-4 py-3 rounded-xl transition-colors text-sm font-medium"
           >
-            Log out
+            <LogOut size={16} /> Sign Out
           </button>
         </div>
+      </aside>
 
-        <section className="mt-10 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-3xl border border-ink/10 bg-white/80 p-6">
-            <h2 className="text-xl font-semibold">Upload a project</h2>
-            <form className="mt-6 grid gap-4" onSubmit={handleUpload}>
-              <div className="grid gap-2">
-                <label className="text-xs font-semibold uppercase tracking-[0.25em] text-ink/60">
-                  Table
-                </label>
-                <select
-                  value={selectedTable}
-                  onChange={(event) => setSelectedTable(event.target.value as TableKey)}
-                  className="rounded-2xl border border-ink/15 bg-sand px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-terracotta/60"
-                >
-                  <option value="industries">Industries</option>
-                  <option value="clients">Clients</option>
-                  <option value="projects">Projects</option>
-                  <option value="portfolio_assets">Portfolio Assets</option>
-                  <option value="testimonials">Testimonials</option>
-                  <option value="credentials">Credentials</option>
-                  <option value="profiles">Profiles</option>
-                </select>
+      {/* Main Content */}
+      <main className="flex-1 min-w-0 overflow-auto h-screen relative">
+        <header className="sticky top-0 z-40 bg-sand/80 backdrop-blur-md border-b border-ink/5 px-8 py-6 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-white rounded-2xl shadow-sm border border-ink/5 text-ink">
+              <CurrentIcon size={24} />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold">{TABLE_CONFIG[selectedTable].label}</h2>
+              <p className="text-sm text-ink/40">{currentData.length} entries found</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => setShowCreateForm(true)}
+            className="bg-ink text-white px-6 py-3 rounded-xl font-medium text-sm flex items-center gap-2 hover:bg-ink/90 transition-all shadow-lg shadow-ink/20"
+          >
+            <Plus size={18} /> Add New
+          </button>
+        </header>
+
+        <div className="p-8">
+          {currentData.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-6 shadow-sm border border-ink/5">
+                <Search size={32} className="text-ink/20" />
+              </div>
+              <h3 className="text-xl font-medium text-ink mb-2">No entries yet</h3>
+              <p className="text-ink/40 max-w-sm mb-8">Start building your portfolio by adding a new {TABLE_CONFIG[selectedTable].label.toLowerCase().slice(0, -1)}.</p>
+              <button 
+                onClick={() => setShowCreateForm(true)}
+                className="text-ink font-medium border-b border-ink/20 hover:border-ink pb-0.5 transition-all"
+              >
+                Create your first entry
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              <AnimatePresence>
+                {currentData.map((item: any) => (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="bg-white rounded-3xl p-5 border border-ink/5 hover:border-ink/20 hover:shadow-xl transition-all group"
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1 min-w-0 pr-4">
+                        <h3 className="font-bold text-lg truncate">{item.title || item.client_name || item.name || "Untitled"}</h3>
+                        <p className="text-sm text-ink/40 truncate">{item.client || item.role || item.description || "No description"}</p>
+                      </div>
+                      <div className="w-8 h-8 rounded-full bg-sand flex items-center justify-center text-ink/40">
+                         <ChevronRight size={16} />
+                      </div>
+                    </div>
+
+                    {/* Image Preview if available */}
+                    {(item.image_url || item.avatar_url || item.before_image_url) && (
+                      <div className="aspect-video w-full bg-sand rounded-2xl mb-4 overflow-hidden relative">
+                         <img 
+                           src={item.image_url || item.avatar_url || item.before_image_url} 
+                           alt="Preview" 
+                           className="w-full h-full object-cover"
+                         />
+                      </div>
+                    )}
+                    
+                    {/* Video Preview if available */}
+                    {item.video_url && (
+                       <div className="aspect-video w-full bg-black rounded-2xl mb-4 flex items-center justify-center relative overflow-hidden">
+                          <p className="text-white/50 text-xs flex items-center gap-2"><Video size={14}/> Video Link</p>
+                       </div>
+                    )}
+
+                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-ink/5">
+                       <span className="text-xs text-ink/30 font-mono uppercase">
+                         {item.created_at ? new Date(item.created_at).toLocaleDateString() : 'N/A'}
+                       </span>
+                       {/* Placeholder for delete/edit actions */}
+                       {/* <button className="text-red-400 hover:text-red-600 p-2"><Trash2 size={16}/></button> */}
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Slide-over Form */}
+      <AnimatePresence>
+        {showCreateForm && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowCreateForm(false)}
+              className="fixed inset-0 bg-ink/20 backdrop-blur-sm z-50"
+            />
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed inset-y-0 right-0 z-50 w-full max-w-lg bg-white shadow-2xl flex flex-col"
+            >
+              <div className="p-6 border-b border-ink/5 flex items-center justify-between bg-sand/30">
+                <h3 className="text-xl font-bold">New {TABLE_CONFIG[selectedTable].label.slice(0, -1)}</h3>
+                <button onClick={() => setShowCreateForm(false)} className="p-2 hover:bg-ink/5 rounded-full transition-colors">
+                  <X size={20} />
+                </button>
               </div>
 
-              {TABLE_FIELDS[selectedTable].map((field) => (
-                <div key={field.name} className="grid gap-2">
-                  <label className="text-xs font-semibold uppercase tracking-[0.2em] text-ink/60">
-                    {field.label}
-                  </label>
-                  {field.type === "textarea" ? (
-                    <textarea
-                      name={field.name}
-                      placeholder={field.placeholder ?? field.label}
-                      rows={3}
-                      className="rounded-2xl border border-ink/15 bg-sand px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-terracotta/60"
-                      required={field.required}
-                    />
-                  ) : (
-                    <div className="grid gap-2">
-                      <input
-                        ref={(node) => {
-                          inputRefs.current[field.name] = node;
-                        }}
-                        type={field.type ?? "text"}
-                        name={field.name}
-                        placeholder={field.placeholder ?? field.label}
-                        className="rounded-2xl border border-ink/15 bg-sand px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-terracotta/60"
-                        required={field.required}
-                        onChange={(event) => {
-                          if (IMAGE_FIELDS.has(field.name)) {
-                            handleImageUrlChange(field.name, event.target.value);
-                          }
-                        }}
-                      />
-                      {IMAGE_FIELDS.has(field.name) && (
-                        <div className="grid gap-3">
-                          <input
-                            ref={(node) => {
-                              fileInputRefs.current[field.name] = node;
-                            }}
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(event) =>
-                              handleImageUpload(field.name, event.target.files?.[0] ?? null)
-                            }
-                          />
-                          <div
-                            onDragOver={(event) => handleDragOver(event, field.name)}
-                            onDragLeave={() => handleDragLeave(field.name)}
-                            onDrop={(event) => handleDrop(event, field.name)}
-                            className={`rounded-2xl border border-dashed px-4 py-4 text-xs uppercase tracking-[0.2em] text-ink/50 transition ${
-                              dragOverField === field.name
-                                ? "border-ink bg-terracotta/10 text-ink"
-                                : "border-ink/20 bg-white/60"
-                            }`}
-                          >
-                            Drag & drop an image here
-                          </div>
-                          {imagePreview[field.name] && (
-                            <div className="overflow-hidden rounded-2xl border border-ink/10 bg-white/70">
-                              <img
-                                src={imagePreview[field.name]}
-                                alt="Preview"
-                                className="h-40 w-full object-cover"
-                              />
-                              <div className="flex justify-end border-t border-ink/10 bg-white/80 px-3 py-2">
-                                <button
-                                  type="button"
-                                  onClick={() => clearImagePreview(field.name)}
-                                  className="text-[11px] font-semibold uppercase tracking-[0.25em] text-ink/60 hover:text-ink"
-                                >
-                                  Clear
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                          <div className="flex flex-wrap items-center gap-3">
-                            <button
-                              type="button"
-                              onClick={() => handleImagePick(field.name)}
-                              className="rounded-full border border-ink/20 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.25em] text-ink/70 hover:border-ink"
-                              disabled={uploadingField === field.name}
+              <form onSubmit={handleUpload} className="flex-1 overflow-y-auto p-6 space-y-6">
+                 {/* Industry Selector - Auto populated for simplicity if needed, or dropdown */}
+                 {TABLE_CONFIG[selectedTable].fields.map((field) => {
+                   if (field.name === "industry_id" && industries.length > 0) {
+                     return (
+                       <div key={field.name} className="space-y-2">
+                         <label className="text-xs font-bold uppercase tracking-widest text-ink/50">{field.label}</label>
+                         <div className="relative">
+                            <select 
+                              name={field.name} 
+                              className="w-full bg-sand/30 border border-ink/10 rounded-xl px-4 py-3 appearance-none focus:ring-2 focus:ring-ink/10 focus:outline-none transition-all"
                             >
-                              {uploadingField === field.name ? "Uploading..." : "Upload image"}
-                            </button>
-                            {fieldUpload?.field === field.name && (
-                              <span className="text-xs text-ink/60">
-                                {fieldUpload.message}
-                              </span>
-                            )}
+                               <option value="">Select Industry...</option>
+                               {industries.map(i => (
+                                 <option key={i.id} value={i.id}>{i.name}</option>
+                               ))}
+                            </select>
+                            <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 rotate-90 pointer-events-none text-ink/30" size={16}/>
+                         </div>
+                       </div>
+                     )
+                   }
+                   if (field.name === "carousel_id" && carousels.length > 0) {
+                     return (
+                        <div key={field.name} className="space-y-2">
+                          <label className="text-xs font-bold uppercase tracking-widest text-ink/50">{field.label}</label>
+                          <div className="relative">
+                             <select 
+                               name={field.name} 
+                               className="w-full bg-sand/30 border border-ink/10 rounded-xl px-4 py-3 appearance-none focus:ring-2 focus:ring-ink/10 focus:outline-none transition-all"
+                             >
+                                <option value="">Select Carousel...</option>
+                                {carousels.map(c => (
+                                  <option key={c.id} value={c.id}>{c.title}</option>
+                                ))}
+                             </select>
+                             <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 rotate-90 pointer-events-none text-ink/30" size={16}/>
                           </div>
                         </div>
-                      )}
-                    </div>
-                  )}
-                  {field.helper && (
-                    <span className="text-xs text-ink/50">{field.helper}</span>
-                  )}
-                </div>
-              ))}
-              <button
-                type="submit"
-                className="rounded-full bg-ink px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-sand transition hover:bg-ink/90"
-                disabled={uploadState === "loading"}
-              >
-                {uploadState === "loading" ? "Saving..." : "Save record"}
-              </button>
-              <p className="text-xs text-ink/50">
-                Images upload to Supabase Storage bucket <span className="text-ink">portfolio</span>.
-                Ensure the bucket is public or allow authenticated uploads.
-              </p>
-              {uploadState !== "idle" && (
-                <p className={uploadState === "error" ? "text-sm text-red-600" : "text-sm text-emerald-600"}>
-                  {uploadMessage}
-                </p>
-              )}
-            </form>
-          </div>
+                      )
+                   }
 
-          <div className="rounded-3xl border border-ink/10 bg-white/80 p-6">
-            <h2 className="text-xl font-semibold">Dashboard data</h2>
-            <div className="mt-4 grid grid-cols-2 gap-3 text-xs uppercase tracking-[0.2em] text-ink/60">
-              <div className="rounded-2xl border border-ink/10 bg-sand/70 p-3">
-                Industries: <span className="text-ink">{industries.length}</span>
-              </div>
-              <div className="rounded-2xl border border-ink/10 bg-sand/70 p-3">
-                Clients: <span className="text-ink">{clients.length}</span>
-              </div>
-              <div className="rounded-2xl border border-ink/10 bg-sand/70 p-3">
-                Projects: <span className="text-ink">{projects.length}</span>
-              </div>
-              <div className="rounded-2xl border border-ink/10 bg-sand/70 p-3">
-                Assets: <span className="text-ink">{assets.length}</span>
-              </div>
-              <div className="rounded-2xl border border-ink/10 bg-sand/70 p-3">
-                Testimonials: <span className="text-ink">{testimonials.length}</span>
-              </div>
-              <div className="rounded-2xl border border-ink/10 bg-sand/70 p-3">
-                Credentials: <span className="text-ink">{credentials.length}</span>
-              </div>
-              <div className="rounded-2xl border border-ink/10 bg-sand/70 p-3">
-                Profiles: <span className="text-ink">{profiles.length}</span>
-              </div>
-            </div>
-            <div className="mt-4 space-y-4">
-              {adminLoaded && projects.length === 0 && (
-                <p className="text-sm text-ink/60">No records available.</p>
-              )}
-              {projects.map((project) => (
-                <div
-                  key={project.id}
-                  className="rounded-2xl border border-ink/10 bg-sand/70 p-4 text-sm"
+                   return (
+                    <div key={field.name} className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-widest text-ink/50 flex justify-between">
+                        {field.label}
+                        {field.required && <span className="text-terracotta text-[10px]">REQUIRED</span>}
+                      </label>
+                      
+                      {field.type === "textarea" ? (
+                        <textarea
+                          name={field.name}
+                          placeholder={field.placeholder}
+                          rows={4}
+                          className="w-full bg-sand/30 border border-ink/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-ink/10 focus:outline-none transition-all resize-none"
+                          required={field.required}
+                        />
+                      ) : (
+                        <div className="space-y-3">
+                           <input
+                             ref={(el) => { inputRefs.current[field.name] = el; }}
+                             type={field.type === "url" ? "text" : field.type || "text"}
+                             name={field.name}
+                             placeholder={field.placeholder}
+                             className="w-full bg-sand/30 border border-ink/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-ink/10 focus:outline-none transition-all"
+                             required={field.required}
+                           />
+                           
+                           {/* Image Upload Widget */}
+                           {IMAGE_FIELDS.has(field.name) && (
+                             <div className="bg-sand/50 rounded-xl p-4 border border-dashed border-ink/20 hover:border-ink/40 transition-colors">
+                                <input
+                                  ref={(el) => { fileInputRefs.current[field.name] = el; }}
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(e) => handleImageUpload(field.name, e.target.files?.[0] ?? null)}
+                                />
+                                
+                                {imagePreview[field.name] ? (
+                                  <div className="relative rounded-lg overflow-hidden group">
+                                     <img src={imagePreview[field.name]} alt="Preview" className="w-full h-48 object-cover" />
+                                     <button 
+                                      type="button"
+                                      onClick={() => {
+                                        setImagePreview(prev => { const n = {...prev}; delete n[field.name]; return n; });
+                                        if (inputRefs.current[field.name]) inputRefs.current[field.name]!.value = "";
+                                      }}
+                                      className="absolute top-2 right-2 bg-white/90 p-2 rounded-full text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                     >
+                                       <Trash2 size={16} />
+                                     </button>
+                                  </div>
+                                ) : (
+                                  <div 
+                                    onClick={() => fileInputRefs.current[field.name]?.click()}
+                                    className="flex flex-col items-center justify-center py-6 cursor-pointer text-ink/40 hover:text-ink/70 transition-colors"
+                                  >
+                                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mb-2 shadow-sm">
+                                      {uploadingField === field.name ? <Loader2 className="animate-spin" size={20}/> : <UploadCloud size={20} />}
+                                    </div>
+                                    <span className="text-xs font-bold uppercase tracking-widest">
+                                      {uploadingField === field.name ? "Uploading..." : "Click to Upload Image"}
+                                    </span>
+                                  </div>
+                                )}
+                             </div>
+                           )}
+                        </div>
+                      )}
+                      {field.helper && <p className="text-xs text-ink/40">{field.helper}</p>}
+                    </div>
+                   );
+                 })}
+              </form>
+
+              <div className="p-6 border-t border-ink/5 bg-sand/30">
+                <button
+                  onClick={() => document.querySelector('form')?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }))}
+                  disabled={uploadState === "loading"}
+                  className="w-full bg-ink text-white rounded-xl py-4 font-bold uppercase tracking-widest text-sm hover:bg-ink/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  <p className="font-semibold text-ink">{project.title}</p>
-                  <p className="text-ink/60">
-                    {project.category ?? "Uncategorized"}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      </div>
-    </main>
+                  {uploadState === "loading" ? (
+                    <>
+                      <Loader2 className="animate-spin" size={16} /> Saving...
+                    </>
+                  ) : (
+                    "Save Record"
+                  )}
+                </button>
+                {uploadMessage && (
+                   <p className={clsx("text-center text-xs mt-3", uploadState === "error" ? "text-red-500" : "text-emerald-600")}>
+                     {uploadMessage}
+                   </p>
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

@@ -17,7 +17,7 @@ import {
   Aperture
 } from "lucide-react";
 import clsx from "clsx";
-import Image from "next/image";
+import NextImage from "next/image";
 import ChromaGrid from "./ChromaGrid";
 import FlowingMenu from "./FlowingMenu";
 import CircularGallery from "./CircularGallery";
@@ -388,13 +388,13 @@ function IndustryGallery({ industry, onBack }: { industry: Industry, onBack: () 
                      exit={{ opacity: 0 }}
                      transition={{ duration: 0.25, ease: "easeOut" }}
                    >
-                     <Image
-                       src={selectedMedia.image}
-                       alt={selectedMedia.text}
-                       fill
-                       sizes="(max-width: 768px) 100vw, 80vw"
-                       className="object-contain"
-                     />
+                      <NextImage
+                        src={selectedMedia.image}
+                        alt={selectedMedia.text}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 80vw"
+                        className="object-contain"
+                      />
                    </motion.div>
                  </AnimatePresence>
                </div>

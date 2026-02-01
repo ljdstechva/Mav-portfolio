@@ -34,33 +34,39 @@ export async function GET(request: Request) {
 
   const [
     industries,
-    clients,
-    projects,
-    assets,
+    graphicDesigns,
+    carousels,
+    carouselImages,
+    reels,
+    copywriting,
+    photoEditing,
     testimonials,
-    credentials,
-    profiles,
   ] = await Promise.all([
-    supabase.from("industries").select("*").order("display_order"),
-    supabase.from("clients").select("*"),
-    supabase.from("projects").select("*").order("created_at", { ascending: false }),
+    supabase.from("industries").select("*").order("created_at", { ascending: false }),
     supabase
-      .from("portfolio_assets")
+      .from("graphic_designs")
       .select("*")
-      .order("display_order"),
+      .order("created_at", { ascending: false }),
+    supabase.from("carousels").select("*").order("created_at", { ascending: false }),
+    supabase
+      .from("carousel_images")
+      .select("*")
+      .order("position", { ascending: true }),
+    supabase.from("reels").select("*").order("created_at", { ascending: false }),
+    supabase.from("copywriting").select("*").order("created_at", { ascending: false }),
+    supabase.from("photo_editing").select("*").order("created_at", { ascending: false }),
     supabase.from("testimonials").select("*").order("created_at", { ascending: false }),
-    supabase.from("credentials").select("*").order("created_at", { ascending: false }),
-    supabase.from("profiles").select("*"),
   ]);
 
   const error =
     industries.error ??
-    clients.error ??
-    projects.error ??
-    assets.error ??
-    testimonials.error ??
-    credentials.error ??
-    profiles.error;
+    graphicDesigns.error ??
+    carousels.error ??
+    carouselImages.error ??
+    reels.error ??
+    copywriting.error ??
+    photoEditing.error ??
+    testimonials.error;
 
   if (error) {
     return NextResponse.json({ message: error.message }, { status: 500 });
@@ -68,11 +74,12 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     industries: industries.data ?? [],
-    clients: clients.data ?? [],
-    projects: projects.data ?? [],
-    assets: assets.data ?? [],
+    graphicDesigns: graphicDesigns.data ?? [],
+    carousels: carousels.data ?? [],
+    carouselImages: carouselImages.data ?? [],
+    reels: reels.data ?? [],
+    copywriting: copywriting.data ?? [],
+    photoEditing: photoEditing.data ?? [],
     testimonials: testimonials.data ?? [],
-    credentials: credentials.data ?? [],
-    profiles: profiles.data ?? [],
   });
 }
