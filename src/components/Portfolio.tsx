@@ -937,8 +937,8 @@ function IndustryList({
                      text={industry.name}
                      image={industry.projects[0]?.image ?? "/images/About.png"}
                     speed={14}
-                    textColor="#1a1511"
-                    marqueeBgColor="#0b0b0b"
+                    textColor="#b08968"
+                    marqueeBgColor="#7a563b"
                     marqueeTextColor="#ffffff"
                     borderColor="rgba(0,0,0,0.1)"
                     itemHeight={itemHeight}
