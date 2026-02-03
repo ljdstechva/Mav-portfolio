@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
@@ -437,7 +437,7 @@ export function AdminPage() {
       const values: Record<string, string> = {};
 
       // Determine the table to use
-      let targetTable = createTableOverride ?? selectedTable;
+      const targetTable = createTableOverride ?? selectedTable;
 
       TABLE_CONFIG[targetTable].fields.forEach((field) => {
         values[field.name] = String(form.get(field.name) ?? "").trim();
@@ -623,55 +623,6 @@ export function AdminPage() {
         setBatchImages(prev => [...prev, ...newImages]);
 
         // Batch upload for clients when inside an industry
-      } else if (targetTable === "graphic_designs" && selectedIndustryId && fieldName === "image_url") {
-        const newImages: { id: string; url: string }[] = [];
-
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
-          const extension = file.name.split(".").pop() || "png";
-          const filePath = `${targetTable}/${fieldName}/${crypto.randomUUID()}.${extension}`;
-
-          const { error } = await supabase.storage.from("portfolio").upload(filePath, file, {
-            cacheControl: "3600",
-            upsert: false,
-            contentType: file.type || "image/png",
-          });
-
-          if (error) throw error;
-
-          const { data } = supabase.storage.from("portfolio").getPublicUrl(filePath);
-          if (data.publicUrl) {
-            newImages.push({ id: crypto.randomUUID(), url: data.publicUrl });
-          }
-        }
-
-        setBatchImages(prev => [...prev, ...newImages]);
-
-        // If Graphic Designs without industry selected (batch mode for designs)
-      } else if (targetTable === "graphic_designs" && !selectedIndustryId && fieldName === "image_url") {
-        const newImages: { id: string; url: string }[] = [];
-
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
-          const extension = file.name.split(".").pop() || "png";
-          const filePath = `${targetTable}/${fieldName}/${crypto.randomUUID()}.${extension}`;
-
-          const { error } = await supabase.storage.from("portfolio").upload(filePath, file, {
-            cacheControl: "3600",
-            upsert: false,
-            contentType: file.type || "image/png",
-          });
-
-          if (error) throw error;
-
-          const { data } = supabase.storage.from("portfolio").getPublicUrl(filePath);
-          if (data.publicUrl) {
-            newImages.push({ id: crypto.randomUUID(), url: data.publicUrl });
-          }
-        }
-
-        setBatchImages(prev => [...prev, ...newImages]);
-
       } else if (targetTable === "carousels" && fieldName === "image_url") {
         const newImages: { id: string; url: string }[] = [];
 
@@ -1018,7 +969,7 @@ export function AdminPage() {
             </div>
             <div>
               <h2 className="text-2xl font-bold flex items-center gap-2">
-                {selectedTable === "graphic_designs" && selectedIndustryId && (
+                {selectedTable === "clients" && selectedIndustryId && (
                   <span
                     onClick={() => setSelectedIndustryId(null)}
                     className="cursor-pointer text-ink/40 hover:text-ink transition-colors flex items-center gap-1"
@@ -1026,19 +977,19 @@ export function AdminPage() {
                     Industries <ChevronRight size={20} />
                   </span>
                 )}
-                {selectedTable === "graphic_designs" && selectedIndustryId
+                {selectedTable === "clients" && selectedIndustryId
                   ? industries.find(i => i.id === selectedIndustryId)?.name
                   : TABLE_CONFIG[selectedTable].label}
               </h2>
               <p className="text-sm text-ink/40">
-                {selectedTable === "graphic_designs" && !selectedIndustryId
+                {selectedTable === "clients" && !selectedIndustryId
                   ? `${industries.length} industries`
                   : `${currentData.length} entries found`}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {selectedTable === "graphic_designs" && (
+            {selectedTable === "clients" && (
               <button
                 onClick={() => {
                   setCreateTableOverride("industries");
@@ -1049,7 +1000,7 @@ export function AdminPage() {
                 <Plus size={18} /> Add Industry
               </button>
             )}
-            {(selectedTable !== "graphic_designs" || selectedIndustryId) && (
+            {(selectedTable !== "clients" || selectedIndustryId) && (
               <button
                 onClick={() => setShowCreateForm(true)}
                 className="bg-ink text-white px-6 py-3 rounded-xl font-medium text-sm flex items-center gap-2 hover:bg-ink/90 transition-all shadow-lg shadow-ink/20"
@@ -1068,7 +1019,7 @@ export function AdminPage() {
             </div>
           )}
 
-          {selectedTable === "graphic_designs" && selectedIndustryId ? (
+          {selectedTable === "clients" && selectedIndustryId ? (
             <div className="flex flex-col md:flex-row gap-6 items-start h-full">
               {/* Left: Industry Card */}
               <div className="w-full md:w-80 flex-shrink-0">
@@ -1279,7 +1230,7 @@ export function AdminPage() {
                         Add new industry
                       </button>
                     </>
-                  ) : selectedTable === "graphic_designs" ? (
+                  ) : selectedTable === "clients" ? (
                     // Inside an industry but empty
                     selectedIndustryId ? (
                       <>
