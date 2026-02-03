@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ArrowLeft, 
+  ArrowRight,
   Sparkles, 
   Heart, 
   Cpu, 
@@ -14,7 +15,8 @@ import {
   Layers,
   Video,
   FileText,
-  Aperture
+  Aperture,
+  X
 } from "lucide-react";
 import clsx from "clsx";
 import NextImage from "next/image";
@@ -30,6 +32,7 @@ type PortfolioProject = {
   id: string;
   image: string;
   title: string;
+  body?: string;
   clientName: string;
   clientOrder: number;
 };
@@ -45,6 +48,19 @@ type CarouselClient = {
   items: CarouselItemData[];
 };
 
+type ReelItem = {
+  id: string;
+  title: string;
+  video_url: string;
+};
+
+type PhotoEditingItem = {
+  id: string;
+  title: string;
+  before_image_url: string;
+  after_image_url: string;
+};
+
 type GalleryItem = {
   image: string;
   text: string;
@@ -55,6 +71,9 @@ export function Portfolio() {
   const [selectedIndustry, setSelectedIndustry] = useState<PortfolioIndustry | null>(null);
   const [industries, setIndustries] = useState<PortfolioIndustry[]>([]);
   const [carouselClients, setCarouselClients] = useState<CarouselClient[]>([]);
+  const [reels, setReels] = useState<ReelItem[]>([]);
+  const [photoEditing, setPhotoEditing] = useState<PhotoEditingItem[]>([]);
+  const [copywritingIndustry, setCopywritingIndustry] = useState<PortfolioIndustry | null>(null);
   const [industriesLoading, setIndustriesLoading] = useState(true);
   const [industriesError, setIndustriesError] = useState<string | null>(null);
 
@@ -106,6 +125,29 @@ export function Portfolio() {
           image_url: string;
           position: number;
           created_at: string;
+        }[];
+        const rawReels = (data.reels ?? []) as {
+          id: string;
+          client: string;
+          title: string;
+          video_url: string;
+          created_at: string;
+        }[];
+        const rawPhotoEditing = (data.photoEditing ?? []) as {
+          id: string;
+          client: string;
+          title: string;
+          before_image_url: string;
+          after_image_url: string;
+          created_at: string;
+        }[];
+        const rawCopywriting = (data.copywriting ?? []) as {
+          id: string;
+          client?: string;
+          title?: string;
+          body?: string;
+          image_url?: string;
+          created_at?: string;
         }[];
 
         // Process Graphics
@@ -164,9 +206,43 @@ export function Portfolio() {
           items: items.sort((a, b) => a.position - b.position).map((i) => i.item),
         })).sort((a, b) => a.clientName.localeCompare(b.clientName)); // Sort clients alphabetically
 
+        // Process Reels
+        const reelsData = rawReels.map(r => ({
+          id: r.id,
+          title: r.title || r.client || "Untitled Reel",
+          video_url: r.video_url
+        }));
+
+        // Process Photo Editing
+        const photoEditingData = rawPhotoEditing.map(p => ({
+          id: p.id,
+          title: p.title || p.client || "",
+          before_image_url: p.before_image_url,
+          after_image_url: p.after_image_url
+        }));
+
+        const copywritingProjects = rawCopywriting
+          .map((item, index) => ({
+            id: item.id,
+            image: item.image_url || "/images/About.png", // Use a placeholder if image is missing
+            title: item.title || item.client || "",
+            body: item.body || undefined,
+            clientName: item.client || "Client",
+            clientOrder: index,
+          }));
+
+        const copyIndustryData: PortfolioIndustry = {
+          id: "copywriting",
+          name: "Copywriting",
+          projects: copywritingProjects,
+        };
+
         if (active) {
           setIndustries(byIndustry);
           setCarouselClients(carousels);
+          setReels(reelsData);
+          setPhotoEditing(photoEditingData);
+          setCopywritingIndustry(copyIndustryData);
         }
       } catch (error) {
         if (active) {
@@ -281,8 +357,57 @@ export function Portfolio() {
                 </motion.div>
               )}
 
+              {selectedCategory?.id === 'videos' && (
+                <motion.div
+                  className="w-full"
+                  key="reels-list"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                >
+                  <ReelsList 
+                    reels={reels}
+                    onBack={goBackToCategories}
+                    loading={industriesLoading}
+                  />
+                </motion.div>
+              )}
+
+              {selectedCategory?.id === 'photo-editing' && (
+                <motion.div
+                  className="w-full"
+                  key="photo-editing-list"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                >
+                  <PhotoEditingList 
+                    items={photoEditing}
+                    onBack={goBackToCategories}
+                    loading={industriesLoading}
+                  />
+                </motion.div>
+              )}
+
+              {selectedCategory?.id === 'copywriting' && copywritingIndustry && (
+                <motion.div
+                  className="w-full"
+                  key="copywriting-list"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                >
+                   <div className="relative rounded-[28px] overflow-hidden bg-white flex flex-col">
+                      <CopywritingGallery 
+                         industry={copywritingIndustry} 
+                         onBack={goBackToCategories} 
+                      />
+                   </div>
+                </motion.div>
+              )}
+
               {/* Placeholders for other categories */}
-              {selectedCategory && selectedCategory.id !== 'graphics' && selectedCategory.id !== 'carousels' && (
+              {selectedCategory && selectedCategory.id !== 'graphics' && selectedCategory.id !== 'carousels' && selectedCategory.id !== 'videos' && selectedCategory.id !== 'copywriting' && selectedCategory.id !== 'photo-editing' && (
                 <motion.div
                   className="w-full"
                   key="placeholder"
@@ -310,6 +435,226 @@ export function Portfolio() {
         </motion.div>
       </div>
     </section>
+  );
+}
+
+function PhotoEditingList({
+  items,
+  onBack,
+  loading
+}: {
+  items: PhotoEditingItem[];
+  onBack: () => void;
+  loading: boolean;
+}) {
+  const [selectedItem, setSelectedItem] = useState<PhotoEditingItem | null>(null);
+
+  if (loading) return <div className="text-ink/50">Loading photo edits...</div>;
+
+  return (
+    <div className="w-full">
+      <button onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
+         <ArrowLeft size={20} /> Back to Categories
+      </button>
+
+      {items.length === 0 ? (
+        <div className="p-8 text-center text-ink/50 bg-sand/20 rounded-3xl">No photo editing samples available yet.</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {items.map((item) => (
+            <div 
+              key={item.id} 
+              className="bg-white rounded-3xl p-6 shadow-sm border border-ink/5 hover:shadow-lg transition-all"
+            >
+              {item.title && <h3 className="text-xl font-bold text-ink mb-4">{item.title}</h3>}
+              <div 
+                className="flex gap-4 h-64 md:h-80 cursor-pointer"
+                onClick={() => setSelectedItem(item)}
+              >
+                <div className="flex-1 flex flex-col gap-2">
+                  <span className="text-xs font-bold uppercase tracking-widest text-ink/40">Before</span>
+                  <div className="relative flex-1 rounded-xl overflow-hidden bg-sand/20 group">
+                    <img 
+                      src={item.before_image_url} 
+                      alt="Before" 
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  </div>
+                </div>
+                <div className="flex-1 flex flex-col gap-2">
+                  <span className="text-xs font-bold uppercase tracking-widest text-ink/40">After</span>
+                  <div className="relative flex-1 rounded-xl overflow-hidden bg-sand/20 group">
+                    <img 
+                      src={item.after_image_url} 
+                      alt="After" 
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <AnimatePresence>
+        {selectedItem && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 md:p-8"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedItem(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-6xl flex flex-col items-center"
+            >
+              <div className="w-full flex items-center justify-between mb-6 text-white">
+                {selectedItem.title && <h3 className="text-2xl font-bold">{selectedItem.title}</h3>}
+                <button 
+                  onClick={() => setSelectedItem(null)}
+                  className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors ml-auto"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="relative flex flex-col md:flex-row gap-8 md:gap-16 w-full h-[70vh]">
+                <div className="flex-1 flex flex-col gap-2 relative">
+                  <span className="absolute top-4 left-4 z-10 bg-black/50 text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest backdrop-blur-md">Before</span>
+                  <div className="w-full h-full rounded-2xl overflow-hidden bg-black/50">
+                    <img 
+                      src={selectedItem.before_image_url} 
+                      alt="Before" 
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                </div>
+                <div className="flex md:hidden items-center justify-center">
+                  <div className="flex items-center justify-center w-12 h-12 rounded-full bg-white/10 border border-white/20 text-white shadow-lg">
+                    <ArrowRight size={22} className="rotate-90" />
+                  </div>
+                </div>
+                <div className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center justify-center w-14 h-14 rounded-full bg-white/10 border border-white/20 text-white shadow-lg backdrop-blur-md">
+                  <ArrowRight size={24} />
+                </div>
+                <div className="flex-1 flex flex-col gap-2 relative">
+                  <span className="absolute top-4 left-4 z-10 bg-black/50 text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest backdrop-blur-md">After</span>
+                  <div className="w-full h-full rounded-2xl overflow-hidden bg-black/50">
+                    <img 
+                      src={selectedItem.after_image_url} 
+                      alt="After" 
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function ReelsList({
+  reels,
+  onBack,
+  loading
+}: {
+  reels: ReelItem[];
+  onBack: () => void;
+  loading: boolean;
+}) {
+  const [visibleCount, setVisibleCount] = useState(3);
+  const prevCountRef = useRef(3);
+
+  useEffect(() => {
+    const prevCount = prevCountRef.current;
+    
+    if (visibleCount > prevCount) {
+        // Show More was clicked
+        const timer = setTimeout(() => {
+            const card = document.querySelector(".reel-card") as HTMLElement | null;
+            if (card) {
+                const step = card.offsetHeight + 24; // Height + gap
+                window.scrollBy({ top: step, behavior: "smooth" });
+            }
+        }, 500);
+        return () => clearTimeout(timer);
+    } else if (visibleCount < prevCount) {
+        // Show Less was clicked
+        const portfolioSection = document.getElementById("portfolio");
+        if (portfolioSection) {
+            portfolioSection.scrollIntoView({ behavior: "smooth" });
+        }
+    }
+    
+    prevCountRef.current = visibleCount;
+  }, [visibleCount]);
+
+  const showMore = () => setVisibleCount(prev => prev + 3);
+  const showLess = () => setVisibleCount(3);
+
+  if (loading) return <div className="text-ink/50">Loading reels...</div>;
+
+  const visibleReels = reels.slice(0, visibleCount);
+  const hasMore = reels.length > visibleCount;
+  const showLessButton = visibleCount > 3 && visibleCount >= reels.length;
+
+  return (
+    <div className="w-full">
+      <button onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
+         <ArrowLeft size={20} /> Back to Categories
+      </button>
+
+      {reels.length === 0 ? (
+        <div className="p-8 text-center text-ink/50 bg-sand/20 rounded-3xl">No reels available yet.</div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {visibleReels.map((reel) => (
+              <motion.div
+                key={reel.id}
+                className="reel-card bg-black rounded-3xl overflow-hidden aspect-[9/16] relative shadow-lg"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <video
+                  src={reel.video_url}
+                  controls
+                  className="w-full h-full object-cover"
+                  playsInline
+                />
+              </motion.div>
+            ))}
+          </div>
+
+          <div className="mt-12 flex justify-center">
+            {hasMore ? (
+              <button 
+                onClick={showMore}
+                className="px-8 py-3 bg-ink text-white rounded-full font-medium hover:bg-ink/90 transition-colors"
+              >
+                Show More
+              </button>
+            ) : showLessButton ? (
+              <button 
+                onClick={showLess}
+                className="px-8 py-3 bg-sand text-ink rounded-full font-medium hover:bg-sand/80 transition-colors"
+              >
+                Show Less
+              </button>
+            ) : null}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -576,6 +921,73 @@ function IndustryList({
              );
          })}
       </div>
+    </div>
+  );
+}
+
+function CopywritingGallery({ industry, onBack }: { industry: PortfolioIndustry, onBack: () => void }) {
+  const [selectedImage, setSelectedImage] = useState<{ image: string } | null>(null);
+
+  return (
+    <div className="w-full">
+      <button onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
+        <ArrowLeft size={20} /> Back to Categories
+      </button>
+
+      {industry.projects.length === 0 ? (
+        <div className="p-8 text-center text-ink/50 bg-sand/20 rounded-3xl">No copywriting samples available yet.</div>
+      ) : (
+        <div className="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6">
+          {industry.projects.map((project) => (
+            <div 
+              key={project.id} 
+              className="break-inside-avoid relative group rounded-2xl overflow-hidden cursor-pointer"
+              onClick={() => setSelectedImage({ image: project.image })}
+            >
+              <img 
+                src={project.image} 
+                alt={project.title || "Copywriting sample"} 
+                className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
+            </div>
+          ))}
+        </div>
+      )}
+
+      <AnimatePresence>
+        {selectedImage && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedImage(null)}
+          >
+            <motion.div
+              className="relative max-w-4xl w-full max-h-[90vh] bg-white rounded-2xl overflow-hidden shadow-2xl"
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-full bg-sand/20 relative">
+                <img 
+                  src={selectedImage.image} 
+                  alt="Copywriting sample" 
+                  className="w-full h-full max-h-[85vh] object-contain p-4"
+                />
+              </div>
+              <button 
+                onClick={() => setSelectedImage(null)}
+                className="absolute top-4 right-4 bg-white/50 hover:bg-white text-ink p-2 rounded-full transition-colors z-10"
+              >
+                <ArrowLeft className="rotate-180" size={24} />
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

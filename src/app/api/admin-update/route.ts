@@ -3,30 +3,11 @@ import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
 export const runtime = "nodejs";
 
-type AllowedTable =
-  | "industries"
-  | "clients"
-  | "graphic_designs"
-  | "carousels"
-  | "reels"
-  | "copywriting"
-  | "photo_editing"
-  | "testimonials";
+type AllowedTable = "testimonials";
 
 const TABLE_COLUMNS: Record<AllowedTable, string[]> = {
-  industries: ["name"],
-  clients: ["industry_id", "name", "image_url", "sort_order"],
-  graphic_designs: ["industry_id", "client_id", "title", "client", "category", "image_url"],
-  carousels: ["client", "image_url", "position"],
-  reels: ["video_url"],
-  copywriting: ["image_url"],
-  photo_editing: ["before_image_url", "after_image_url"],
   testimonials: ["client_name", "quote"],
 };
-
-const ARRAY_FIELDS = new Set([] as string[]);
-const NUMBER_FIELDS = new Set(["position", "sort_order"]);
-const JSON_FIELDS = new Set([] as string[]);
 
 async function ensureAuthed(request: Request) {
   const authHeader = request.headers.get("authorization") ?? "";
@@ -50,30 +31,13 @@ async function ensureAuthed(request: Request) {
   }
 }
 
-function normalizeValue(key: string, value: unknown) {
+function normalizeValue(value: unknown) {
   if (value === null || value === undefined) {
     return null;
   }
   if (typeof value === "string") {
     const trimmed = value.trim();
-    if (!trimmed) {
-      return null;
-    }
-    if (ARRAY_FIELDS.has(key)) {
-      return trimmed.split(",").map((item) => item.trim()).filter(Boolean);
-    }
-    if (NUMBER_FIELDS.has(key)) {
-      const parsed = Number(trimmed);
-      return Number.isNaN(parsed) ? null : parsed;
-    }
-    if (JSON_FIELDS.has(key)) {
-      try {
-        return JSON.parse(trimmed);
-      } catch {
-        return null;
-      }
-    }
-    return trimmed;
+    return trimmed ? trimmed : null;
   }
   return value;
 }
@@ -85,21 +49,21 @@ export async function POST(request: Request) {
 
   const body = (await request.json()) as {
     table?: AllowedTable;
+    id?: string;
     values?: Record<string, unknown>;
   };
 
   const table = body.table;
-  if (!table || !TABLE_COLUMNS[table]) {
-    return NextResponse.json({ message: "Invalid table." }, { status: 400 });
+  if (!table || !TABLE_COLUMNS[table] || !body.id) {
+    return NextResponse.json({ message: "Invalid request." }, { status: 400 });
   }
 
-  const allowedColumns = TABLE_COLUMNS[table];
   const values = body.values ?? {};
   const payload: Record<string, unknown> = {};
 
-  for (const column of allowedColumns) {
+  for (const column of TABLE_COLUMNS[table]) {
     if (column in values) {
-      const normalized = normalizeValue(column, values[column]);
+      const normalized = normalizeValue(values[column]);
       if (normalized !== null) {
         payload[column] = normalized;
       }
@@ -116,7 +80,8 @@ export async function POST(request: Request) {
   const supabase = createSupabaseServerClient();
   const { data, error } = await supabase
     .from(table)
-    .insert(payload)
+    .update(payload)
+    .eq("id", body.id)
     .select("*")
     .single();
 
@@ -124,5 +89,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(data, { status: 201 });
+  return NextResponse.json(data, { status: 200 });
 }

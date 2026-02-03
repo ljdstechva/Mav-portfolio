@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, PanInfo, useMotionValue, useTransform } from 'framer-motion';
 import React, { JSX } from 'react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 
 export interface CarouselItemData {
   id: string;
@@ -202,45 +203,76 @@ export default function Carousel({
   const activeIndex =
     items.length === 0 ? 0 : loop ? (position - 1 + items.length) % items.length : Math.min(position, items.length - 1);
 
+  const handleArrowClick = (direction: 1 | -1) => {
+    if (itemsForRender.length <= 1) return;
+    setPosition(prev => {
+      const next = prev + direction;
+      const max = itemsForRender.length - 1;
+      return Math.max(0, Math.min(next, max));
+    });
+  };
+
   return (
     <div
       ref={containerRef}
-      className={`relative overflow-hidden p-4`}
+      className={`relative p-4`}
       style={{
         width: `${baseWidth}px`,
         height: `${baseWidth * 1.25 + 100}px` // Height for 4:5 aspect ratio + controls/padding
       }}
     >
-      <motion.div
-        className="flex"
-        drag={isAnimating ? false : 'x'}
-        {...dragProps}
-        style={{
-          width: itemWidth,
-          gap: `${GAP}px`,
-          perspective: 1000,
-          perspectiveOrigin: `${position * trackItemOffset + itemWidth / 2}px 50%`,
-          x
-        }}
-        onDragEnd={handleDragEnd}
-        animate={{ x: -(position * trackItemOffset) }}
-        transition={effectiveTransition}
-        onAnimationStart={handleAnimationStart}
-        onAnimationComplete={handleAnimationComplete}
-      >
-        {itemsForRender.map((item, index) => (
-          <CarouselItem
-            key={`${item.id}-${index}`}
-            item={item}
-            index={index}
-            itemWidth={itemWidth}
-            round={round}
-            trackItemOffset={trackItemOffset}
-            x={x}
-            transition={effectiveTransition}
-          />
-        ))}
-      </motion.div>
+      <div className="relative overflow-hidden">
+        <motion.div
+          className="flex"
+          drag={isAnimating ? false : 'x'}
+          {...dragProps}
+          style={{
+            width: itemWidth,
+            gap: `${GAP}px`,
+            perspective: 1000,
+            perspectiveOrigin: `${position * trackItemOffset + itemWidth / 2}px 50%`,
+            x
+          }}
+          onDragEnd={handleDragEnd}
+          animate={{ x: -(position * trackItemOffset) }}
+          transition={effectiveTransition}
+          onAnimationStart={handleAnimationStart}
+          onAnimationComplete={handleAnimationComplete}
+        >
+          {itemsForRender.map((item, index) => (
+            <CarouselItem
+              key={`${item.id}-${index}`}
+              item={item}
+              index={index}
+              itemWidth={itemWidth}
+              round={round}
+              trackItemOffset={trackItemOffset}
+              x={x}
+              transition={effectiveTransition}
+            />
+          ))}
+        </motion.div>
+      </div>
+      {itemsForRender.length > 1 && (
+        <>
+          <button
+            type="button"
+            aria-label="Previous slide"
+            onClick={() => handleArrowClick(-1)}
+            className="absolute left-0 top-1/2 z-10 -translate-x-[120%] -translate-y-1/2 rounded-full border border-ink/10 bg-white/80 p-3 text-ink shadow-lg transition-transform hover:scale-110"
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <button
+            type="button"
+            aria-label="Next slide"
+            onClick={() => handleArrowClick(1)}
+            className="absolute right-0 top-1/2 z-10 translate-x-[120%] -translate-y-1/2 rounded-full border border-ink/10 bg-white/80 p-3 text-ink shadow-lg transition-transform hover:scale-110"
+          >
+            <ArrowRight size={18} />
+          </button>
+        </>
+      )}
       <div className={`flex w-full justify-center`}>
         <div className="mt-8 flex w-[150px] justify-between px-8">
           {items.map((_, index) => (

@@ -53,7 +53,7 @@ export const PORTFOLIO_CATEGORIES: PortfolioCategory[] = [
   },
   { 
     id: "videos", 
-    name: "Videos", 
+    name: "Reels", 
     icon: Video, 
     description: "Motion graphics and video editing.", 
     color: "bg-red-100 text-red-600" 

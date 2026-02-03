@@ -1,55 +1,53 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Star, Quote } from "lucide-react";
-import Image from "next/image";
+import { getSupabaseClient, getSupabaseConfigError } from "@/lib/supabaseClient";
 
-const TESTIMONIALS = [
-  {
-    id: 1,
-    name: "Sarah Jenkins",
-    role: "Founder, Glow Skincare",
-    text: "Mav completely transformed our Instagram presence. Her designs are not just beautiful; they tell our brand story perfectly. Engagement has doubled since we started working together!",
-    avatar: "/avatars/avatar-1.png" // Placeholder
-  },
-  {
-    id: 2,
-    name: "David Chen",
-    role: "Marketing Director, TechFlow",
-    text: "The strategic approach Mav brings to social media is unmatched. She doesn't just post; she creates conversations. The graphics are always on-point and professional.",
-    avatar: "/avatars/avatar-2.png"
-  },
-  {
-    id: 3,
-    name: "Elena Rodriguez",
-    role: "Lifestyle Coach",
-    text: "I was struggling to find my visual identity until I met Mav. She captured my vibe instantly. My feed looks cohesive, professional, and authentically 'me' now.",
-    avatar: "/avatars/avatar-3.png"
-  },
-  {
-    id: 4,
-    name: "James Wilson",
-    role: "CEO, Urban Eatery",
-    text: "Fast, reliable, and incredibly creative. Mav handles our social media so I can focus on running the restaurant. The food photography edits are mouth-watering!",
-    avatar: "/avatars/avatar-4.png"
-  },
-  {
-    id: 5,
-    name: "Anita Patel",
-    role: "Boutique Owner",
-    text: "Hiring Mav was the best investment for my business this year. She understands the algorithm and the aesthetics. Highly recommended!",
-    avatar: "/avatars/avatar-5.png"
-  },
-  {
-    id: 6,
-    name: "Marcus Johnson",
-    role: "Fitness Trainer",
-    text: "Her graphics stopped the scroll! I've gotten so many new clients just from the improved look of my promotional posts. She's a design wizard.",
-    avatar: "/avatars/avatar-6.png"
-  }
-];
+type Testimonial = {
+  id: string;
+  client_name: string;
+  role?: string | null;
+  company?: string | null;
+  quote: string;
+  avatar_url?: string | null;
+};
 
 export function Testimonials() {
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const configError = getSupabaseConfigError();
+    if (configError) {
+      setLoading(false);
+      return;
+    }
+
+    const supabase = getSupabaseClient();
+    let mounted = true;
+
+    const fetchTestimonials = async () => {
+      const { data, error } = await supabase
+        .from("testimonials")
+        .select("id, client_name, role, company, quote, avatar_url")
+        .order("created_at", { ascending: false });
+
+      if (!mounted) return;
+      if (!error) {
+        setTestimonials(data ?? []);
+      }
+      setLoading(false);
+    };
+
+    void fetchTestimonials();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   return (
     <section className="py-24 px-4 md:px-8 bg-[#FDF8F5] relative overflow-hidden" id="testimonials">
       {/* Decorative Elements */}
@@ -82,9 +80,14 @@ export function Testimonials() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-          {TESTIMONIALS.map((testimonial, index) => (
+          {testimonials.map((testimonial, index) => (
             <TestimonialCard key={testimonial.id} testimonial={testimonial} index={index} />
           ))}
+          {!loading && testimonials.length === 0 && (
+            <div className="col-span-full rounded-[2rem] border border-ink/5 bg-white p-10 text-center text-ink/50">
+              Testimonials coming soon.
+            </div>
+          )}
         </div>
         
         {/* Call to Action Mini-Section */}
@@ -98,7 +101,7 @@ export function Testimonials() {
           <div className="inline-block p-1 rounded-full border border-ink/10 bg-white shadow-sm">
              <div className="px-6 py-3 rounded-full bg-ink text-sand font-medium text-sm md:text-base flex items-center gap-2">
                 <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                <span>Join 50+ Happy Clients</span>
+                <span>Join the Happy Clients</span>
              </div>
           </div>
         </motion.div>
@@ -107,7 +110,24 @@ export function Testimonials() {
   );
 }
 
-function TestimonialCard({ testimonial, index }: { testimonial: any, index: number }) {
+function TestimonialCard({ testimonial, index }: { testimonial: Testimonial, index: number }) {
+  const displayRole = useMemo(() => {
+    const role = testimonial.role?.trim();
+    const company = testimonial.company?.trim();
+    if (role && company) return `${role}, ${company}`;
+    if (role) return role;
+    if (company) return company;
+    return "";
+  }, [testimonial.company, testimonial.role]);
+
+  const initials = testimonial.client_name
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 40 }}
@@ -128,20 +148,21 @@ function TestimonialCard({ testimonial, index }: { testimonial: any, index: numb
              ))}
            </div>
            
-           <p className="text-ink/80 leading-relaxed text-lg font-medium mb-8">
-             "{testimonial.text}"
-           </p>
+            <p className="text-ink/80 leading-relaxed text-lg font-medium mb-8">
+              "{testimonial.quote}"
+            </p>
         </div>
 
         <div className="flex items-center gap-4 pt-6 border-t border-ink/5">
            <div className="w-12 h-12 rounded-full bg-sand flex items-center justify-center text-ink font-bold text-lg overflow-hidden relative">
-              {/* Fallback to initials if no image, or just use colored circle for now as generic */}
-              {testimonial.name.charAt(0)}
-           </div>
-           <div>
-              <h4 className="text-ink font-bold leading-tight">{testimonial.name}</h4>
-              <p className="text-ink/50 text-xs uppercase tracking-wider font-semibold mt-1">{testimonial.role}</p>
-           </div>
+              {initials || testimonial.client_name.charAt(0)}
+            </div>
+            <div>
+              <h4 className="text-ink font-bold leading-tight">{testimonial.client_name}</h4>
+              {displayRole && (
+                <p className="text-ink/50 text-xs uppercase tracking-wider font-semibold mt-1">{displayRole}</p>
+              )}
+            </div>
         </div>
       </div>
     </motion.div>

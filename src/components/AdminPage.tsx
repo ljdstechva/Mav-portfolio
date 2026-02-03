@@ -64,7 +64,6 @@ type ReelItem = {
   id: string;
   industry_id?: string | null;
   client?: string | null;
-  title: string;
   video_url?: string | null;
 };
 
@@ -107,6 +106,7 @@ type AdminListItem = {
   image_url?: string | null;
   avatar_url?: string | null;
   before_image_url?: string | null;
+  after_image_url?: string | null;
   video_url?: string | null;
   category?: string | null;
 };
@@ -174,13 +174,10 @@ const TABLE_CONFIG: Record<
     ],
   },
   reels: {
-    label: "Videos",
-    singularLabel: "Video",
+    label: "Reels",
+    singularLabel: "Reel",
     icon: Video,
     fields: [
-      { name: "industry_id", label: "Industry ID" },
-      { name: "client", label: "Client Name" },
-      { name: "title", label: "Reel Title", required: true },
       { name: "video_url", label: "Video URL", type: "url", required: true },
     ],
   },
@@ -197,9 +194,6 @@ const TABLE_CONFIG: Record<
     singularLabel: "Photo Edit",
     icon: Aperture,
     fields: [
-      { name: "industry_id", label: "Industry ID" },
-      { name: "client", label: "Client Name" },
-      { name: "title", label: "Edit Title", required: true },
       { name: "before_image_url", label: "Before Image", type: "url", required: true },
       { name: "after_image_url", label: "After Image", type: "url", required: true },
     ],
@@ -210,10 +204,7 @@ const TABLE_CONFIG: Record<
     icon: MessageSquareQuote,
     fields: [
       { name: "client_name", label: "Client Name", required: true },
-      { name: "role", label: "Role", placeholder: "e.g. CEO" },
-      { name: "company", label: "Company" },
       { name: "quote", label: "Quote", type: "textarea", required: true },
-      { name: "avatar_url", label: "Avatar Image", type: "url" },
     ],
   },
 };
@@ -277,6 +268,16 @@ export function AdminPage() {
   const [dragOverField, setDragOverField] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<Record<string, string>>({});
   const [batchImages, setBatchImages] = useState<{ id: string; url: string }[]>([]);
+  const [previewModal, setPreviewModal] = useState<
+    | null
+    | {
+      type: "single" | "beforeAfter";
+      title?: string;
+      image?: string | null;
+      before?: string | null;
+      after?: string | null;
+    }
+  >(null);
   const [industryDeletePrompt, setIndustryDeletePrompt] = useState<{ id: string; name: string } | null>(null);
   const [industryDeleteText, setIndustryDeleteText] = useState("");
   const [industryDeleteState, setIndustryDeleteState] = useState<DeleteState>("idle");
@@ -288,6 +289,7 @@ export function AdminPage() {
   const [clientDeleteText, setClientDeleteText] = useState("");
   const [clientDeleteState, setClientDeleteState] = useState<DeleteState>("idle");
   const [clientDeleteError, setClientDeleteError] = useState("");
+  const [editingTestimonial, setEditingTestimonial] = useState<TestimonialItem | null>(null);
 
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
@@ -471,10 +473,36 @@ export function AdminPage() {
           throw new Error("Please upload a copywriting image.");
         }
 
+      } else if (targetTable === "photo_editing") {
+        if (!values.before_image_url || !values.after_image_url) {
+          throw new Error("Please upload both before and after images.");
+        }
+
       }
 
+      if (targetTable === "testimonials" && editingTestimonial) {
+        const response = await fetch("/api/admin-update", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          },
+          body: JSON.stringify({
+            table: "testimonials",
+            id: editingTestimonial.id,
+            values: {
+              client_name: values.client_name,
+              quote: values.quote,
+            },
+          }),
+        });
+
+        if (!response.ok) {
+          const payload = await response.json();
+          throw new Error(payload.message ?? "Update failed");
+        }
       // Carousel Images - Direct Supabase Insert
-      if (targetTable === "carousels") {
+      } else if (targetTable === "carousels") {
         if (!supabase) {
           throw new Error("Supabase client is not configured.");
         }
@@ -570,6 +598,7 @@ export function AdminPage() {
       formElement?.reset();
       setImagePreview({});
       setBatchImages([]);
+      setEditingTestimonial(null);
       await fetchAdminData();
 
       // Close form after short delay on success
@@ -830,6 +859,7 @@ export function AdminPage() {
   const closeCreateForm = () => {
     setShowCreateForm(false);
     setCreateTableOverride(null);
+    setEditingTestimonial(null);
   };
 
   const formTable = createTableOverride ?? selectedTable;
@@ -843,6 +873,11 @@ export function AdminPage() {
   }, [selectedIndustryId]);
   const showCarouselForm = formTable === "carousels";
   const showCopywritingForm = formTable === "copywriting";
+  const showPhotoEditingForm = formTable === "photo_editing";
+  const fieldsToRender = formTable === "testimonials"
+    ? TABLE_CONFIG[formTable].fields.filter((field) => ["client_name", "quote"].includes(field.name))
+    : TABLE_CONFIG[formTable].fields;
+  const isEditingTestimonial = formTable === "testimonials" && Boolean(editingTestimonial);
 
   if (!mounted) {
     return null;
@@ -1392,7 +1427,11 @@ export function AdminPage() {
                       ))
                     ) : (
                       currentData.map((item) => {
-                        const imageSrc = item.image_url ?? item.avatar_url ?? item.before_image_url ?? undefined;
+                        const imageSrc = item.image_url ?? item.avatar_url ?? item.before_image_url ?? item.after_image_url ?? undefined;
+                        const beforeImage = (item as any).before_image_url ?? null;
+                        const afterImage = (item as any).after_image_url ?? null;
+                        const canShowBeforeAfter = Boolean(beforeImage && afterImage);
+                        const previewTitle = item.title || item.client_name || item.name || "Preview";
                         const industryName = 'industry_id' in item ? getIndustryName((item as any).industry_id) : null;
 
                         return (
@@ -1401,7 +1440,17 @@ export function AdminPage() {
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="bg-white rounded-3xl p-5 border border-ink/5 hover:border-ink/20 hover:shadow-xl transition-all group"
+                            onClick={() => {
+                              if (selectedTable !== "testimonials") return;
+                              setEditingTestimonial(item as TestimonialItem);
+                              setUploadState("idle");
+                              setUploadMessage("");
+                              setShowCreateForm(true);
+                            }}
+                            className={clsx(
+                              "bg-white rounded-3xl p-5 border border-ink/5 hover:border-ink/20 hover:shadow-xl transition-all group",
+                              selectedTable === "testimonials" && "cursor-pointer"
+                            )}
                           >
                             <div className="flex items-start justify-between mb-4">
                               <div className="flex-1 min-w-0 pr-4">
@@ -1418,20 +1467,50 @@ export function AdminPage() {
                             </div>
 
                             {/* Image Preview if available */}
-                            {imageSrc && (
-                              <div className="aspect-video w-full bg-sand rounded-2xl mb-4 overflow-hidden relative">
+                              {imageSrc && (
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    if (selectedTable === "testimonials") {
+                                      event.stopPropagation();
+                                    }
+                                    if (canShowBeforeAfter) {
+                                      setPreviewModal({
+                                        type: "beforeAfter",
+                                        title: previewTitle,
+                                        before: beforeImage,
+                                      after: afterImage,
+                                    });
+                                  } else {
+                                    setPreviewModal({
+                                      type: "single",
+                                      title: previewTitle,
+                                      image: imageSrc,
+                                    });
+                                  }
+                                }}
+                                className="aspect-video w-full bg-sand rounded-2xl mb-4 overflow-hidden relative group"
+                              >
                                 <img
                                   src={imageSrc}
                                   alt="Preview"
-                                  className="w-full h-full object-cover"
+                                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                                 />
-                              </div>
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                              </button>
                             )}
 
                             {/* Video Preview if available */}
-                            {item.video_url && (
+                            {selectedTable === "reels" && item.video_url && (
                               <div className="aspect-video w-full bg-black rounded-2xl mb-4 flex items-center justify-center relative overflow-hidden">
-                                <p className="text-white/50 text-xs flex items-center gap-2"><Video size={14} /> Video Link</p>
+                                <video
+                                  src={item.video_url}
+                                  autoPlay
+                                  muted
+                                  loop
+                                  playsInline
+                                  className="absolute inset-0 w-full h-full object-cover"
+                                />
                               </div>
                             )}
 
@@ -1457,6 +1536,79 @@ export function AdminPage() {
 
 
 
+      {/* Media Preview Modal */}
+      <AnimatePresence>
+        {previewModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setPreviewModal(null)}
+              className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-6"
+            >
+              <div
+                className="relative w-full max-w-5xl rounded-3xl bg-white shadow-2xl overflow-hidden"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="flex items-center justify-between px-6 py-4 border-b border-ink/5 bg-sand/30">
+                  <h4 className="text-lg font-bold text-ink">{previewModal.title ?? "Preview"}</h4>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewModal(null)}
+                    className="p-2 rounded-full hover:bg-ink/5 transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {previewModal.type === "beforeAfter" ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6 bg-sand/20">
+                    <div className="space-y-3">
+                      <p className="text-xs font-bold uppercase tracking-widest text-ink/50">Before</p>
+                      <div className="rounded-2xl overflow-hidden bg-white border border-ink/10">
+                        {previewModal.before ? (
+                          <img src={previewModal.before} alt="Before" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="flex items-center justify-center h-64 text-sm text-ink/40">No image</div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <p className="text-xs font-bold uppercase tracking-widest text-ink/50">After</p>
+                      <div className="rounded-2xl overflow-hidden bg-white border border-ink/10">
+                        {previewModal.after ? (
+                          <img src={previewModal.after} alt="After" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="flex items-center justify-center h-64 text-sm text-ink/40">No image</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-6 bg-sand/20">
+                    <div className="rounded-2xl overflow-hidden bg-white border border-ink/10">
+                      {previewModal.image ? (
+                        <img src={previewModal.image} alt="Preview" className="w-full h-full object-contain max-h-[70vh]" />
+                      ) : (
+                        <div className="flex items-center justify-center h-64 text-sm text-ink/40">No image</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* Slide-over Form */}
       <AnimatePresence>
         {showCreateForm && (
@@ -1477,16 +1629,21 @@ export function AdminPage() {
             >
               <div className="p-6 border-b border-ink/5 flex items-center justify-between bg-sand/30">
                 <h3 className="text-xl font-bold">
-                  New {showClientForm
-                    ? "Client"
-                    : TABLE_CONFIG[formTable].singularLabel}
+                  {isEditingTestimonial
+                    ? "Edit Testimonial"
+                    : `New ${showClientForm ? "Client" : TABLE_CONFIG[formTable].singularLabel}`}
                 </h3>
                 <button onClick={closeCreateForm} className="p-2 hover:bg-ink/5 rounded-full transition-colors">
                   <X size={20} />
                 </button>
               </div>
 
-              <form ref={createFormRef} onSubmit={handleUpload} className="flex-1 overflow-y-auto p-6 space-y-6">
+              <form
+                key={isEditingTestimonial ? editingTestimonial?.id ?? "edit" : "create"}
+                ref={createFormRef}
+                onSubmit={handleUpload}
+                className="flex-1 overflow-y-auto p-6 space-y-6"
+              >
                 {showClientForm ? (
                   /* Client Form - Simple name and image upload */
                   <>
@@ -1835,10 +1992,93 @@ export function AdminPage() {
                       </div>
                     </div>
                   </>
+                ) : showPhotoEditingForm ? (
+                  <>
+                    <div className="space-y-6">
+                      {(
+                        [
+                          { name: "before_image_url", label: "Before Image" },
+                          { name: "after_image_url", label: "After Image" },
+                        ] as const
+                      ).map((field) => (
+                        <div key={field.name} className="space-y-3">
+                          <label className="text-xs font-bold uppercase tracking-widest text-ink/50 flex justify-between">
+                            {field.label}
+                            <span className="text-terracotta text-[10px]">REQUIRED</span>
+                          </label>
+
+                          <input
+                            ref={(el) => { inputRefs.current[field.name] = el; }}
+                            type="hidden"
+                            name={field.name}
+                          />
+
+                          <div
+                            className={clsx(
+                              "bg-sand/50 rounded-xl p-4 border border-dashed transition-colors",
+                              dragOverField === field.name ? "border-ink/50 bg-sand/70" : "border-ink/20 hover:border-ink/40"
+                            )}
+                            onDragOver={(event) => {
+                              event.preventDefault();
+                              setDragOverField(field.name);
+                            }}
+                            onDragLeave={() => setDragOverField(null)}
+                            onDrop={(event) => {
+                              event.preventDefault();
+                              setDragOverField(null);
+                              if (event.dataTransfer?.files?.length) {
+                                void handleImageUpload(field.name, event.dataTransfer.files);
+                              }
+                            }}
+                            onClick={() => fileInputRefs.current[field.name]?.click()}
+                          >
+                            <input
+                              ref={(el) => { fileInputRefs.current[field.name] = el; }}
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => handleImageUpload(field.name, e.target.files)}
+                            />
+
+                            {imagePreview[field.name] ? (
+                              <div className="relative rounded-lg overflow-hidden group">
+                                <img src={imagePreview[field.name]} alt="Preview" className="w-full h-48 object-cover" />
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    setImagePreview(prev => {
+                                      const next = { ...prev };
+                                      delete next[field.name];
+                                      return next;
+                                    });
+                                    if (inputRefs.current[field.name]) inputRefs.current[field.name]!.value = "";
+                                  }}
+                                  className="absolute top-2 right-2 bg-white/90 p-2 rounded-full text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col items-center justify-center py-6 cursor-pointer text-ink/40 hover:text-ink/70 transition-colors">
+                                <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mb-2 shadow-sm">
+                                  {uploadingField === field.name ? <Loader2 className="animate-spin" size={20} /> : <UploadCloud size={20} />}
+                                </div>
+                                <span className="text-xs font-bold uppercase tracking-widest">
+                                  {uploadingField === field.name ? "Uploading..." : "Drag & Drop or Click to Upload"}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
                 ) : (
                   <>
                     {/* Standard Form Rendering for other tables */}
-                    {TABLE_CONFIG[formTable].fields.map((field) => {
+                    {fieldsToRender.map((field) => {
                       if (field.name === "industry_id" && industries.length > 0) {
                         return (
                           <div key={field.name} className="space-y-2">
@@ -1861,6 +2101,13 @@ export function AdminPage() {
                       }
 
                       const isClientImage = formTable === "clients" && field.name === "image_url";
+                      const defaultValue = isEditingTestimonial
+                        ? field.name === "client_name"
+                          ? (editingTestimonial?.client_name ?? "")
+                          : field.name === "quote"
+                            ? (editingTestimonial?.quote ?? "")
+                            : undefined
+                        : undefined;
 
                       return (
                         <div key={field.name} className="space-y-2">
@@ -1873,6 +2120,7 @@ export function AdminPage() {
                             <textarea
                               name={field.name}
                               placeholder={field.placeholder}
+                              defaultValue={defaultValue}
                               rows={4}
                               className="w-full bg-sand/30 border border-ink/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-ink/10 focus:outline-none transition-all resize-none"
                               required={field.required}
@@ -1884,6 +2132,7 @@ export function AdminPage() {
                                 type={field.type === "url" ? "text" : field.type || "text"}
                                 name={field.name}
                                 placeholder={field.placeholder}
+                                defaultValue={defaultValue}
                                 className="w-full bg-sand/30 border border-ink/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-ink/10 focus:outline-none transition-all"
                                 required={field.required}
                               />
