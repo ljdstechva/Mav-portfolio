@@ -3,10 +3,11 @@ import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
 export const runtime = "nodejs";
 
-type AllowedTable = "testimonials";
+type AllowedTable = "testimonials" | "industries";
 
 const TABLE_COLUMNS: Record<AllowedTable, string[]> = {
   testimonials: ["client_name", "quote"],
+  industries: ["name"],
 };
 
 async function ensureAuthed(request: Request) {

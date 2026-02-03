@@ -21,7 +21,9 @@ import {
   X,
   ChevronRight,
   Search,
-  ArrowLeft
+  ArrowLeft,
+  Menu,
+  Pencil
 } from "lucide-react";
 
 import clsx from "clsx";
@@ -140,8 +142,8 @@ const TABLE_CONFIG: Record<
     ],
   },
   clients: {
-    label: "Clients",
-    singularLabel: "Client",
+    label: "Graphic Designs",
+    singularLabel: "Graphic Design",
     icon: LayoutDashboard,
     fields: [
       { name: "industry_id", label: "Industry" },
@@ -251,7 +253,7 @@ export function AdminPage() {
   const [selectedTable, setSelectedTable] = useState<TableKey>("industries");
   const [selectedIndustryId, setSelectedIndustryId] = useState<string | null>(null);
   const [selectedCarouselClient, setSelectedCarouselClient] = useState<string | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // For mobile responsiveness if needed
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createTableOverride, setCreateTableOverride] = useState<TableKey | null>(null);
 
@@ -285,6 +287,7 @@ export function AdminPage() {
   const [clientDeleteState, setClientDeleteState] = useState<DeleteState>("idle");
   const [clientDeleteError, setClientDeleteError] = useState("");
   const [editingTestimonial, setEditingTestimonial] = useState<TestimonialItem | null>(null);
+  const [editingIndustry, setEditingIndustry] = useState<IndustryItem | null>(null);
 
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
@@ -471,7 +474,27 @@ export function AdminPage() {
 
       }
 
-      if (targetTable === "testimonials" && editingTestimonial) {
+      if (targetTable === "industries" && editingIndustry) {
+        const response = await fetch("/api/admin-update", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          },
+          body: JSON.stringify({
+            table: "industries",
+            id: editingIndustry.id,
+            values: {
+              name: values.name,
+            },
+          }),
+        });
+
+        if (!response.ok) {
+          const payload = await response.json();
+          throw new Error(payload.message ?? "Update failed");
+        }
+      } else if (targetTable === "testimonials" && editingTestimonial) {
         const response = await fetch("/api/admin-update", {
           method: "POST",
           headers: {
@@ -571,6 +594,7 @@ export function AdminPage() {
       setImagePreview({});
       setBatchImages([]);
       setEditingTestimonial(null);
+      setEditingIndustry(null);
       await fetchAdminData();
 
       // Close form after short delay on success
@@ -783,6 +807,7 @@ export function AdminPage() {
     setShowCreateForm(false);
     setCreateTableOverride(null);
     setEditingTestimonial(null);
+    setEditingIndustry(null);
   };
 
   const formTable = createTableOverride ?? selectedTable;
@@ -801,6 +826,7 @@ export function AdminPage() {
     ? TABLE_CONFIG[formTable].fields.filter((field) => ["client_name", "quote"].includes(field.name))
     : TABLE_CONFIG[formTable].fields;
   const isEditingTestimonial = formTable === "testimonials" && Boolean(editingTestimonial);
+  const isEditingIndustry = formTable === "industries" && Boolean(editingIndustry);
 
   if (!mounted) {
     return null;
@@ -909,14 +935,23 @@ export function AdminPage() {
       <aside className={clsx("fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-ink/10 transition-transform duration-300 transform lg:translate-x-0 lg:static",
         !isSidebarOpen && "-translate-x-full"
       )}>
-        <div className="p-8 border-b border-ink/5">
+        <div className="p-6 lg:p-8 border-b border-ink/5 flex items-center justify-between">
           <h1 className="font-bold text-2xl tracking-tighter">MAV<span className="font-normal text-ink/40">ADMIN</span></h1>
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen(false)}
+            className="lg:hidden w-9 h-9 rounded-full border border-ink/10 flex items-center justify-center text-ink/60 hover:text-ink hover:border-ink/30"
+            aria-label="Close sidebar"
+          >
+            <X size={16} />
+          </button>
         </div>
 
         <nav className="p-4 space-y-1 overflow-y-auto max-h-[calc(100vh-160px)]">
           {Object.entries(TABLE_CONFIG)
             .filter(([key]) => (
               [
+                "clients",
                 "carousels",
                 "reels",
                 "stories",
@@ -936,6 +971,7 @@ export function AdminPage() {
                     setSelectedIndustryId(null);
                     setSelectedCarouselClient(null);
                     setShowCreateForm(false);
+                    setIsSidebarOpen(false);
                   }}
                   className={clsx(
 
@@ -960,10 +996,27 @@ export function AdminPage() {
         </div>
       </aside>
 
+      {isSidebarOpen && (
+        <button
+          type="button"
+          onClick={() => setIsSidebarOpen(false)}
+          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+          aria-label="Close sidebar overlay"
+        />
+      )}
+
       {/* Main Content */}
       <main className="flex-1 min-w-0 overflow-auto h-screen relative">
-        <header className="sticky top-0 z-40 bg-sand/80 backdrop-blur-md border-b border-ink/5 px-8 py-6 flex items-center justify-between">
+        <header className="sticky top-0 z-40 bg-sand/80 backdrop-blur-md border-b border-ink/5 px-4 py-4 sm:px-8 sm:py-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(true)}
+              className="lg:hidden w-10 h-10 rounded-2xl bg-white border border-ink/10 flex items-center justify-center text-ink/70"
+              aria-label="Open sidebar"
+            >
+              <Menu size={18} />
+            </button>
             <div className="p-3 bg-white rounded-2xl shadow-sm border border-ink/5 text-ink">
               <CurrentIcon size={24} />
             </div>
@@ -988,12 +1041,13 @@ export function AdminPage() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {selectedTable === "clients" && (
               <button
                 onClick={() => {
                   setCreateTableOverride("industries");
                   setShowCreateForm(true);
+                  setIsSidebarOpen(false);
                 }}
                 className="bg-white text-ink px-5 py-3 rounded-xl font-medium text-sm flex items-center gap-2 border border-ink/10 hover:border-ink/30 hover:bg-sand transition-all"
               >
@@ -1011,7 +1065,7 @@ export function AdminPage() {
           </div>
         </header>
 
-        <div className="p-8">
+        <div className="p-4 sm:p-8">
           {adminDataError && (
 
             <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
@@ -1034,6 +1088,18 @@ export function AdminPage() {
                       className="text-xs uppercase tracking-widest font-bold opacity-50 hover:opacity-100 flex items-center gap-2 transition-opacity"
                     >
                       <ArrowLeft size={14} /> Back to Industries
+                    </button>
+                    <button
+                      onClick={() => {
+                        const name = industries.find(i => i.id === selectedIndustryId)?.name ?? "Industry";
+                        setEditingIndustry({ id: selectedIndustryId, name });
+                        setCreateTableOverride("industries");
+                        setShowCreateForm(true);
+                        setIsSidebarOpen(false);
+                      }}
+                      className="text-xs uppercase tracking-widest font-bold text-white/70 hover:text-white flex items-center gap-2 transition-colors"
+                    >
+                      <Pencil size={14} /> Edit Industry
                     </button>
                     <button
                       onClick={() => {
@@ -1132,29 +1198,29 @@ export function AdminPage() {
                             animate={{ opacity: 1, scale: 1 }}
                             className="bg-white rounded-2xl p-4 border border-ink/5 hover:border-ink/20 hover:shadow-lg transition-all text-left cursor-pointer"
                           >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex-1 min-w-0">
-                                <h3 className="font-bold text-base truncate">{name}</h3>
-                                <p className="text-xs text-ink/40">{items.length} images</p>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    if (!selectedIndustryId) return;
-                                    setClientDeletePrompt({ industryId: selectedIndustryId, name });
-                                    setClientDeleteText("");
-                                    setClientDeleteError("");
-                                  }}
-                                  className="w-8 h-8 rounded-full bg-red-50 text-red-500 hover:bg-red-100 transition-colors flex items-center justify-center"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                                <div className="w-8 h-8 rounded-full bg-sand flex items-center justify-center text-ink/40">
-                                  <ChevronRight size={16} />
-                                </div>
-                              </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-base truncate">{name}</h3>
+                          <p className="text-xs text-ink/40">{items.length} images</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              if (!selectedIndustryId) return;
+                              setClientDeletePrompt({ industryId: selectedIndustryId, name });
+                              setClientDeleteText("");
+                              setClientDeleteError("");
+                            }}
+                            className="w-8 h-8 rounded-full bg-red-50 text-red-500 hover:bg-red-100 transition-colors flex items-center justify-center"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                          <div className="w-8 h-8 rounded-full bg-sand flex items-center justify-center text-ink/40">
+                            <ChevronRight size={16} />
+                          </div>
+                        </div>
                             </div>
                           </motion.div>
                         ))}
@@ -1296,8 +1362,24 @@ export function AdminPage() {
                               ).size} Clients
                             </p>
                           </div>
-                          <div className="w-10 h-10 rounded-full bg-sand group-hover:bg-ink group-hover:text-white transition-colors flex items-center justify-center text-ink/40">
-                            <ChevronRight size={20} />
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setEditingIndustry({ id: item.id, name: item.name ?? "" });
+                                setCreateTableOverride("industries");
+                                setShowCreateForm(true);
+                                setIsSidebarOpen(false);
+                              }}
+                              className="w-9 h-9 rounded-full bg-ink/5 text-ink/60 hover:bg-ink/10 hover:text-ink transition-colors flex items-center justify-center"
+                              aria-label="Edit industry"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            <div className="w-10 h-10 rounded-full bg-sand group-hover:bg-ink group-hover:text-white transition-colors flex items-center justify-center text-ink/40">
+                              <ChevronRight size={20} />
+                            </div>
                           </div>
                         </motion.div>
                       ))
@@ -1550,7 +1632,9 @@ export function AdminPage() {
                 <h3 className="text-xl font-bold">
                   {isEditingTestimonial
                     ? "Edit Testimonial"
-                    : `New ${showClientForm ? "Client" : TABLE_CONFIG[formTable].singularLabel}`}
+                    : isEditingIndustry
+                      ? "Edit Industry"
+                      : `New ${showClientForm ? "Client" : TABLE_CONFIG[formTable].singularLabel}`}
                 </h3>
                 <button onClick={closeCreateForm} className="p-2 hover:bg-ink/5 rounded-full transition-colors">
                   <X size={20} />
@@ -1558,7 +1642,11 @@ export function AdminPage() {
               </div>
 
               <form
-                key={isEditingTestimonial ? editingTestimonial?.id ?? "edit" : "create"}
+                key={isEditingTestimonial
+                  ? editingTestimonial?.id ?? "edit"
+                  : isEditingIndustry
+                    ? editingIndustry?.id ?? "edit"
+                    : "create"}
                 ref={createFormRef}
                 onSubmit={handleUpload}
                 className="flex-1 overflow-y-auto p-6 space-y-6"
@@ -1918,7 +2006,9 @@ export function AdminPage() {
                           : field.name === "quote"
                             ? (editingTestimonial?.quote ?? "")
                             : undefined
-                        : undefined;
+                        : isEditingIndustry && field.name === "name"
+                          ? (editingIndustry?.name ?? "")
+                          : undefined;
 
                       return (
                         <div key={field.name} className="space-y-2">
