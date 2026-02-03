@@ -72,6 +72,7 @@ export function Portfolio() {
   const [industries, setIndustries] = useState<PortfolioIndustry[]>([]);
   const [carouselClients, setCarouselClients] = useState<CarouselClient[]>([]);
   const [reels, setReels] = useState<ReelItem[]>([]);
+  const [stories, setStories] = useState<ReelItem[]>([]);
   const [photoEditing, setPhotoEditing] = useState<PhotoEditingItem[]>([]);
   const [copywritingIndustry, setCopywritingIndustry] = useState<PortfolioIndustry | null>(null);
   const [industriesLoading, setIndustriesLoading] = useState(true);
@@ -133,6 +134,7 @@ export function Portfolio() {
           video_url: string;
           created_at: string;
         }[];
+        const rawStories = (data.stories ?? []) as Record<string, unknown>[];
         const rawPhotoEditing = (data.photoEditing ?? []) as {
           id: string;
           client: string;
@@ -213,6 +215,26 @@ export function Portfolio() {
           video_url: r.video_url
         }));
 
+        const storiesData = rawStories.map((story, index) => {
+          const id = typeof story.id === "string" ? story.id : `story-${index}`;
+          const title =
+            (typeof story.title === "string" && story.title) ||
+            (typeof story.client === "string" && story.client) ||
+            (typeof story.name === "string" && story.name) ||
+            "Untitled Story";
+          const videoUrl =
+            (typeof story.video_url === "string" && story.video_url) ||
+            (typeof story.story_url === "string" && story.story_url) ||
+            (typeof story.media_url === "string" && story.media_url) ||
+            (typeof story.url === "string" && story.url) ||
+            "";
+          return {
+            id,
+            title,
+            video_url: videoUrl,
+          };
+        });
+
         // Process Photo Editing
         const photoEditingData = rawPhotoEditing.map(p => ({
           id: p.id,
@@ -241,6 +263,7 @@ export function Portfolio() {
           setIndustries(byIndustry);
           setCarouselClients(carousels);
           setReels(reelsData);
+          setStories(storiesData);
           setPhotoEditing(photoEditingData);
           setCopywritingIndustry(copyIndustryData);
         }
@@ -373,6 +396,23 @@ export function Portfolio() {
                 </motion.div>
               )}
 
+              {selectedCategory?.id === 'stories' && (
+                <motion.div
+                  className="w-full"
+                  key="stories-list"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                >
+                  <ReelsList 
+                    reels={stories}
+                    onBack={goBackToCategories}
+                    loading={industriesLoading}
+                    autoplay
+                  />
+                </motion.div>
+              )}
+
               {selectedCategory?.id === 'photo-editing' && (
                 <motion.div
                   className="w-full"
@@ -407,7 +447,7 @@ export function Portfolio() {
               )}
 
               {/* Placeholders for other categories */}
-              {selectedCategory && selectedCategory.id !== 'graphics' && selectedCategory.id !== 'carousels' && selectedCategory.id !== 'videos' && selectedCategory.id !== 'copywriting' && selectedCategory.id !== 'photo-editing' && (
+              {selectedCategory && selectedCategory.id !== 'graphics' && selectedCategory.id !== 'carousels' && selectedCategory.id !== 'videos' && selectedCategory.id !== 'stories' && selectedCategory.id !== 'copywriting' && selectedCategory.id !== 'photo-editing' && (
                 <motion.div
                   className="w-full"
                   key="placeholder"
@@ -564,11 +604,13 @@ function PhotoEditingList({
 function ReelsList({
   reels,
   onBack,
-  loading
+  loading,
+  autoplay = false
 }: {
   reels: ReelItem[];
   onBack: () => void;
   loading: boolean;
+  autoplay?: boolean;
 }) {
   const [visibleCount, setVisibleCount] = useState(3);
   const prevCountRef = useRef(3);
@@ -630,6 +672,9 @@ function ReelsList({
                   controls
                   className="w-full h-full object-cover"
                   playsInline
+                  autoPlay={autoplay}
+                  muted={autoplay}
+                  loop={autoplay}
                 />
               </motion.div>
             ))}

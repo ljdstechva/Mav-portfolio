@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
@@ -28,16 +28,6 @@ import clsx from "clsx";
 
 // --- Types ---
 
-type GraphicDesignItem = {
-  id: string;
-  title: string;
-  industry_id?: string | null;
-  client?: string | null;
-  category?: string | null;
-  image_url?: string | null;
-  created_at?: string | null;
-};
-
 type IndustryItem = {
   id: string;
   name: string;
@@ -61,6 +51,13 @@ type CarouselImageItem = {
 };
 
 type ReelItem = {
+  id: string;
+  industry_id?: string | null;
+  client?: string | null;
+  video_url?: string | null;
+};
+
+type StoryItem = {
   id: string;
   industry_id?: string | null;
   client?: string | null;
@@ -114,9 +111,9 @@ type AdminListItem = {
 type TableKey =
   | "industries"
   | "clients"
-  | "graphic_designs"
   | "carousels"
   | "reels"
+  | "stories"
   | "copywriting"
   | "photo_editing"
   | "testimonials";
@@ -153,16 +150,6 @@ const TABLE_CONFIG: Record<
       { name: "sort_order", label: "Sort Order", type: "number", placeholder: "0" },
     ],
   },
-  graphic_designs: {
-    label: "Graphic Designs",
-    singularLabel: "Graphic Design",
-    icon: Palette,
-    fields: [
-      { name: "industry_id", label: "Industry ID" },
-      { name: "client", label: "Client Name" },
-      { name: "image_url", label: "Image", type: "url", required: true },
-    ],
-  },
   carousels: {
     label: "Carousels",
     singularLabel: "Carousel",
@@ -176,6 +163,14 @@ const TABLE_CONFIG: Record<
   reels: {
     label: "Reels",
     singularLabel: "Reel",
+    icon: Video,
+    fields: [
+      { name: "video_url", label: "Video URL", type: "url", required: true },
+    ],
+  },
+  stories: {
+    label: "Stories",
+    singularLabel: "Story",
     icon: Video,
     fields: [
       { name: "video_url", label: "Video URL", type: "url", required: true },
@@ -239,9 +234,9 @@ export function AdminPage() {
   // Data State
   const [industries, setIndustries] = useState<IndustryItem[]>([]);
   const [clients, setClients] = useState<ClientItem[]>([]);
-  const [graphicDesigns, setGraphicDesigns] = useState<GraphicDesignItem[]>([]);
   const [carousels, setCarousels] = useState<CarouselImageItem[]>([]);
   const [reels, setReels] = useState<ReelItem[]>([]);
+  const [stories, setStories] = useState<StoryItem[]>([]);
   const [copywriting, setCopywriting] = useState<CopywritingItem[]>([]);
   const [photoEditing, setPhotoEditing] = useState<PhotoEditingItem[]>([]);
   const [testimonials, setTestimonials] = useState<TestimonialItem[]>([]);
@@ -253,7 +248,7 @@ export function AdminPage() {
   // UI State
   const [loginState, setLoginState] = useState<LoginState>("idle");
   const [loginError, setLoginError] = useState("");
-  const [selectedTable, setSelectedTable] = useState<TableKey>("graphic_designs");
+  const [selectedTable, setSelectedTable] = useState<TableKey>("industries");
   const [selectedIndustryId, setSelectedIndustryId] = useState<string | null>(null);
   const [selectedCarouselClient, setSelectedCarouselClient] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true); // For mobile responsiveness if needed
@@ -337,9 +332,10 @@ export function AdminPage() {
 
       setIndustries(data.industries);
       setClients(data.clients ?? []);
-      setGraphicDesigns(data.graphicDesigns);
+
       setCarousels(data.carousels ?? []);
       setReels(data.reels);
+      setStories(data.stories ?? []);
       setCopywriting(data.copywriting);
       setPhotoEditing(data.photoEditing);
       setTestimonials(data.testimonials);
@@ -421,6 +417,7 @@ export function AdminPage() {
     setClients([]);
     setCarousels([]);
     setReels([]);
+    setStories([]);
     setCopywriting([]);
     setPhotoEditing([]);
     setTestimonials([]);
@@ -440,16 +437,11 @@ export function AdminPage() {
     try {
       const values: Record<string, string> = {};
 
-      // Determine the table to use (clients when in graphic_designs with industry selected)
+      // Determine the table to use
       let targetTable = createTableOverride ?? selectedTable;
-      if (!createTableOverride && selectedTable === "graphic_designs" && selectedIndustryId) {
-        targetTable = "clients";
-      }
 
       TABLE_CONFIG[targetTable].fields.forEach((field) => {
-        if (field.name !== "image_url" || targetTable !== "graphic_designs") {
-          values[field.name] = String(form.get(field.name) ?? "").trim();
-        }
+        values[field.name] = String(form.get(field.name) ?? "").trim();
       });
 
       // Auto-assign industry_id for clients when inside an industry
@@ -501,7 +493,7 @@ export function AdminPage() {
           const payload = await response.json();
           throw new Error(payload.message ?? "Update failed");
         }
-      // Carousel Images - Direct Supabase Insert
+        // Carousel Images - Direct Supabase Insert
       } else if (targetTable === "carousels") {
         if (!supabase) {
           throw new Error("Supabase client is not configured.");
@@ -541,25 +533,6 @@ export function AdminPage() {
             image_url: image.url,
             sort_order: String(baseSortOrder + index),
           };
-
-          const response = await fetch("/api/admin-insert", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
-            },
-            body: JSON.stringify({ table: targetTable, values: recordValues }),
-          });
-
-          if (!response.ok) {
-            const payload = await response.json();
-            throw new Error(payload.message ?? "Batch upload failed");
-          }
-        }
-      } else if (targetTable === "graphic_designs" && batchImages.length > 0) {
-        // Special handling for Graphic Designs batch upload
-        for (const image of batchImages) {
-          const recordValues = { ...values, image_url: image.url };
 
           const response = await fetch("/api/admin-insert", {
             method: "POST",
@@ -863,8 +836,8 @@ export function AdminPage() {
   };
 
   const formTable = createTableOverride ?? selectedTable;
-  const showClientForm = selectedTable === "graphic_designs" && selectedIndustryId && !createTableOverride;
-  const showGraphicDesignsForm = formTable === "graphic_designs" && !selectedIndustryId;
+  const showClientForm = selectedTable === "clients" && selectedIndustryId && !createTableOverride;
+
 
   useEffect(() => {
     setSelectedClientName(null);
@@ -963,16 +936,12 @@ export function AdminPage() {
     switch (selectedTable) {
       case "industries": return industries;
       case "clients":
-        if (selectedIndustryId) {
-          return clients.filter(item => item.industry_id === selectedIndustryId) as AdminListItem[];
-        }
-        return clients as AdminListItem[];
-      case "graphic_designs":
-        if (!selectedIndustryId) return industries as AdminListItem[]; // Show industries first
-        // When industry is selected, show clients for that industry
+        if (!selectedIndustryId) return industries as AdminListItem[];
         return clients.filter(item => item.industry_id === selectedIndustryId) as AdminListItem[];
+
       case "carousels": return carousels as AdminListItem[];
       case "reels": return reels;
+      case "stories": return stories;
       case "copywriting": return copywriting;
       case "photo_editing": return photoEditing;
       case "testimonials": return testimonials;
@@ -998,9 +967,9 @@ export function AdminPage() {
           {Object.entries(TABLE_CONFIG)
             .filter(([key]) => (
               [
-                "graphic_designs",
                 "carousels",
                 "reels",
+                "stories",
                 "copywriting",
                 "photo_editing",
                 "testimonials",
@@ -1356,8 +1325,8 @@ export function AdminPage() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   <AnimatePresence>
-                    {/* Special Render for Top Level Graphic Designs (Industry List) */}
-                    {selectedTable === "graphic_designs" && !selectedIndustryId ? (
+                    {/* Special Render for Top Level Clients (Industry List) */}
+                    {selectedTable === "clients" && !selectedIndustryId ? (
                       currentData.map((item) => (
                         <motion.div
                           key={item.id}
@@ -1467,18 +1436,18 @@ export function AdminPage() {
                             </div>
 
                             {/* Image Preview if available */}
-                              {imageSrc && (
-                                <button
-                                  type="button"
-                                  onClick={(event) => {
-                                    if (selectedTable === "testimonials") {
-                                      event.stopPropagation();
-                                    }
-                                    if (canShowBeforeAfter) {
-                                      setPreviewModal({
-                                        type: "beforeAfter",
-                                        title: previewTitle,
-                                        before: beforeImage,
+                            {imageSrc && (
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  if (selectedTable === "testimonials") {
+                                    event.stopPropagation();
+                                  }
+                                  if (canShowBeforeAfter) {
+                                    setPreviewModal({
+                                      type: "beforeAfter",
+                                      title: previewTitle,
+                                      before: beforeImage,
                                       after: afterImage,
                                     });
                                   } else {
@@ -1501,7 +1470,7 @@ export function AdminPage() {
                             )}
 
                             {/* Video Preview if available */}
-                            {selectedTable === "reels" && item.video_url && (
+                            {(["reels", "stories"] as TableKey[]).includes(selectedTable) && item.video_url && (
                               <div className="aspect-video w-full bg-black rounded-2xl mb-4 flex items-center justify-center relative overflow-hidden">
                                 <video
                                   src={item.video_url}
@@ -1721,114 +1690,6 @@ export function AdminPage() {
                               <img src={image.url} alt="Preview" className="h-32 w-full object-cover" />
                             </div>
                           ))}
-                        </div>
-                      )}
-                    </div>
-                  </>
-                ) : showGraphicDesignsForm ? (
-                  <>
-                    {/* Industry Selector - Disabled if selected */}
-                    <div className="space-y-2">
-                      <label className="text-xs font-bold uppercase tracking-widest text-ink/50">Industry ID</label>
-                      <div className="relative">
-                        <select
-                          name="industry_id"
-                          defaultValue={selectedIndustryId || ""}
-                          disabled={!!selectedIndustryId}
-                          className="w-full bg-sand/30 border border-ink/10 rounded-xl px-4 py-3 appearance-none focus:ring-2 focus:ring-ink/10 focus:outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <option value="">Select Industry...</option>
-                          {industries.map(i => (
-                            <option key={i.id} value={i.id}>{i.name}</option>
-                          ))}
-                        </select>
-                        <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 rotate-90 pointer-events-none text-ink/30" size={16} />
-                        {selectedIndustryId && <input type="hidden" name="industry_id" value={selectedIndustryId} />}
-                      </div>
-                    </div>
-
-                    {/* Standard Fields (Title, Client) */}
-                    {TABLE_CONFIG.graphic_designs.fields.filter(f => !["industry_id", "image_url"].includes(f.name)).map(field => (
-                      <div key={field.name} className="space-y-2">
-                        <label className="text-xs font-bold uppercase tracking-widest text-ink/50 flex justify-between">
-                          {field.label}
-                          {field.required && <span className="text-terracotta text-[10px]">REQUIRED</span>}
-                        </label>
-                        <input
-                          type="text"
-                          name={field.name}
-                          className="w-full bg-sand/30 border border-ink/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-ink/10 focus:outline-none transition-all"
-                          required={field.required}
-                        />
-                      </div>
-                    ))}
-
-                    {/* Batch Image Uploader with Drag Sort */}
-                    <div className="space-y-3">
-                      <label className="text-xs font-bold uppercase tracking-widest text-ink/50 flex justify-between">
-                        Images (Batch Upload & Sort)
-                        <span className="text-terracotta text-[10px]">REQUIRED</span>
-                      </label>
-
-                      <label
-                        htmlFor="batch-upload"
-                        className={clsx(
-                          "bg-sand/50 rounded-xl p-4 border border-dashed transition-colors block",
-                          dragOverField === "image_url" ? "border-ink/50 bg-sand/70" : "border-ink/20 hover:border-ink/40"
-                        )}
-                        onDragOver={(event) => {
-                          event.preventDefault();
-                          setDragOverField("image_url");
-                        }}
-                        onDragLeave={() => setDragOverField(null)}
-                        onDrop={(event) => {
-                          event.preventDefault();
-                          setDragOverField(null);
-                          if (event.dataTransfer?.files?.length) {
-                            void handleImageUpload("image_url", event.dataTransfer.files);
-                          }
-                        }}
-                      >
-                        <input
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          className="hidden"
-                          id="batch-upload"
-                          onChange={(e) => handleImageUpload("image_url", e.target.files)}
-                        />
-                        <div className="flex flex-col items-center justify-center py-6 cursor-pointer text-ink/40 hover:text-ink/70 transition-colors w-full">
-                          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mb-2 shadow-sm">
-                            {uploadingField === "image_url" ? <Loader2 className="animate-spin" size={20} /> : <UploadCloud size={20} />}
-                          </div>
-                          <span className="text-xs font-bold uppercase tracking-widest">
-                            {uploadingField === "image_url" ? "Uploading..." : "Drag & Drop or Click to Upload"}
-                          </span>
-                        </div>
-                      </label>
-
-                      {batchImages.length > 0 && (
-                        <div className="mt-4">
-                          <Reorder.Group axis="y" values={batchImages} onReorder={setBatchImages} className="space-y-2">
-                            {batchImages.map((image) => (
-                              <Reorder.Item key={image.id} value={image} className="bg-white p-3 rounded-xl border border-ink/5 flex items-center gap-4 cursor-grab active:cursor-grabbing shadow-sm">
-                                <div className="w-16 h-12 bg-sand rounded-lg overflow-hidden flex-shrink-0">
-                                  <img src={image.url} className="w-full h-full object-cover" alt="preview" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-xs text-ink/40 truncate">{image.url.split('/').pop()}</p>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => setBatchImages(prev => prev.filter(p => p.id !== image.id))}
-                                  className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
-                              </Reorder.Item>
-                            ))}
-                          </Reorder.Group>
-                          <p className="text-[10px] text-ink/40 text-center mt-2">Drag items to reorder</p>
                         </div>
                       )}
                     </div>

@@ -30,6 +30,19 @@ export async function GET() {
       .order("created_at", { ascending: false }),
   ]);
 
+  let storiesData: unknown[] = [];
+  try {
+    const stories = await supabase
+      .from("stories")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (!stories.error) {
+      storiesData = stories.data ?? [];
+    }
+  } catch (error) {
+    storiesData = [];
+  }
+
   const error = industries.error ?? clients.error ?? carousels.error ?? copywriting.error ?? reels.error ?? photoEditing.error;
   if (error) {
     return NextResponse.json({ message: error.message }, { status: 500 });
@@ -41,6 +54,7 @@ export async function GET() {
     carousels: carousels.data ?? [],
     copywriting: copywriting.data ?? [],
     reels: reels.data ?? [],
+    stories: storiesData,
     photoEditing: photoEditing.data ?? [],
   });
 }

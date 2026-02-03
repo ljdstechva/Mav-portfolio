@@ -10,7 +10,8 @@ import {
   Layers,
   Video,
   FileText,
-  Aperture
+  Aperture,
+  BookOpen
 } from "lucide-react";
 
 export type PortfolioCategory = {
@@ -71,6 +72,13 @@ export const PORTFOLIO_CATEGORIES: PortfolioCategory[] = [
     icon: Aperture, 
     description: "Professional retouching and color grading.", 
     color: "bg-orange-100 text-orange-600" 
+  },
+  { 
+    id: "stories", 
+    name: "Stories", 
+    icon: BookOpen, 
+    description: "Captivating narratives and storytelling.", 
+    color: "bg-yellow-100 text-yellow-600" 
   },
 ];
 

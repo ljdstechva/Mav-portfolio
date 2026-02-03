@@ -6,9 +6,9 @@ export const runtime = "nodejs";
 type AllowedTable =
   | "industries"
   | "clients"
-  | "graphic_designs"
   | "carousels"
   | "reels"
+  | "stories"
   | "copywriting"
   | "photo_editing"
   | "testimonials";
@@ -16,9 +16,9 @@ type AllowedTable =
 const TABLE_COLUMNS: Record<AllowedTable, string[]> = {
   industries: ["name"],
   clients: ["industry_id", "name", "image_url", "sort_order"],
-  graphic_designs: ["industry_id", "client_id", "title", "client", "category", "image_url"],
   carousels: ["client", "image_url", "position"],
   reels: ["video_url"],
+  stories: ["video_url"],
   copywriting: ["image_url"],
   photo_editing: ["before_image_url", "after_image_url"],
   testimonials: ["client_name", "quote"],

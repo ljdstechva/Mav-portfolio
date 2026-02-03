@@ -35,9 +35,9 @@ export async function GET(request: Request) {
   const [
     industries,
     clients,
-    graphicDesigns,
     carousels,
     reels,
+    stories,
     copywriting,
     photoEditing,
     testimonials,
@@ -49,14 +49,11 @@ export async function GET(request: Request) {
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: false }),
     supabase
-      .from("graphic_designs")
-      .select("*")
-      .order("created_at", { ascending: false }),
-    supabase
       .from("carousels")
       .select("*")
       .order("created_at", { ascending: false }),
     supabase.from("reels").select("*").order("created_at", { ascending: false }),
+    supabase.from("stories").select("*").order("created_at", { ascending: false }),
     supabase.from("copywriting").select("*").order("created_at", { ascending: false }),
     supabase.from("photo_editing").select("*").order("created_at", { ascending: false }),
     supabase.from("testimonials").select("*").order("created_at", { ascending: false }),
@@ -65,9 +62,9 @@ export async function GET(request: Request) {
   const error =
     industries.error ??
     clients.error ??
-    graphicDesigns.error ??
     carousels.error ??
     reels.error ??
+    stories.error ??
     copywriting.error ??
     photoEditing.error ??
     testimonials.error;
@@ -79,9 +76,9 @@ export async function GET(request: Request) {
   const response = NextResponse.json({
     industries: industries.data ?? [],
     clients: clients.data ?? [],
-    graphicDesigns: graphicDesigns.data ?? [],
     carousels: carousels.data ?? [],
     reels: reels.data ?? [],
+    stories: stories.data ?? [],
     copywriting: copywriting.data ?? [],
     photoEditing: photoEditing.data ?? [],
     testimonials: testimonials.data ?? [],
