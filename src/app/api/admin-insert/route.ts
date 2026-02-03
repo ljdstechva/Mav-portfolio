@@ -5,9 +5,9 @@ export const runtime = "nodejs";
 
 type AllowedTable =
   | "industries"
+  | "clients"
   | "graphic_designs"
   | "carousels"
-  | "carousel_images"
   | "reels"
   | "copywriting"
   | "photo_editing"
@@ -15,17 +15,17 @@ type AllowedTable =
 
 const TABLE_COLUMNS: Record<AllowedTable, string[]> = {
   industries: ["name"],
-  graphic_designs: ["industry_id", "title", "client", "category", "image_url"],
-  carousels: ["industry_id", "client", "title", "description"],
-  carousel_images: ["carousel_id", "image_url", "position"],
+  clients: ["industry_id", "name", "image_url", "sort_order"],
+  graphic_designs: ["industry_id", "client_id", "title", "client", "category", "image_url"],
+  carousels: ["client", "image_url", "position"],
   reels: ["industry_id", "client", "title", "video_url"],
-  copywriting: ["industry_id", "client", "title", "body"],
+  copywriting: ["industry_id", "client", "title", "body", "image_url"],
   photo_editing: ["industry_id", "client", "title", "before_image_url", "after_image_url"],
   testimonials: ["client_name", "role", "company", "quote", "avatar_url"],
 };
 
 const ARRAY_FIELDS = new Set([] as string[]);
-const NUMBER_FIELDS = new Set(["position"]);
+const NUMBER_FIELDS = new Set(["position", "sort_order"]);
 const JSON_FIELDS = new Set([] as string[]);
 
 async function ensureAuthed(request: Request) {
@@ -45,7 +45,7 @@ async function ensureAuthed(request: Request) {
       return false;
     }
     return true;
-  } catch (error) {
+  } catch {
     return false;
   }
 }
@@ -69,7 +69,7 @@ function normalizeValue(key: string, value: unknown) {
     if (JSON_FIELDS.has(key)) {
       try {
         return JSON.parse(trimmed);
-      } catch (error) {
+      } catch {
         return null;
       }
     }

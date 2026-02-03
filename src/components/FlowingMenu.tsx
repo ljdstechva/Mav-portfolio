@@ -1,13 +1,24 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { gsap } from 'gsap';
 
-interface MenuItemData {
+export interface MenuItemData {
   link: string;
   text: string;
   image: string;
 }
 
-interface FlowingMenuProps {
+export interface MenuItemProps extends MenuItemData {
+  speed: number;
+  textColor: string;
+  marqueeBgColor: string;
+  marqueeTextColor: string;
+  borderColor: string;
+  isFirst: boolean;
+  itemHeight: number;
+  onItemClick?: (item: MenuItemData) => void;
+}
+
+export interface FlowingMenuProps {
   items?: MenuItemData[];
   speed?: number;
   textColor?: string;
@@ -16,17 +27,6 @@ interface FlowingMenuProps {
   marqueeTextColor?: string;
   borderColor?: string;
   itemHeight?: number;
-  onItemClick?: (item: MenuItemData) => void;
-}
-
-interface MenuItemProps extends MenuItemData {
-  speed: number;
-  textColor: string;
-  marqueeBgColor: string;
-  marqueeTextColor: string;
-  borderColor: string;
-  isFirst: boolean;
-  itemHeight: number;
   onItemClick?: (item: MenuItemData) => void;
 }
 
@@ -63,7 +63,7 @@ const FlowingMenu: React.FC<FlowingMenuProps> = ({
   );
 };
 
-const MenuItem: React.FC<MenuItemProps> = ({
+export const MenuItem: React.FC<MenuItemProps> = ({
   link,
   text,
   image,
@@ -168,7 +168,7 @@ const MenuItem: React.FC<MenuItemProps> = ({
 
   return (
     <div
-      className="relative overflow-hidden text-center"
+      className="group relative overflow-hidden text-center cursor-pointer transition-transform duration-300 ease-out hover:scale-[1.01]"
       ref={itemRef}
       style={{
         borderTop: isFirst ? 'none' : `1px solid ${borderColor}`,
@@ -176,7 +176,7 @@ const MenuItem: React.FC<MenuItemProps> = ({
       }}
     >
       <a
-        className="flex items-center justify-center h-full relative cursor-pointer uppercase no-underline font-semibold text-[4vh]"
+        className="flex items-center justify-center h-full w-full relative cursor-pointer uppercase no-underline font-semibold text-[4vh]"
         href={link}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}

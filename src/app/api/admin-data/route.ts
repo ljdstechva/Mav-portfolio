@@ -20,7 +20,7 @@ async function ensureAuthed(request: Request) {
       return false;
     }
     return true;
-  } catch (error) {
+  } catch {
     return false;
   }
 }
@@ -34,9 +34,9 @@ export async function GET(request: Request) {
 
   const [
     industries,
+    clients,
     graphicDesigns,
     carousels,
-    carouselImages,
     reels,
     copywriting,
     photoEditing,
@@ -44,14 +44,18 @@ export async function GET(request: Request) {
   ] = await Promise.all([
     supabase.from("industries").select("*").order("created_at", { ascending: false }),
     supabase
+      .from("clients")
+      .select("*")
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false }),
+    supabase
       .from("graphic_designs")
       .select("*")
       .order("created_at", { ascending: false }),
-    supabase.from("carousels").select("*").order("created_at", { ascending: false }),
     supabase
-      .from("carousel_images")
+      .from("carousels")
       .select("*")
-      .order("position", { ascending: true }),
+      .order("created_at", { ascending: false }),
     supabase.from("reels").select("*").order("created_at", { ascending: false }),
     supabase.from("copywriting").select("*").order("created_at", { ascending: false }),
     supabase.from("photo_editing").select("*").order("created_at", { ascending: false }),
@@ -60,9 +64,9 @@ export async function GET(request: Request) {
 
   const error =
     industries.error ??
+    clients.error ??
     graphicDesigns.error ??
     carousels.error ??
-    carouselImages.error ??
     reels.error ??
     copywriting.error ??
     photoEditing.error ??
@@ -72,14 +76,20 @@ export async function GET(request: Request) {
     return NextResponse.json({ message: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     industries: industries.data ?? [],
+    clients: clients.data ?? [],
     graphicDesigns: graphicDesigns.data ?? [],
     carousels: carousels.data ?? [],
-    carouselImages: carouselImages.data ?? [],
     reels: reels.data ?? [],
     copywriting: copywriting.data ?? [],
     photoEditing: photoEditing.data ?? [],
     testimonials: testimonials.data ?? [],
   });
+
+  response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  response.headers.set('Pragma', 'no-cache');
+  response.headers.set('Expires', '0');
+
+  return response;
 }

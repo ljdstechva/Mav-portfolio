@@ -1,10 +1,13 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star } from 'lucide-react';
 
 export default function Preloader() {
+  const pathname = usePathname();
+  const isLandingRoute = pathname === '/';
   const [isLoading, setIsLoading] = useState(true);
   const [percent, setPercent] = useState(0);
   const [loadedCount, setLoadedCount] = useState(0);
@@ -15,6 +18,7 @@ export default function Preloader() {
   const isExiting = useRef(false);
 
   useEffect(() => {
+    if (!isLandingRoute) return;
     // Lock scroll
     document.body.style.overflow = 'hidden';
 
@@ -120,7 +124,11 @@ export default function Preloader() {
       clearTimeout(maxTime);
       document.body.style.overflow = '';
     };
-  }, [percent]);
+  }, [isLandingRoute, percent]);
+
+  if (!isLandingRoute) {
+    return null;
+  }
 
   return (
     <AnimatePresence mode="wait">

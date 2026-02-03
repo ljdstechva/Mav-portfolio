@@ -19,27 +19,180 @@ import {
 import clsx from "clsx";
 import NextImage from "next/image";
 import ChromaGrid from "./ChromaGrid";
-import FlowingMenu from "./FlowingMenu";
+import { MenuItem } from "./FlowingMenu";
 import CircularGallery from "./CircularGallery";
+import Carousel, { CarouselItemData } from "./Carousel";
 import StarBorder from "./StarBorder";
 import { GlobalSpotlight, MagicStyles } from "./MagicBento";
-import { PORTFOLIO_CATEGORIES, INDUSTRIES, Industry, PortfolioCategory } from "@/data/portfolioData";
+import { PORTFOLIO_CATEGORIES, PortfolioCategory } from "@/data/portfolioData";
+
+type PortfolioProject = {
+  id: string;
+  image: string;
+  title: string;
+  clientName: string;
+  clientOrder: number;
+};
+
+type PortfolioIndustry = {
+  id: string;
+  name: string;
+  projects: PortfolioProject[];
+};
+
+type CarouselClient = {
+  clientName: string;
+  items: CarouselItemData[];
+};
+
+type GalleryItem = {
+  image: string;
+  text: string;
+};
 
 export function Portfolio() {
   const [selectedCategory, setSelectedCategory] = useState<PortfolioCategory | null>(null);
-  const [selectedIndustry, setSelectedIndustry] = useState<Industry | null>(null);
+  const [selectedIndustry, setSelectedIndustry] = useState<PortfolioIndustry | null>(null);
+  const [industries, setIndustries] = useState<PortfolioIndustry[]>([]);
+  const [carouselClients, setCarouselClients] = useState<CarouselClient[]>([]);
+  const [industriesLoading, setIndustriesLoading] = useState(true);
+  const [industriesError, setIndustriesError] = useState<string | null>(null);
 
   const goBackToCategories = () => {
     setSelectedCategory(null);
     setSelectedIndustry(null);
   };
 
-  const goBackToIndustries = () => {
-    setSelectedIndustry(null);
+  const toggleIndustry = (industry: PortfolioIndustry) => {
+    if (selectedIndustry?.id === industry.id) {
+        setSelectedIndustry(null);
+    } else {
+        setSelectedIndustry(industry);
+    }
   };
 
+  useEffect(() => {
+    let active = true;
+
+    const loadIndustries = async () => {
+      try {
+        setIndustriesLoading(true);
+        setIndustriesError(null);
+        const response = await fetch("/api/portfolio-graphics", { cache: "no-store" });
+        if (!response.ok) {
+          let message = "Failed to load portfolio";
+          try {
+            const payload = await response.json();
+            if (payload?.message) message = payload.message;
+          } catch (error) {
+            // ignore json parse errors
+          }
+          throw new Error(message);
+        }
+
+        const data = await response.json();
+        const rawIndustries = (data.industries ?? []) as { id: string; name: string }[];
+        const rawClients = (data.clients ?? []) as {
+          id: string;
+          industry_id: string;
+          name: string;
+          image_url?: string | null;
+          sort_order?: number | null;
+          created_at?: string | null;
+        }[];
+        const rawCarousels = (data.carousels ?? []) as {
+          id: string;
+          client: string;
+          image_url: string;
+          position: number;
+          created_at: string;
+        }[];
+
+        // Process Graphics
+        const byIndustry = rawIndustries.map((industry) => {
+          const clientsForIndustry = rawClients
+            .filter((client) => client.industry_id === industry.id && client.image_url)
+            .sort((a, b) => {
+              const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+              const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+              return dateA - dateB;
+            });
+
+          const clientOrderMap = new Map<string, number>();
+          clientsForIndustry.forEach((client) => {
+            const key = client.name || "Untitled";
+            if (!clientOrderMap.has(key)) {
+              clientOrderMap.set(key, clientOrderMap.size);
+            }
+          });
+
+          const projects = clientsForIndustry.map((client, index) => {
+            const clientName = client.name || "Untitled";
+            return {
+              id: client.id || `${industry.id}-${index}`,
+              image: client.image_url as string,
+              title: client.name || "",
+              clientName,
+              clientOrder: clientOrderMap.get(clientName) ?? 0,
+            };
+          });
+
+          return {
+            id: industry.id,
+            name: industry.name,
+            projects,
+          } satisfies PortfolioIndustry;
+        });
+
+        // Process Carousels
+        const carouselMap = new Map<string, { position: number; item: CarouselItemData }[]>();
+        rawCarousels.forEach((c) => {
+          const client = c.client || "Untitled";
+          if (!carouselMap.has(client)) carouselMap.set(client, []);
+          carouselMap.get(client)!.push({
+            position: c.position,
+            item: {
+              id: c.id,
+              image: c.image_url,
+              title: client,
+            },
+          });
+        });
+
+        const carousels = Array.from(carouselMap.entries()).map(([clientName, items]) => ({
+          clientName,
+          items: items.sort((a, b) => a.position - b.position).map((i) => i.item),
+        })).sort((a, b) => a.clientName.localeCompare(b.clientName)); // Sort clients alphabetically
+
+        if (active) {
+          setIndustries(byIndustry);
+          setCarouselClients(carousels);
+        }
+      } catch (error) {
+        if (active) {
+          setIndustriesError(error instanceof Error ? error.message : "Failed to load portfolio");
+        }
+      } finally {
+        if (active) {
+          setIndustriesLoading(false);
+        }
+      }
+    };
+
+    loadIndustries();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const { ref: contentRef, height } = useContentHeight();
+
   return (
-    <section className="py-20 px-4 md:px-8 min-h-screen bg-white" id="portfolio">
+    <section
+      className="py-20 px-4 md:px-8 bg-white"
+      id="portfolio"
+    >
       <div className="container mx-auto">
         <div className="mb-12">
            {/* Breadcrumbs / Header */}
@@ -50,90 +203,264 @@ export function Portfolio() {
                 <>
                   <span>/</span>
                   <span 
-                    className={clsx("cursor-pointer hover:text-ink", !selectedIndustry && "font-bold text-ink")} 
-                    onClick={selectedCategory.id === 'graphics' ? goBackToIndustries : undefined}
+                    className={clsx("cursor-pointer hover:text-ink", "font-bold text-ink")} 
+                    onClick={selectedCategory.id === 'graphics' ? () => setSelectedIndustry(null) : undefined}
                   >
                     {selectedCategory.name}
                   </span>
                 </>
              )}
-
-             {selectedIndustry && (
-                <>
-                  <span>/</span>
-                  <span className="font-bold text-ink">{selectedIndustry.name}</span>
-                </>
-             )}
            </motion.div>
            
            <motion.h2 layout className="text-4xl md:text-5xl font-bold text-ink mb-4">
-              {selectedIndustry 
-                ? selectedIndustry.name 
-                : selectedCategory 
+              {selectedCategory 
                   ? selectedCategory.name 
                   : "Portfolio"}
            </motion.h2>
            
            <motion.p layout className="text-lg text-ink/60 max-w-2xl">
-              {selectedIndustry 
-                ? "Explore project gallery."
-                : selectedCategory
+              {selectedCategory
                   ? selectedCategory.description
                   : "Explore my creative work across different disciplines."}
            </motion.p>
         </div>
 
-        <AnimatePresence mode="wait">
-          {!selectedCategory && (
-            <CategoryGrid 
-              key="categories" 
-              onSelect={setSelectedCategory} 
-            />
-          )}
+        <motion.div 
+          animate={{ height }} 
+          transition={{ duration: 0.45, ease: "easeInOut" }} 
+          className="relative overflow-hidden"
+        >
+          <div ref={contentRef}>
+            <AnimatePresence mode="popLayout" initial={false}>
+              {!selectedCategory && (
+                <motion.div
+                  className="w-full"
+                  key="categories"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                >
+                  <CategoryGrid 
+                    onSelect={setSelectedCategory} 
+                  />
+                </motion.div>
+              )}
 
-          {selectedCategory?.id === 'graphics' && !selectedIndustry && (
-            <IndustryGrid 
-              key="industries" 
-              onSelect={setSelectedIndustry} 
-              onBack={goBackToCategories}
-            />
-          )}
+              {selectedCategory?.id === 'graphics' && (
+                <motion.div
+                  className="w-full"
+                  key="industries-list"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                >
+                   <IndustryList 
+                      selectedIndustry={selectedIndustry}
+                      onSelect={toggleIndustry}
+                      onBack={goBackToCategories}
+                      industries={industries}
+                      loading={industriesLoading}
+                      error={industriesError}
+                    />
+                </motion.div>
+              )}
 
-          {selectedCategory?.id === 'graphics' && selectedIndustry && (
-            <IndustryGallery 
-              key="gallery" 
-              industry={selectedIndustry} 
-              onBack={goBackToIndustries}
-            />
-          )}
+              {selectedCategory?.id === 'carousels' && (
+                <motion.div
+                  className="w-full"
+                  key="carousels-list"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                >
+                  <CarouselList 
+                    clients={carouselClients}
+                    onBack={goBackToCategories}
+                    loading={industriesLoading}
+                  />
+                </motion.div>
+              )}
 
-          {/* Placeholders for other categories */}
-          {selectedCategory && selectedCategory.id !== 'graphics' && (
-            <motion.div
-              key="placeholder"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-            >
-              <button onClick={goBackToCategories} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
-                 <ArrowLeft size={20} /> Back to Categories
-              </button>
+              {/* Placeholders for other categories */}
+              {selectedCategory && selectedCategory.id !== 'graphics' && selectedCategory.id !== 'carousels' && (
+                <motion.div
+                  className="w-full"
+                  key="placeholder"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                >
+                  <button onClick={goBackToCategories} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
+                     <ArrowLeft size={20} /> Back to Categories
+                  </button>
 
-              <div className="py-20 text-center bg-sand/30 rounded-3xl">
-                <div className={clsx("w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl", selectedCategory.color)}>
-                  <selectedCategory.icon size={40} />
-                </div>
-                <h3 className="text-2xl font-bold text-ink mb-2">Coming Soon</h3>
-                <p className="text-ink/60 mb-8 max-w-md mx-auto">
-                  I'm currently curating my best {selectedCategory.name.toLowerCase()} work for this section. Check back soon!
-                </p>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                  <div className="py-20 text-center bg-sand/30 rounded-3xl">
+                    <div className={clsx("w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl", selectedCategory.color)}>
+                      <selectedCategory.icon size={40} />
+                    </div>
+                    <h3 className="text-2xl font-bold text-ink mb-2">Coming Soon</h3>
+                    <p className="text-ink/60 mb-8 max-w-md mx-auto">
+                      I&apos;m currently curating my best {selectedCategory.name.toLowerCase()} work for this section. Check back soon!
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </motion.div>
       </div>
     </section>
   );
+}
+
+function CarouselList({
+  clients,
+  onBack,
+  loading
+}: {
+  clients: CarouselClient[];
+  onBack: () => void;
+  loading: boolean;
+}) {
+  const [selectedClient, setSelectedClient] = useState<CarouselClient | null>(null);
+  const [carouselWidth, setCarouselWidth] = useState(300);
+
+  useEffect(() => {
+    const handleResize = () => {
+        const padding = 32; // Mobile padding
+        const verticalPadding = 200; // Title + Button space
+        const maxW = 500; // Target max width for desktop
+        
+        const availableWidth = window.innerWidth - padding;
+        const availableHeight = window.innerHeight - verticalPadding;
+        
+        // Calculate max width that fits vertically with 4:5 ratio + 100px controls
+        // height = width * 1.25 + 100
+        // width = (height - 100) / 1.25
+        const maxWidthFromHeight = (availableHeight - 100) / 1.25;
+        
+        const finalWidth = Math.min(maxW, availableWidth, maxWidthFromHeight);
+        setCarouselWidth(Math.max(280, finalWidth)); // Min width 280
+    };
+    
+    // Initial calculation
+    handleResize();
+    
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  if (loading) return <div className="text-ink/50">Loading carousels...</div>;
+
+  return (
+    <div className="w-full">
+      <button onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
+         <ArrowLeft size={20} /> Back to Categories
+      </button>
+
+      {clients.length === 0 ? (
+        <div className="p-8 text-center text-ink/50 bg-sand/20 rounded-3xl">No carousels available yet.</div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {clients.map((client) => (
+            <motion.div
+              key={client.clientName}
+              onClick={() => setSelectedClient(client)}
+              className="group relative cursor-pointer bg-white rounded-3xl border border-ink/10 overflow-hidden hover:shadow-xl transition-all"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              whileHover={{ y: -5 }}
+            >
+              <div className="aspect-[4/5] bg-sand/20 relative overflow-hidden">
+                {client.items[0]?.image ? (
+                  <img 
+                    src={client.items[0].image} 
+                    alt={client.clientName} 
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center w-full h-full text-ink/40">No Image</div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-6">
+                  <span className="text-white font-medium flex items-center gap-2">
+                    View Carousel <ArrowLeft className="rotate-180" size={16} />
+                  </span>
+                </div>
+              </div>
+              <div className="p-6">
+                <h3 className="text-xl font-bold text-ink">{client.clientName}</h3>
+                <p className="text-sm text-ink/50 mt-1">{client.items.length} Slides</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
+
+      <AnimatePresence>
+        {selectedClient && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 md:p-8"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedClient(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full flex flex-col items-center justify-center"
+              style={{ maxWidth: '100%', maxHeight: '100vh' }}
+            >
+              <div className="mb-4 text-center text-white">
+                <h3 className="text-3xl font-bold">{selectedClient.clientName}</h3>
+                <p className="opacity-60">{selectedClient.items.length} slides</p>
+              </div>
+              
+              <div className="relative">
+                <Carousel 
+                  items={selectedClient.items}
+                  baseWidth={carouselWidth}
+                  autoplay={false}
+                  round={false}
+                />
+              </div>
+
+              <button 
+                onClick={() => setSelectedClient(null)}
+                className="mt-4 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-full text-sm font-medium transition-colors"
+              >
+                Close Carousel
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function useContentHeight() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState<number | "auto">("auto");
+
+  useEffect(() => {
+    if (!ref.current) return;
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setHeight(entry.contentRect.height);
+      }
+    });
+
+    resizeObserver.observe(ref.current);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
+  return { ref, height };
 }
 
 // --- Sub-components ---
@@ -142,11 +469,7 @@ function CategoryGrid({ onSelect }: { onSelect: (c: PortfolioCategory) => void }
   const gridRef = useRef<HTMLDivElement>(null);
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-    >
+    <div className="w-full">
       <MagicStyles />
       <GlobalSpotlight gridRef={gridRef} />
       <div 
@@ -178,68 +501,109 @@ function CategoryGrid({ onSelect }: { onSelect: (c: PortfolioCategory) => void }
           </StarBorder>
         ))}
       </div>
-    </motion.div>
+    </div>
   );
 }
 
-function IndustryGrid({ onSelect, onBack }: { onSelect: (i: Industry) => void, onBack: () => void }) {
-  const menuItems = INDUSTRIES.map((industry) => ({
-    link: "#",
-    text: industry.name,
-    image: industry.projects[0]?.image ?? "/images/About.png",
-  }));
+function IndustryList({
+  selectedIndustry,
+  onSelect,
+  onBack,
+  industries,
+  loading,
+  error,
+}: {
+  selectedIndustry: PortfolioIndustry | null;
+  onSelect: (i: PortfolioIndustry) => void;
+  onBack: () => void;
+  industries: PortfolioIndustry[];
+  loading: boolean;
+  error: string | null;
+}) {
   const itemHeight = 100;
-  const menuHeight = menuItems.length * itemHeight;
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-    >
+    <div className="w-full">
       <button onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
          <ArrowLeft size={20} /> Back to Categories
       </button>
 
-      <div
-         className="relative rounded-[28px] border border-ink/10 overflow-hidden bg-white shadow-[0_25px_80px_-45px_rgba(6,0,16,0.25)]"
-         style={{ height: menuHeight }}
-       >
-         <FlowingMenu
-           items={menuItems}
-           speed={14}
-           textColor="#1a1511"
-           bgColor="#ffffff"
-           marqueeBgColor="#0b0b0b"
-           marqueeTextColor="#ffffff"
-           borderColor="rgba(0,0,0,0.1)"
-           itemHeight={itemHeight}
-           onItemClick={(item) => {
-             const selected = INDUSTRIES.find((ind) => ind.name === item.text);
-             if (selected) {
-               onSelect(selected);
-             }
-           }}
-         />
-       </div>
-    </motion.div>
+       <div className="relative rounded-[28px] border border-ink/10 overflow-hidden bg-white shadow-[0_25px_80px_-45px_rgba(6,0,16,0.25)] flex flex-col">
+         {loading && (
+           <div className="p-6 text-sm text-ink/50">Loading industries...</div>
+         )}
+         {error && !loading && (
+           <div className="p-6 text-sm text-red-500">{error}</div>
+         )}
+         {!loading && !error && industries.length === 0 && (
+           <div className="p-6 text-sm text-ink/50">No industries available yet.</div>
+         )}
+         {!loading && !error && industries.map((industry, index) => {
+             const isSelected = selectedIndustry?.id === industry.id;
+             return (
+               <div key={industry.id} className="flex flex-col">
+                  <MenuItem 
+                     link="#"
+                     text={industry.name}
+                     image={industry.projects[0]?.image ?? "/images/About.png"}
+                    speed={14}
+                    textColor="#1a1511"
+                    marqueeBgColor="#0b0b0b"
+                    marqueeTextColor="#ffffff"
+                    borderColor="rgba(0,0,0,0.1)"
+                    itemHeight={itemHeight}
+                    isFirst={index === 0}
+                    onItemClick={() => onSelect(industry)}
+                 />
+                 <AnimatePresence>
+                    {isSelected && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3, ease: "easeInOut" }}
+                        className="overflow-hidden bg-sand/10"
+                      >
+                  <IndustryGallery 
+                             industry={industry} 
+                             // We don't need onBack here anymore as toggling closes it
+                             onBack={() => onSelect(industry)} 
+                          />
+                      </motion.div>
+                    )}
+                 </AnimatePresence>
+               </div>
+             );
+         })}
+      </div>
+    </div>
   );
 }
 
-function IndustryGallery({ industry, onBack }: { industry: Industry, onBack: () => void }) {
+function IndustryGallery({ industry, onBack }: { industry: PortfolioIndustry, onBack: () => void }) {
   const [selectedMedia, setSelectedMedia] = useState<{ image: string; text: string } | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const swipeStartX = useRef<number | null>(null);
   const swipeStartY = useRef<number | null>(null);
   const selectedIndexRef = useRef<number>(0);
 
-  const galleryItems = useMemo(
+  const galleries = useMemo(
     () =>
-      industry.projects.map((project) => ({
-        image: project.image,
-        text: "", // Removed text
-      })) ?? [],
+      industry.projects.reduce((acc, project) => {
+        const key = project.clientName || "Untitled";
+        if (!acc.has(key)) acc.set(key, { order: project.clientOrder, items: [] as GalleryItem[] });
+        acc.get(key)!.items.push({ image: project.image, text: project.title ?? "" });
+        return acc;
+      }, new Map<string, { order: number; items: GalleryItem[] }>()),
     [industry]
+  );
+
+  const galleryList = useMemo(
+    () =>
+      Array.from(galleries.entries())
+        .map(([clientName, value]) => ({ clientName, items: value.items, order: value.order }))
+        .sort((a, b) => a.order - b.order),
+    [galleries]
   );
 
   useEffect(() => {
@@ -251,19 +615,22 @@ function IndustryGallery({ industry, onBack }: { industry: Industry, onBack: () 
   const getCurrentIndex = () => {
     if (selectedIndex !== null) return selectedIndex;
     if (selectedMedia) {
-      const index = galleryItems.findIndex((item) => item.image === selectedMedia.image);
+      const index = galleryList
+        .flatMap((gallery) => gallery.items)
+        .findIndex((item: GalleryItem) => item.image === selectedMedia.image);
       if (index >= 0) return index;
     }
     return selectedIndexRef.current;
   };
 
   const showNext = (direction: 1 | -1) => {
-    if (galleryItems.length === 0) return;
+    const allItems = galleryList.flatMap((gallery) => gallery.items);
+    if (allItems.length === 0) return;
     const currentIndex = getCurrentIndex();
-    const nextIndex = (currentIndex + direction + galleryItems.length) % galleryItems.length;
+    const nextIndex = (currentIndex + direction + allItems.length) % allItems.length;
     selectedIndexRef.current = nextIndex;
     setSelectedIndex(nextIndex);
-    setSelectedMedia(galleryItems[nextIndex]);
+    setSelectedMedia(allItems[nextIndex]);
   };
 
   useEffect(() => {
@@ -275,77 +642,83 @@ function IndustryGallery({ industry, onBack }: { industry: Industry, onBack: () 
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [selectedMedia, selectedIndex, galleryItems.length]);
+  }, [selectedMedia, selectedIndex, galleryList]);
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-    >
-       <button onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
-         <ArrowLeft size={20} /> Back to Industries
-       </button>
-
-       <motion.div
-         initial={{ opacity: 0, y: 20 }}
-         animate={{ opacity: 1, y: 0 }}
-         exit={{ opacity: 0, y: 20 }}
-         transition={{ duration: 0.4, ease: "easeOut" }}
-         className="mt-6 rounded-[28px] border border-ink/10 bg-white p-6 shadow-[0_20px_60px_-45px_rgba(6,0,16,0.25)]"
-       >
-         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-           <div>
-             <h3 className="text-2xl font-bold text-ink">{industry.name} Gallery</h3>
-             <p className="text-sm text-ink/60">Showcasing selected works from {industry.name}</p>
-           </div>
-           <div className="text-xs uppercase tracking-[0.25em] text-ink/50">
-             {galleryItems.length} pieces
-           </div>
+    <div className="w-full p-4 md:p-8">
+       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+         <div>
+           <h3 className="text-2xl font-bold text-ink">{industry.name} Gallery</h3>
+           <p className="text-sm text-ink/60">Showcasing selected works from {industry.name}</p>
          </div>
-
-          <div className="h-[360px] md:h-[500px] overflow-hidden rounded-[24px] border border-ink/10 bg-sand/60">
-            {galleryItems.length > 0 ? (
-              <CircularGallery
-                items={galleryItems}
-                bend={1}
-                borderRadius={0.06}
-                scrollSpeed={2}
-                scrollEase={0.05}
-                textColor="#1f1a15"
-                onItemClick={(item, index) => {
-                  if (galleryItems.length === 0) return;
-                  setSelectedMedia(item);
-                  const nextIndex = index % galleryItems.length;
-                  selectedIndexRef.current = nextIndex;
-                  setSelectedIndex(nextIndex);
-                }}
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center text-sm text-ink/60">
-                No images available.
+         <div className="text-xs uppercase tracking-[0.25em] text-ink/50">
+           {galleryList.reduce((count, gallery) => count + gallery.items.length, 0)} pieces
+         </div>
+        </div>
+        {galleryList.length > 0 ? (
+          <div className="space-y-8">
+            {galleryList.map((gallery) => (
+              <div key={gallery.clientName} className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-lg font-bold text-ink">{gallery.clientName}</h4>
+                  <span className="text-xs uppercase tracking-[0.2em] text-ink/50">
+                    {gallery.items.length} images
+                  </span>
+                </div>
+                <div className="h-[320px] md:h-[420px] overflow-hidden rounded-[24px] border border-ink/10 bg-sand/60">
+                  <CircularGallery
+                    items={gallery.items}
+                    bend={1}
+                    borderRadius={0.06}
+                    scrollSpeed={2}
+                    scrollEase={0.05}
+                    textColor="#1f1a15"
+                    onItemClick={(item: GalleryItem, index: number) => {
+                      if (gallery.items.length === 0) return;
+                      setSelectedMedia(item);
+                      const offset = galleryList
+                        .slice(0, galleryList.findIndex((g) => g.clientName === gallery.clientName))
+                        .reduce((count, g) => count + g.items.length, 0);
+                      const total = galleryList.reduce((count, g) => count + g.items.length, 0);
+                      const nextIndex = (offset + index) % Math.max(total, 1);
+                      selectedIndexRef.current = nextIndex;
+                      setSelectedIndex(nextIndex);
+                    }}
+                  />
+                </div>
               </div>
-            )}
+            ))}
           </div>
-       </motion.div>
+        ) : (
+          <div className="flex h-[320px] items-center justify-center text-sm text-ink/60 rounded-[24px] border border-ink/10 bg-sand/60">
+            No images available.
+          </div>
+        )}
 
-       <AnimatePresence>
-         {selectedMedia && (
-           <motion.div
-             className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6"
-             initial={{ opacity: 0 }}
-             animate={{ opacity: 1 }}
-             exit={{ opacity: 0 }}
-             onClick={() => setSelectedMedia(null)}
-           >
-             <motion.div
-               className="group relative w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl"
-               initial={{ scale: 0.96, opacity: 0 }}
-               animate={{ scale: 1, opacity: 1 }}
-               exit={{ scale: 0.98, opacity: 0 }}
-               transition={{ duration: 0.25, ease: "easeOut" }}
-               onClick={(event) => event.stopPropagation()}
-             >
+        <AnimatePresence>
+          {selectedMedia && (
+            <motion.div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onPointerDown={(event) => {
+                event.stopPropagation();
+              }}
+              onPointerUp={(event) => {
+                event.stopPropagation();
+                setSelectedMedia(null);
+              }}
+            >
+              <motion.div
+                className="group relative w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl"
+                initial={{ scale: 0.96, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.98, opacity: 0 }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+                onPointerDown={(event) => event.stopPropagation()}
+                onPointerUp={(event) => event.stopPropagation()}
+              >
                <button
                  className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/80 p-3 text-ink opacity-0 shadow-lg transition-all duration-200 group-hover:opacity-100 hover:scale-110 cursor-pointer"
                  onClick={() => showNext(-1)}
@@ -362,7 +735,7 @@ function IndustryGallery({ industry, onBack }: { industry: Industry, onBack: () 
                </button>
                <div
                  className="relative w-full bg-sand"
-                 style={{ aspectRatio: "4 / 5" }} // Adjusted aspect ratio for gallery view
+                 style={{ aspectRatio: "4 / 5" }} 
                  onTouchStart={(event) => {
                    const touch = event.touches[0];
                    swipeStartX.current = touch.clientX;
@@ -405,6 +778,6 @@ function IndustryGallery({ industry, onBack }: { industry: Industry, onBack: () 
            </motion.div>
          )}
        </AnimatePresence>
-    </motion.div>
+    </div>
   );
 }
