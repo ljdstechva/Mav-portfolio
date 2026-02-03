@@ -145,20 +145,18 @@ export function Hero() {
             </Magnet>
           </div>
 
-          <div className="flex items-center gap-8 pt-8 border-t border-ink/5">
-            <div>
-              <p className="text-3xl font-bold text-ink">10+</p>
-              <p className="text-sm text-ink/50 uppercase tracking-wider">Years Exp.</p>
-            </div>
-            <div>
-              <p className="text-3xl font-bold text-ink">50+</p>
-              <p className="text-sm text-ink/50 uppercase tracking-wider">Happy Clients</p>
-            </div>
-            <div>
-              <p className="text-3xl font-bold text-ink">120+</p>
-              <p className="text-sm text-ink/50 uppercase tracking-wider">Projects</p>
-            </div>
+          <div className="flex flex-wrap items-center gap-3 pt-8 border-t border-ink/5">
+            <span className="px-4 py-2 rounded-full bg-white/80 border border-ink/10 text-sm font-medium text-ink">
+              Consistent posting
+            </span>
+            <span className="px-4 py-2 rounded-full bg-white/80 border border-ink/10 text-sm font-medium text-ink">
+              Scroll-stopping design
+            </span>
+            <span className="px-4 py-2 rounded-full bg-white/80 border border-ink/10 text-sm font-medium text-ink">
+              Strategy + execution
+            </span>
           </div>
+
         </motion.div>
 
         {/* Image / Visual */}
