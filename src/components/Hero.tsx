@@ -214,11 +214,11 @@ export function Hero() {
                 <div className="p-1.5 bg-green-100 rounded-full text-green-600">
                   <Star size={12} fill="currentColor" />
                 </div>
-                <span className="text-xs font-bold text-ink">Top Rated</span>
+                <span className="text-xs font-bold text-ink">Social-First</span>
              </div>
-             <p className="text-[10px] text-ink/60 leading-tight">
-               Consistently delivering high-quality visual solutions.
-             </p>
+              <p className="text-[10px] text-ink/60 leading-tight">
+                Strategy-led content optimized for growth and engagement.
+              </p>
           </motion.div>
 
           <motion.div
@@ -237,10 +237,10 @@ export function Hero() {
              <div className="h-10 w-10 rounded-full bg-sienna/10 flex items-center justify-center text-sienna">
                <MousePointer2 size={20} />
              </div>
-             <div>
-               <p className="text-xs font-bold text-ink">Interactive</p>
-               <p className="text-[10px] text-ink/50">User Experience</p>
-             </div>
+              <div>
+                <p className="text-xs font-bold text-ink">Content Creator</p>
+                <p className="text-[10px] text-ink/50">Social Media Management</p>
+              </div>
           </motion.div>
 
         </motion.div>
