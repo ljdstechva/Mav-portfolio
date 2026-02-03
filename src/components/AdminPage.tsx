@@ -413,7 +413,6 @@ export function AdminPage() {
     if (!supabase) return;
     await supabase.auth.signOut();
     // Clear local state
-    setGraphicDesigns([]);
     setClients([]);
     setCarousels([]);
     setReels([]);
