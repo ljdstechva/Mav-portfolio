@@ -64,24 +64,40 @@ export function Footer() {
                   <h4 className="text-white/40 uppercase tracking-widest text-xs mb-4">Socials</h4>
                   <ul className="space-y-3">
                     <li>
-                      <a href="#" className="group flex items-center justify-end gap-2 text-lg hover:text-terracotta transition-colors">
-                        Instagram <ArrowUpRight size={16} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </a>
+                      <div className="relative group flex items-center justify-end gap-2 text-lg text-sand/40 cursor-not-allowed">
+                        <span>Instagram</span>
+                        <ArrowUpRight size={16} className="opacity-20" />
+                        <span className="absolute right-0 -top-7 rounded-full bg-white/10 px-3 py-1 text-[10px] uppercase tracking-widest text-white opacity-0 transition-opacity group-hover:opacity-100">
+                          Under construction
+                        </span>
+                      </div>
                     </li>
                     <li>
-                      <a href="#" className="group flex items-center justify-end gap-2 text-lg hover:text-terracotta transition-colors">
-                        Facebook <ArrowUpRight size={16} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </a>
+                      <div className="relative group flex items-center justify-end gap-2 text-lg text-sand/40 cursor-not-allowed">
+                        <span>Facebook</span>
+                        <ArrowUpRight size={16} className="opacity-20" />
+                        <span className="absolute right-0 -top-7 rounded-full bg-white/10 px-3 py-1 text-[10px] uppercase tracking-widest text-white opacity-0 transition-opacity group-hover:opacity-100">
+                          Under construction
+                        </span>
+                      </div>
                     </li>
                     <li>
-                      <a href="#" className="group flex items-center justify-end gap-2 text-lg hover:text-terracotta transition-colors">
-                        LinkedIn <ArrowUpRight size={16} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </a>
+                      <div className="relative group flex items-center justify-end gap-2 text-lg text-sand/40 cursor-not-allowed">
+                        <span>LinkedIn</span>
+                        <ArrowUpRight size={16} className="opacity-20" />
+                        <span className="absolute right-0 -top-7 rounded-full bg-white/10 px-3 py-1 text-[10px] uppercase tracking-widest text-white opacity-0 transition-opacity group-hover:opacity-100">
+                          Under construction
+                        </span>
+                      </div>
                     </li>
                     <li>
-                      <a href="#" className="group flex items-center justify-end gap-2 text-lg hover:text-terracotta transition-colors">
-                        Canva <ArrowUpRight size={16} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </a>
+                      <div className="relative group flex items-center justify-end gap-2 text-lg text-sand/40 cursor-not-allowed">
+                        <span>Canva</span>
+                        <ArrowUpRight size={16} className="opacity-20" />
+                        <span className="absolute right-0 -top-7 rounded-full bg-white/10 px-3 py-1 text-[10px] uppercase tracking-widest text-white opacity-0 transition-opacity group-hover:opacity-100">
+                          Under construction
+                        </span>
+                      </div>
                     </li>
                   </ul>
                 </div>

@@ -52,11 +52,31 @@ export async function GET(request: Request) {
       .from("carousels")
       .select("*")
       .order("created_at", { ascending: false }),
-    supabase.from("reels").select("*").order("created_at", { ascending: false }),
-    supabase.from("stories").select("*").order("created_at", { ascending: false }),
-    supabase.from("copywriting").select("*").order("created_at", { ascending: false }),
-    supabase.from("photo_editing").select("*").order("created_at", { ascending: false }),
-    supabase.from("testimonials").select("*").order("created_at", { ascending: false }),
+    supabase
+      .from("reels")
+      .select("*")
+      .order("sort_order", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("stories")
+      .select("*")
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("copywriting")
+      .select("*")
+      .order("sort_order", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("photo_editing")
+      .select("*")
+      .order("sort_order", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("testimonials")
+      .select("*")
+      .order("sort_order", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: false }),
   ]);
 
   const error =

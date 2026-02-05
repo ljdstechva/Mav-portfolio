@@ -3,6 +3,7 @@ import { Fraunces, Space_Grotesk } from "next/font/google";
 import SmoothScrolling from "@/components/SmoothScrolling";
 import FluidCursor from "@/components/FluidCursor";
 import Preloader from "@/components/Preloader";
+import ServiceWorker from "@/components/ServiceWorker";
 import "./globals.css";
 
 const display = Fraunces({
@@ -35,6 +36,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${body.variable} ${display.variable} antialiased`}>
         <Preloader />
+        <ServiceWorker />
         <FluidCursor />
         <SmoothScrolling />
         {children}

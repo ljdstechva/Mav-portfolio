@@ -3,7 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
 export const runtime = "nodejs";
 
-type AllowedTable = "industries" | "clients";
+type AllowedTable = "industries" | "clients" | "reels" | "carousels" | "stories" | "photo_editing" | "testimonials" | "copywriting";
 
 async function ensureAuthed(request: Request) {
   const authHeader = request.headers.get("authorization") ?? "";
@@ -64,6 +64,54 @@ export async function POST(request: Request) {
       .eq("industry_id", body.industry_id)
       .eq("name", body.name);
 
+    if (error) {
+      return NextResponse.json({ message: error.message }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true }, { status: 200 });
+  }
+
+  if (body.table === "reels") {
+    const { error } = await supabase.from("reels").delete().eq("id", body.id);
+    if (error) {
+      return NextResponse.json({ message: error.message }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true }, { status: 200 });
+  }
+
+  if (body.table === "carousels") {
+    const { error } = await supabase.from("carousels").delete().eq("id", body.id);
+    if (error) {
+      return NextResponse.json({ message: error.message }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true }, { status: 200 });
+  }
+
+  if (body.table === "stories") {
+    const { error } = await supabase.from("stories").delete().eq("id", body.id);
+    if (error) {
+      return NextResponse.json({ message: error.message }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true }, { status: 200 });
+  }
+
+  if (body.table === "photo_editing") {
+    const { error } = await supabase.from("photo_editing").delete().eq("id", body.id);
+    if (error) {
+      return NextResponse.json({ message: error.message }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true }, { status: 200 });
+  }
+
+  if (body.table === "copywriting") {
+    const { error } = await supabase.from("copywriting").delete().eq("id", body.id);
+    if (error) {
+      return NextResponse.json({ message: error.message }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true }, { status: 200 });
+  }
+
+  if (body.table === "testimonials") {
+    const { error } = await supabase.from("testimonials").delete().eq("id", body.id);
     if (error) {
       return NextResponse.json({ message: error.message }, { status: 500 });
     }

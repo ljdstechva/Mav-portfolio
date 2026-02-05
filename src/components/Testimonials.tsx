@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Star, Quote } from "lucide-react";
 import { getSupabaseClient, getSupabaseConfigError } from "@/lib/supabaseClient";
+import BookingModal from "./BookingModal";
 
 type Testimonial = {
   id: string;
@@ -17,6 +18,7 @@ type Testimonial = {
 export function Testimonials() {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
 
   useEffect(() => {
     const configError = getSupabaseConfigError();
@@ -98,14 +100,19 @@ export function Testimonials() {
           transition={{ duration: 0.8, delay: 0.4 }}
           className="mt-20 text-center"
         >
-          <div className="inline-block p-1 rounded-full border border-ink/10 bg-white shadow-sm">
-             <div className="px-6 py-3 rounded-full bg-ink text-sand font-medium text-sm md:text-base flex items-center gap-2">
+          <div className="inline-block p-1 rounded-full border border-ink/10 bg-white shadow-sm hover:shadow-lg transition-shadow cursor-pointer">
+             <button 
+                onClick={() => setIsBookingOpen(true)}
+                className="px-6 py-3 rounded-full bg-ink text-sand font-medium text-sm md:text-base flex items-center gap-2 hover:bg-ink/90 transition-colors"
+             >
                 <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
                 <span>Join the Happy Clients</span>
-             </div>
+             </button>
           </div>
         </motion.div>
       </div>
+
+      <BookingModal isOpen={isBookingOpen} onClose={() => setIsBookingOpen(false)} />
     </section>
   );
 }

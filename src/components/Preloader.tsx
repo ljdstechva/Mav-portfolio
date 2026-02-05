@@ -25,11 +25,13 @@ export default function Preloader() {
     // List of critical assets to manually preload (e.g. Hero image)
     const criticalAssets = [
       '/Hero.png',
-      // Add other critical large assets here
+      '/About.png',
     ];
 
     let imagesLoaded = 0;
     let totalImages = 0;
+    const assetLoadedRef = { current: 0 };
+    const assetTotalRef = { current: 0 };
     
     // Actions for the "terminal" text
     const actions = [
@@ -48,15 +50,17 @@ export default function Preloader() {
       // Filter out standard spacers or tracking pixels if needed, mainly focus on content
       const contentImages = allImages.filter(img => img.src && !img.src.includes('data:image'));
       
-      totalImages = contentImages.length + criticalAssets.length;
-      setTotalCount(totalImages);
+      totalImages = contentImages.length;
+      const totalAssets = assetTotalRef.current;
+      setTotalCount(totalImages + totalAssets + criticalAssets.length);
       
       // Count DOM images
       const domLoaded = contentImages.filter(img => img.complete && img.naturalHeight !== 0).length;
       
       // Calculate realistic percentage
-      // We give 20% weight to "time/app init" and 80% to assets
-      const assetProgress = totalImages > 0 ? (domLoaded + imagesLoaded) / totalImages : 1;
+      const assetProgress = (totalImages + totalAssets) > 0
+        ? (domLoaded + imagesLoaded + assetLoadedRef.current) / (totalImages + totalAssets)
+        : 1;
       const targetPercent = Math.min(Math.round(assetProgress * 100), 100);
       
       // Smoothly animate the number up, don't jump
@@ -67,14 +71,88 @@ export default function Preloader() {
         return diff > 0 ? prev + Math.ceil(diff * 0.1) : prev;
       });
 
-      setLoadedCount(domLoaded + imagesLoaded);
+      setLoadedCount(domLoaded + imagesLoaded + assetLoadedRef.current);
       
       // Cycle action text based on percentage
-      const actionIndex = Math.min(Math.floor((percent / 100) * actions.length), actions.length - 1);
+      const actionIndex = Math.min(Math.floor((targetPercent / 100) * actions.length), actions.length - 1);
       setCurrentAction(actions[actionIndex]);
     };
 
-    // Preload critical assets manually
+    const preloadAssets = async () => {
+      try {
+        const response = await fetch('/api/portfolio-graphics', { cache: 'no-store' });
+        if (!response.ok) {
+          return;
+        }
+        const data = await response.json();
+
+        const urls = new Set<string>();
+        (data.clients ?? []).forEach((item: { image_url?: string | null }) => {
+          if (item.image_url) urls.add(item.image_url);
+        });
+        (data.carousels ?? []).forEach((item: { image_url?: string | null }) => {
+          if (item.image_url) urls.add(item.image_url);
+        });
+        (data.copywriting ?? []).forEach((item: { image_url?: string | null }) => {
+          if (item.image_url) urls.add(item.image_url);
+        });
+        (data.photoEditing ?? []).forEach((item: { before_image_url?: string | null; after_image_url?: string | null }) => {
+          if (item.before_image_url) urls.add(item.before_image_url);
+          if (item.after_image_url) urls.add(item.after_image_url);
+        });
+        (data.reels ?? []).forEach((item: { video_url?: string | null }) => {
+          if (item.video_url) urls.add(item.video_url);
+        });
+        (data.stories ?? []).forEach((item: { video_url?: string | null; story_url?: string | null; media_url?: string | null; url?: string | null }) => {
+          if (item.video_url) urls.add(item.video_url);
+          if (item.story_url) urls.add(item.story_url);
+          if (item.media_url) urls.add(item.media_url);
+          if (item.url) urls.add(item.url);
+        });
+
+        const urlList = Array.from(urls);
+        assetTotalRef.current = urlList.length;
+        updateProgress();
+
+        const cacheAvailable = 'caches' in window;
+        const cache = cacheAvailable ? await caches.open('portfolio-assets-v1') : null;
+        const queue = urlList.slice();
+        const concurrency = 4;
+
+        const loadNext = async () => {
+          while (queue.length > 0) {
+            const url = queue.shift();
+            if (!url) continue;
+            try {
+              if (cache) {
+                const cached = await cache.match(url, { ignoreSearch: true });
+                if (cached) {
+                  assetLoadedRef.current += 1;
+                  updateProgress();
+                  continue;
+                }
+              }
+
+              const response = await fetch(url, { mode: 'no-cors' });
+              if (cache && response && (response.ok || response.type === 'opaque')) {
+                await cache.put(url, response);
+              }
+            } catch (error) {
+              // ignore fetch errors
+            } finally {
+              assetLoadedRef.current += 1;
+              updateProgress();
+            }
+          }
+        };
+
+        await Promise.all(Array.from({ length: concurrency }, () => loadNext()));
+      } catch (error) {
+        // ignore errors
+      }
+    };
+
+    // Preload critical assets manually (fallback for critical visuals)
     criticalAssets.forEach(src => {
       const img = new Image();
       img.src = src;
@@ -88,13 +166,15 @@ export default function Preloader() {
       };
     });
 
+    void preloadAssets();
+
     // Interval to poll DOM for new images (Next.js hydrates dynamically)
     const interval = setInterval(updateProgress, 100);
 
     // Safety fallback: Ensure we finish eventually even if assets hang
     const maxTime = setTimeout(() => {
        setPercent(100);
-    }, 5000); // 5s max load time
+    }, 12000); // 12s max load time
 
     // Completion check
     const checkCompletion = setInterval(() => {

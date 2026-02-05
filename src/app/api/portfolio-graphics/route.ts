@@ -18,15 +18,18 @@ export async function GET() {
       .order("position", { ascending: true }),
     supabase
       .from("copywriting")
-      .select("id, client, title, body, image_url, created_at")
+      .select("id, client, title, body, image_url, sort_order, created_at")
+      .order("sort_order", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: false }),
     supabase
       .from("reels")
-      .select("id, client, title, video_url, created_at")
+      .select("id, client, title, video_url, sort_order, created_at")
+      .order("sort_order", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: false }),
     supabase
       .from("photo_editing")
-      .select("id, client, title, before_image_url, after_image_url, created_at")
+      .select("id, client, title, before_image_url, after_image_url, sort_order, created_at")
+      .order("sort_order", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: false }),
   ]);
 
@@ -35,6 +38,7 @@ export async function GET() {
     const stories = await supabase
       .from("stories")
       .select("*")
+      .order("sort_order", { ascending: true })
       .order("created_at", { ascending: false });
     if (!stories.error) {
       storiesData = stories.data ?? [];

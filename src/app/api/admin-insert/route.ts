@@ -17,9 +17,9 @@ const TABLE_COLUMNS: Record<AllowedTable, string[]> = {
   industries: ["name"],
   clients: ["industry_id", "name", "image_url", "sort_order"],
   carousels: ["client", "image_url", "position"],
-  reels: ["video_url"],
-  stories: ["video_url"],
-  copywriting: ["image_url"],
+  reels: ["video_url", "sort_order"],
+  stories: ["video_url", "sort_order"],
+  copywriting: ["image_url", "sort_order"],
   photo_editing: ["before_image_url", "after_image_url"],
   testimonials: ["client_name", "quote"],
 };

@@ -52,7 +52,10 @@ function CarouselItem({ item, index, itemWidth, round, trackItemOffset, x, trans
       }}
       transition={transition}
     >
-        <div className="relative w-full h-full overflow-hidden rounded-xl bg-sand/20 border border-ink/10">
+        <div 
+          className="relative w-full h-full overflow-hidden rounded-xl bg-sand/20 border border-ink/10"
+          onClick={(e) => e.stopPropagation()}
+        >
             {item.image ? (
                 <img 
                     src={item.image} 
@@ -258,7 +261,7 @@ export default function Carousel({
           <button
             type="button"
             aria-label="Previous slide"
-            onClick={() => handleArrowClick(-1)}
+            onClick={(e) => { e.stopPropagation(); handleArrowClick(-1); }}
             className="absolute left-0 top-1/2 z-10 -translate-x-[120%] -translate-y-1/2 rounded-full border border-ink/10 bg-white/80 p-3 text-ink shadow-lg transition-transform hover:scale-110"
           >
             <ArrowLeft size={18} />
@@ -266,7 +269,7 @@ export default function Carousel({
           <button
             type="button"
             aria-label="Next slide"
-            onClick={() => handleArrowClick(1)}
+            onClick={(e) => { e.stopPropagation(); handleArrowClick(1); }}
             className="absolute right-0 top-1/2 z-10 translate-x-[120%] -translate-y-1/2 rounded-full border border-ink/10 bg-white/80 p-3 text-ink shadow-lg transition-transform hover:scale-110"
           >
             <ArrowRight size={18} />
@@ -286,7 +289,7 @@ export default function Carousel({
               animate={{
                 scale: activeIndex === index ? 1.2 : 1
               }}
-              onClick={() => setPosition(loop ? index + 1 : index)}
+              onClick={(e) => { e.stopPropagation(); setPosition(loop ? index + 1 : index); }}
               transition={{ duration: 0.15 }}
             />
           ))}

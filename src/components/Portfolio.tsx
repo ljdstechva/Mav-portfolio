@@ -50,8 +50,8 @@ type CarouselClient = {
 
 type ReelItem = {
   id: string;
-  title: string;
   video_url: string;
+  sort_order?: number | null;
 };
 
 type PhotoEditingItem = {
@@ -129,10 +129,10 @@ export function Portfolio() {
         }[];
         const rawReels = (data.reels ?? []) as {
           id: string;
-          client: string;
-          title: string;
+          client?: string;
           video_url: string;
-          created_at: string;
+          sort_order?: number | null;
+          created_at?: string;
         }[];
         const rawStories = (data.stories ?? []) as Record<string, unknown>[];
         const rawPhotoEditing = (data.photoEditing ?? []) as {
@@ -211,8 +211,8 @@ export function Portfolio() {
         // Process Reels
         const reelsData = rawReels.map(r => ({
           id: r.id,
-          title: r.title || r.client || "Untitled Reel",
-          video_url: r.video_url
+          video_url: r.video_url,
+          sort_order: r.sort_order ?? null,
         }));
 
         const storiesData = rawStories.map((story, index) => {
@@ -799,7 +799,6 @@ function CarouselList({
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
               className="relative w-full flex flex-col items-center justify-center"
               style={{ maxWidth: '100%', maxHeight: '100vh' }}
             >

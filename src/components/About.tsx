@@ -1,11 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
 import Magnet from "./Magnet";
 import TiltedCard from "./TiltedCard";
+import BookingModal from "./BookingModal";
 
 export function About() {
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
+
   return (
     <section className="pb-24 pt-[150px] bg-white overflow-hidden" id="about">
       <div className="container mx-auto px-6">
@@ -85,7 +89,10 @@ export function About() {
 
             <div className="pt-6">
               <Magnet padding={50} magnetStrength={5}>
-                <button className="px-8 py-3 bg-ink text-sand rounded-full font-medium hover:bg-ink/90 transition-all hover:shadow-lg transform hover:-translate-y-1 cursor-pointer">
+                <button 
+                  onClick={() => setIsBookingOpen(true)}
+                  className="px-8 py-3 bg-ink text-sand rounded-full font-medium hover:bg-ink/90 transition-all hover:shadow-lg transform hover:-translate-y-1 cursor-pointer"
+                >
                   More About Me
                 </button>
               </Magnet>
@@ -94,6 +101,8 @@ export function About() {
 
         </div>
       </div>
+
+      <BookingModal isOpen={isBookingOpen} onClose={() => setIsBookingOpen(false)} />
     </section>
   );
 }

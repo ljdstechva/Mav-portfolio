@@ -17,13 +17,16 @@ import {
   Plus,
   Loader2,
   Trash2,
+  GripVertical,
   UploadCloud,
   X,
   ChevronRight,
   Search,
   ArrowLeft,
   Menu,
-  Pencil
+  Pencil,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 
 import clsx from "clsx";
@@ -57,6 +60,8 @@ type ReelItem = {
   industry_id?: string | null;
   client?: string | null;
   video_url?: string | null;
+  sort_order?: number | null;
+  created_at?: string | null;
 };
 
 type StoryItem = {
@@ -64,6 +69,8 @@ type StoryItem = {
   industry_id?: string | null;
   client?: string | null;
   video_url?: string | null;
+  sort_order?: number | null;
+  created_at?: string | null;
 };
 
 type CopywritingItem = {
@@ -73,6 +80,8 @@ type CopywritingItem = {
   title: string;
   body?: string | null;
   image_url?: string | null;
+  sort_order?: number | null;
+  created_at?: string | null;
 };
 
 type PhotoEditingItem = {
@@ -82,6 +91,8 @@ type PhotoEditingItem = {
   title: string;
   before_image_url?: string | null;
   after_image_url?: string | null;
+  sort_order?: number | null;
+  created_at?: string | null;
 };
 
 type TestimonialItem = {
@@ -91,6 +102,8 @@ type TestimonialItem = {
   company?: string | null;
   quote: string;
   avatar_url?: string | null;
+  sort_order?: number | null;
+  created_at?: string | null;
 };
 
 type AdminListItem = {
@@ -111,6 +124,7 @@ type AdminListItem = {
 };
 
 type TableKey =
+  | "dashboard"
   | "industries"
   | "clients"
   | "carousels"
@@ -133,6 +147,12 @@ const TABLE_CONFIG: Record<
   TableKey,
   { label: string; singularLabel: string; icon: React.ElementType; fields: FieldConfig[] }
 > = {
+  dashboard: {
+    label: "Dashboard",
+    singularLabel: "Dashboard",
+    icon: LayoutDashboard,
+    fields: [],
+  },
   industries: {
     label: "Industries",
     singularLabel: "Industry",
@@ -238,10 +258,20 @@ export function AdminPage() {
   const [clients, setClients] = useState<ClientItem[]>([]);
   const [carousels, setCarousels] = useState<CarouselImageItem[]>([]);
   const [reels, setReels] = useState<ReelItem[]>([]);
+  const [reelsOrderDirty, setReelsOrderDirty] = useState(false);
   const [stories, setStories] = useState<StoryItem[]>([]);
+  const [storiesOrderDirty, setStoriesOrderDirty] = useState(false);
   const [copywriting, setCopywriting] = useState<CopywritingItem[]>([]);
   const [photoEditing, setPhotoEditing] = useState<PhotoEditingItem[]>([]);
+  const [photoEditingOrderDirty, setPhotoEditingOrderDirty] = useState(false);
   const [testimonials, setTestimonials] = useState<TestimonialItem[]>([]);
+  const [testimonialsOrderDirty, setTestimonialsOrderDirty] = useState(false);
+  const [deletingStoryId, setDeletingStoryId] = useState<string | null>(null);
+  const [storyOrderSaving, setStoryOrderSaving] = useState(false);
+  const [storyOrderError, setStoryOrderError] = useState("");
+  const [deletingTestimonialId, setDeletingTestimonialId] = useState<string | null>(null);
+  const [testimonialOrderSaving, setTestimonialOrderSaving] = useState(false);
+  const [testimonialOrderError, setTestimonialOrderError] = useState("");
 
   const [adminLoaded, setAdminLoaded] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -250,7 +280,7 @@ export function AdminPage() {
   // UI State
   const [loginState, setLoginState] = useState<LoginState>("idle");
   const [loginError, setLoginError] = useState("");
-  const [selectedTable, setSelectedTable] = useState<TableKey>("industries");
+  const [selectedTable, setSelectedTable] = useState<TableKey>("dashboard");
   const [selectedIndustryId, setSelectedIndustryId] = useState<string | null>(null);
   const [selectedCarouselClient, setSelectedCarouselClient] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -281,18 +311,58 @@ export function AdminPage() {
   const [industryDeleteError, setIndustryDeleteError] = useState("");
   const [selectedClientName, setSelectedClientName] = useState<string | null>(null);
   const [selectedClientImage, setSelectedClientImage] = useState<string | null>(null);
-  const [previewCarouselIndex, setPreviewCarouselIndex] = useState(0);
   const [clientDeletePrompt, setClientDeletePrompt] = useState<{ industryId: string; name: string } | null>(null);
   const [clientDeleteText, setClientDeleteText] = useState("");
   const [clientDeleteState, setClientDeleteState] = useState<DeleteState>("idle");
   const [clientDeleteError, setClientDeleteError] = useState("");
   const [editingTestimonial, setEditingTestimonial] = useState<TestimonialItem | null>(null);
   const [editingIndustry, setEditingIndustry] = useState<IndustryItem | null>(null);
+  const [editingPhotoEditing, setEditingPhotoEditing] = useState<PhotoEditingItem | null>(null);
+  const [reelDeleteState, setReelDeleteState] = useState<DeleteState>("idle");
+  const [reelDeleteId, setReelDeleteId] = useState<string | null>(null);
+  const [reelOrderState, setReelOrderState] = useState<"idle" | "saving" | "error">("idle");
+  const [reelOrderError, setReelOrderError] = useState("");
+  const [photoEditingDeleteState, setPhotoEditingDeleteState] = useState<DeleteState>("idle");
+  const [photoEditingDeleteId, setPhotoEditingDeleteId] = useState<string | null>(null);
+  const [photoEditingOrderState, setPhotoEditingOrderState] = useState<"idle" | "saving" | "error">("idle");
+  const [photoEditingOrderError, setPhotoEditingOrderError] = useState("");
+  const [carouselBatchImages, setCarouselBatchImages] = useState<{ id: string; url: string }[]>([]);
+  const [carouselUploadState, setCarouselUploadState] = useState<UploadState>("idle");
+  const [carouselUploadMessage, setCarouselUploadMessage] = useState("");
+  const [carouselRenameState, setCarouselRenameState] = useState<UploadState>("idle");
+  const [carouselRenameMessage, setCarouselRenameMessage] = useState("");
+  const [carouselRenameDraft, setCarouselRenameDraft] = useState("");
+  const [carouselOrder, setCarouselOrder] = useState<CarouselImageItem[]>([]);
+  const [carouselOrderDirty, setCarouselOrderDirty] = useState(false);
+  const [carouselOrderState, setCarouselOrderState] = useState<UploadState>("idle");
+  const [carouselOrderMessage, setCarouselOrderMessage] = useState("");
+  const [carouselDeletingId, setCarouselDeletingId] = useState<string | null>(null);
+  const [copywritingOrder, setCopywritingOrder] = useState<CopywritingItem[]>([]);
+  const [copywritingOrderDirty, setCopywritingOrderDirty] = useState(false);
+  const [copywritingOrderState, setCopywritingOrderState] = useState<UploadState>("idle");
+  const [copywritingOrderMessage, setCopywritingOrderMessage] = useState("");
+  const [copywritingDeletingId, setCopywritingDeletingId] = useState<string | null>(null);
 
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const createFormRef = useRef<HTMLFormElement | null>(null);
+
+  const moveItemUp = <T,>(index: number, list: T[], setList: (l: T[]) => void, setDirty: (d: boolean) => void) => {
+    if (index === 0) return;
+    const newList = [...list];
+    [newList[index - 1], newList[index]] = [newList[index], newList[index - 1]];
+    setList(newList);
+    setDirty(true);
+  };
+
+  const moveItemDown = <T,>(index: number, list: T[], setList: (l: T[]) => void, setDirty: (d: boolean) => void) => {
+    if (index === list.length - 1) return;
+    const newList = [...list];
+    [newList[index + 1], newList[index]] = [newList[index], newList[index + 1]];
+    setList(newList);
+    setDirty(true);
+  };
 
   // --- Auth & Data Fetching ---
 
@@ -338,10 +408,20 @@ export function AdminPage() {
 
       setCarousels(data.carousels ?? []);
       setReels(data.reels);
-      setStories(data.stories ?? []);
-      setCopywriting(data.copywriting);
+      setReelsOrderDirty(false);
+      const storyData = data.stories ?? [];
+      setStories(storyData);
+      setStoriesOrderDirty(false);
+      setCopywriting(data.copywriting ?? []);
+      setCopywritingOrder(data.copywriting ?? []);
+      setCopywritingOrderDirty(false);
+      setCopywritingOrderState("idle");
+      setCopywritingOrderMessage("");
       setPhotoEditing(data.photoEditing);
-      setTestimonials(data.testimonials);
+      setPhotoEditingOrderDirty(false);
+      const testimonialData = data.testimonials ?? [];
+      setTestimonials(testimonialData);
+      setTestimonialsOrderDirty(false);
 
       setAdminLoaded(true);
     } catch (error) {
@@ -421,6 +501,10 @@ export function AdminPage() {
     setReels([]);
     setStories([]);
     setCopywriting([]);
+    setCopywritingOrder([]);
+    setCopywritingOrderDirty(false);
+    setCopywritingOrderState("idle");
+    setCopywritingOrderMessage("");
     setPhotoEditing([]);
     setTestimonials([]);
     setIndustries([]);
@@ -454,6 +538,19 @@ export function AdminPage() {
         values.sort_order = String(existingClients.length);
       }
 
+      if (targetTable === "stories") {
+        values.sort_order = String(stories.length);
+      }
+
+      if (targetTable === "testimonials" && !editingTestimonial) {
+        values.sort_order = String(testimonials.length);
+      }
+
+      if (targetTable === "reels") {
+        const maxSortOrder = reels.reduce((max, reel) => Math.max(max, reel.sort_order ?? -1), -1);
+        values.sort_order = String(maxSortOrder + 1);
+      }
+
       if (targetTable === "carousels") {
         if (!values.client) {
           throw new Error("Client name is required.");
@@ -466,6 +563,7 @@ export function AdminPage() {
         if (!values.image_url) {
           throw new Error("Please upload a copywriting image.");
         }
+        values.sort_order = String(copywriting.length);
 
       } else if (targetTable === "photo_editing") {
         if (!values.before_image_url || !values.after_image_url) {
@@ -507,6 +605,27 @@ export function AdminPage() {
             values: {
               client_name: values.client_name,
               quote: values.quote,
+            },
+          }),
+        });
+
+        if (!response.ok) {
+          const payload = await response.json();
+          throw new Error(payload.message ?? "Update failed");
+        }
+      } else if (targetTable === "photo_editing" && editingPhotoEditing) {
+        const response = await fetch("/api/admin-update", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          },
+          body: JSON.stringify({
+            table: "photo_editing",
+            id: editingPhotoEditing.id,
+            values: {
+              before_image_url: values.before_image_url,
+              after_image_url: values.after_image_url,
             },
           }),
         });
@@ -595,6 +714,7 @@ export function AdminPage() {
       setBatchImages([]);
       setEditingTestimonial(null);
       setEditingIndustry(null);
+      setEditingPhotoEditing(null);
       await fetchAdminData();
 
       // Close form after short delay on success
@@ -700,6 +820,278 @@ export function AdminPage() {
     }
   };
 
+  const handleCarouselImageUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setCarouselUploadState("loading");
+    setCarouselUploadMessage("");
+
+    try {
+      if (!supabase) {
+        throw new Error(supabaseConfigError ?? "Supabase client is not configured.");
+      }
+
+      const newImages: { id: string; url: string }[] = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const extension = file.name.split(".").pop() || "png";
+        const filePath = `carousels/image_url/${crypto.randomUUID()}.${extension}`;
+
+        const { error } = await supabase.storage.from("portfolio").upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: file.type || "image/png",
+        });
+
+        if (error) throw error;
+
+        const { data } = supabase.storage.from("portfolio").getPublicUrl(filePath);
+        if (data.publicUrl) {
+          newImages.push({ id: crypto.randomUUID(), url: data.publicUrl });
+        }
+      }
+
+      if (newImages.length > 0) {
+        setCarouselBatchImages((prev) => [...prev, ...newImages]);
+        setCarouselUploadState("success");
+        setCarouselUploadMessage(`${newImages.length} image${newImages.length === 1 ? "" : "s"} ready to add.`);
+      } else {
+        setCarouselUploadState("idle");
+      }
+    } catch (error) {
+      setCarouselUploadState("error");
+      setCarouselUploadMessage(error instanceof Error ? error.message : "Carousel upload failed");
+    }
+  };
+
+  const handleCarouselAddImages = async () => {
+    if (!selectedCarouselClient) return;
+    if (carouselBatchImages.length === 0) {
+      setCarouselUploadState("error");
+      setCarouselUploadMessage("Please upload at least one image.");
+      return;
+    }
+
+    try {
+      if (!supabase) {
+        throw new Error(supabaseConfigError ?? "Supabase client is not configured.");
+      }
+
+      setCarouselUploadState("loading");
+      setCarouselUploadMessage("");
+
+      const existingPositions = carousels
+        .filter((item) => (item.client ?? "").trim() === selectedCarouselClient)
+        .map((item) => item.position ?? 0);
+      const basePosition = existingPositions.length > 0
+        ? Math.max(...existingPositions) + 1
+        : 0;
+
+      const carouselRecords = carouselBatchImages.map((image, index) => ({
+        client: selectedCarouselClient,
+        image_url: image.url,
+        position: basePosition + index,
+      }));
+
+      const { error } = await supabase
+        .from("carousels")
+        .insert(carouselRecords);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      setCarouselBatchImages([]);
+      setCarouselUploadState("success");
+      setCarouselUploadMessage("Images added successfully.");
+      await fetchAdminData();
+    } catch (error) {
+      setCarouselUploadState("error");
+      setCarouselUploadMessage(error instanceof Error ? error.message : "Failed to add carousel images");
+    }
+  };
+
+  const handleCarouselRename = async () => {
+    if (!selectedCarouselClient) return;
+    const nextName = carouselRenameDraft.trim();
+
+    if (!nextName) {
+      setCarouselRenameState("error");
+      setCarouselRenameMessage("Client name is required.");
+      return;
+    }
+
+    if (nextName === selectedCarouselClient) {
+      setCarouselRenameState("idle");
+      setCarouselRenameMessage("");
+      return;
+    }
+
+    try {
+      setCarouselRenameState("loading");
+      setCarouselRenameMessage("");
+
+      const response = await fetch("/api/admin-update", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({
+          table: "carousels",
+          client: selectedCarouselClient,
+          values: { client: nextName },
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json();
+        throw new Error(payload.message ?? "Rename failed");
+      }
+
+      setCarouselRenameState("success");
+      setCarouselRenameMessage("Client name updated.");
+      setSelectedCarouselClient(nextName);
+      await fetchAdminData();
+    } catch (error) {
+      setCarouselRenameState("error");
+      setCarouselRenameMessage(error instanceof Error ? error.message : "Rename failed");
+    }
+  };
+
+  const handleCarouselOrderSave = async (items: CarouselImageItem[]) => {
+    if (!selectedCarouselClient || items.length === 0) return;
+
+    try {
+      setCarouselOrderState("loading");
+      setCarouselOrderMessage("");
+
+      const positions = items.map((item, index) => ({
+        id: item.id,
+        position: index,
+      }));
+
+      const response = await fetch("/api/admin-update", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({
+          table: "carousels",
+          positions,
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json();
+        throw new Error(payload.message ?? "Failed to save order");
+      }
+
+      setCarouselOrderState("success");
+      setCarouselOrderMessage("Order saved.");
+      setCarouselOrderDirty(false);
+      await fetchAdminData();
+    } catch (error) {
+      setCarouselOrderState("error");
+      setCarouselOrderMessage(error instanceof Error ? error.message : "Failed to save order");
+    }
+  };
+
+  const handleCarouselImageDelete = async (imageId: string) => {
+    if (!imageId) return;
+    setCarouselDeletingId(imageId);
+
+    try {
+      const response = await fetch("/api/admin-delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ table: "carousels", id: imageId }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json();
+        throw new Error(payload.message ?? "Delete failed");
+      }
+
+      await fetchAdminData();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Delete failed");
+    } finally {
+      setCarouselDeletingId(null);
+    }
+  };
+
+  const handleCopywritingOrderSave = async (items: CopywritingItem[]) => {
+    if (items.length === 0) return;
+
+    try {
+      setCopywritingOrderState("loading");
+      setCopywritingOrderMessage("");
+
+      const positions = items.map((item, index) => ({
+        id: item.id,
+        sort_order: index,
+      }));
+
+      const response = await fetch("/api/admin-update", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({
+          table: "copywriting",
+          positions,
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json();
+        throw new Error(payload.message ?? "Failed to save order");
+      }
+
+      setCopywritingOrderState("success");
+      setCopywritingOrderMessage("Order saved.");
+      setCopywritingOrderDirty(false);
+      await fetchAdminData();
+    } catch (error) {
+      setCopywritingOrderState("error");
+      setCopywritingOrderMessage(error instanceof Error ? error.message : "Failed to save order");
+    }
+  };
+
+  const handleCopywritingDelete = async (id: string) => {
+    if (!id) return;
+    if (!confirm("Delete this copywriting image?")) return;
+
+    try {
+      setCopywritingDeletingId(id);
+      const response = await fetch("/api/admin-delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ table: "copywriting", id }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json();
+        throw new Error(payload.message ?? "Delete failed");
+      }
+
+      await fetchAdminData();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Delete failed");
+    } finally {
+      setCopywritingDeletingId(null);
+    }
+  };
+
   const handleIndustryDelete = async () => {
     if (!industryDeletePrompt) return;
     if (industryDeleteText.trim() !== "DELETE") {
@@ -789,25 +1181,332 @@ export function AdminPage() {
     }
   };
 
+  const handleStoryDelete = async (storyId: string) => {
+    if (!session) return;
+    const confirmed = window.confirm("Delete this story video?");
+    if (!confirmed) return;
+
+    setDeletingStoryId(storyId);
+    try {
+      const response = await fetch("/api/admin-delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ table: "stories", id: storyId }),
+      });
+
+      if (!response.ok) {
+        let message = "Delete failed";
+        try {
+          const payload = await response.json();
+          if (payload?.message) message = payload.message;
+        } catch (error) {
+          // ignore json parse errors
+        }
+        throw new Error(message);
+      }
+
+      await fetchAdminData();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Delete failed");
+    } finally {
+      setDeletingStoryId(null);
+    }
+  };
+
+  const handleStoryOrderSave = async (orderedStories: StoryItem[]) => {
+      if (!session) return;
+      if (orderedStories.length === 0) return;
+
+      setStoryOrderSaving(true);
+      setStoryOrderError("");
+
+      try {
+        const response = await fetch("/api/admin-reorder", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          },
+          body: JSON.stringify({
+            table: "stories",
+            order: orderedStories.map((story, index) => ({
+              id: story.id,
+              sort_order: index,
+            })),
+          }),
+        });
+
+        if (!response.ok) {
+          let message = "Failed to save story order";
+          try {
+            const payload = await response.json();
+            if (payload?.message) message = payload.message;
+          } catch (error) {
+            // ignore json parse errors
+          }
+          throw new Error(message);
+        }
+
+        setStoriesOrderDirty(false);
+      } catch (error) {
+        setStoryOrderError(error instanceof Error ? error.message : "Failed to save story order");
+      } finally {
+        setStoryOrderSaving(false);
+      }
+    };
+
+  const handleTestimonialDelete = async (testimonialId: string) => {
+    if (!session) return;
+    const confirmed = window.confirm("Delete this testimonial?");
+    if (!confirmed) return;
+
+    setDeletingTestimonialId(testimonialId);
+    try {
+      const response = await fetch("/api/admin-delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ table: "testimonials", id: testimonialId }),
+      });
+
+      if (!response.ok) {
+        let message = "Delete failed";
+        try {
+          const payload = await response.json();
+          if (payload?.message) message = payload.message;
+        } catch (error) {
+          // ignore json parse errors
+        }
+        throw new Error(message);
+      }
+
+      await fetchAdminData();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Delete failed");
+    } finally {
+      setDeletingTestimonialId(null);
+    }
+  };
+
+  const handleTestimonialOrderSave = async (orderedTestimonials: TestimonialItem[]) => {
+      if (!session) return;
+      if (orderedTestimonials.length === 0) return;
+
+      setTestimonialOrderSaving(true);
+      setTestimonialOrderError("");
+
+      try {
+        const response = await fetch("/api/admin-reorder", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          },
+          body: JSON.stringify({
+            table: "testimonials",
+            order: orderedTestimonials.map((testimonial, index) => ({
+              id: testimonial.id,
+              sort_order: index,
+            })),
+          }),
+        });
+
+        if (!response.ok) {
+          let message = "Failed to save testimonial order";
+          try {
+            const payload = await response.json();
+            if (payload?.message) message = payload.message;
+          } catch (error) {
+            // ignore json parse errors
+          }
+          throw new Error(message);
+        }
+
+        setTestimonialsOrderDirty(false);
+      } catch (error) {
+        setTestimonialOrderError(
+          error instanceof Error ? error.message : "Failed to save testimonial order"
+        );
+      } finally {
+        setTestimonialOrderSaving(false);
+      }
+    };
+
+  const handleReelsOrderSave = async (orderedReels: ReelItem[]) => {
+    if (!session) return;
+    setReelOrderState("saving");
+    setReelOrderError("");
+
+    try {
+      const response = await fetch("/api/admin-reorder", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          table: "reels",
+          items: orderedReels.map((reel, index) => ({
+            id: reel.id,
+            sort_order: index,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json();
+        throw new Error(payload.message ?? "Failed to save reel order");
+      }
+
+      setReelOrderState("idle");
+      setReelsOrderDirty(false);
+    } catch (error) {
+      setReelOrderState("error");
+      setReelOrderError(error instanceof Error ? error.message : "Failed to save reel order");
+    }
+  };
+
+  const handleReelDelete = async (reelId: string) => {
+    const confirmed = window.confirm("Delete this reel?");
+    if (!confirmed) return;
+
+    setReelDeleteState("loading");
+    setReelDeleteId(reelId);
+
+    try {
+      const response = await fetch("/api/admin-delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ table: "reels", id: reelId }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json();
+        throw new Error(payload.message ?? "Delete failed");
+      }
+
+      setReelDeleteState("idle");
+      setReelDeleteId(null);
+      await fetchAdminData();
+    } catch (error) {
+      setReelDeleteState("error");
+      setReelDeleteId(null);
+      alert(error instanceof Error ? error.message : "Delete failed");
+    }
+  };
+
+  const handlePhotoEditingOrderSave = async (orderedItems: PhotoEditingItem[]) => {
+    if (!session) return;
+    setPhotoEditingOrderState("saving");
+    setPhotoEditingOrderError("");
+
+    try {
+      const response = await fetch("/api/admin-reorder", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          table: "photo_editing",
+          items: orderedItems.map((item, index) => ({
+            id: item.id,
+            sort_order: index,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json();
+        throw new Error(payload.message ?? "Failed to save order");
+      }
+
+      setPhotoEditingOrderState("idle");
+      setPhotoEditingOrderDirty(false);
+    } catch (error) {
+      setPhotoEditingOrderState("error");
+      setPhotoEditingOrderError(error instanceof Error ? error.message : "Failed to save order");
+    }
+  };
+
+  const handlePhotoEditingDelete = async (photoEditingId: string) => {
+    const confirmed = window.confirm("Delete this photo edit?");
+    if (!confirmed) return;
+
+    setPhotoEditingDeleteState("loading");
+    setPhotoEditingDeleteId(photoEditingId);
+
+    try {
+      const response = await fetch("/api/admin-delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ table: "photo_editing", id: photoEditingId }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json();
+        throw new Error(payload.message ?? "Delete failed");
+      }
+
+      setPhotoEditingDeleteState("idle");
+      setPhotoEditingDeleteId(null);
+      await fetchAdminData();
+    } catch (error) {
+      setPhotoEditingDeleteState("error");
+      setPhotoEditingDeleteId(null);
+      alert(error instanceof Error ? error.message : "Delete failed");
+    }
+  };
+
   const getIndustryName = (id?: string | null) => {
     if (!id) return null;
     return industries.find((i) => i.id === id)?.name;
   };
 
-  const carouselPreviewImages = useMemo(() => {
-    if (!selectedCarouselClient) return [] as CarouselImageItem[];
-    return carousels
-      .filter((image) => (image.client ?? "").trim() === selectedCarouselClient)
-      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
-  }, [carousels, selectedCarouselClient]);
+  const dashboardStats = useMemo(() => {
+    const uniqueClientNames = new Set(
+      clients
+        .map((item) => (item.name ?? "").trim())
+        .filter(Boolean)
+    );
+    const uniqueCarouselClients = new Set(
+      carousels
+        .map((item) => (item.client ?? "").trim())
+        .filter(Boolean)
+    );
+    const totalEntries =
+      clients.length +
+      carousels.length +
+      reels.length +
+      stories.length +
+      copywriting.length +
+      photoEditing.length +
+      testimonials.length;
 
-  const currentPreviewImage = carouselPreviewImages[previewCarouselIndex]?.image_url ?? null;
+    return {
+      uniqueClientCount: uniqueClientNames.size,
+      uniqueCarouselClients: uniqueCarouselClients.size,
+      totalEntries,
+    };
+  }, [clients, carousels, reels, stories, copywriting, photoEditing, testimonials]);
 
   const closeCreateForm = () => {
     setShowCreateForm(false);
     setCreateTableOverride(null);
     setEditingTestimonial(null);
     setEditingIndustry(null);
+    setEditingPhotoEditing(null);
   };
 
   const formTable = createTableOverride ?? selectedTable;
@@ -819,6 +1518,36 @@ export function AdminPage() {
     setSelectedClientImage(null);
     setClientDeletePrompt(null);
   }, [selectedIndustryId]);
+
+  useEffect(() => {
+    if (!selectedCarouselClient) {
+      setCarouselBatchImages([]);
+      setCarouselRenameDraft("");
+      setCarouselOrder([]);
+      setCarouselOrderDirty(false);
+      setCarouselUploadState("idle");
+      setCarouselUploadMessage("");
+      setCarouselRenameState("idle");
+      setCarouselRenameMessage("");
+      setCarouselOrderState("idle");
+      setCarouselOrderMessage("");
+      return;
+    }
+
+    const ordered = carousels
+      .filter((image) => (image.client ?? "").trim() === selectedCarouselClient)
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+
+    setCarouselOrder(ordered);
+    setCarouselRenameDraft(selectedCarouselClient);
+    setCarouselOrderDirty(false);
+    setCarouselUploadState("idle");
+    setCarouselUploadMessage("");
+    setCarouselRenameState("idle");
+    setCarouselRenameMessage("");
+    setCarouselOrderState("idle");
+    setCarouselOrderMessage("");
+  }, [selectedCarouselClient, carousels]);
   const showCarouselForm = formTable === "carousels";
   const showCopywritingForm = formTable === "copywriting";
   const showPhotoEditingForm = formTable === "photo_editing";
@@ -827,6 +1556,30 @@ export function AdminPage() {
     : TABLE_CONFIG[formTable].fields;
   const isEditingTestimonial = formTable === "testimonials" && Boolean(editingTestimonial);
   const isEditingIndustry = formTable === "industries" && Boolean(editingIndustry);
+  const isEditingPhotoEditing = formTable === "photo_editing" && Boolean(editingPhotoEditing);
+
+  useEffect(() => {
+    if (!showCreateForm || formTable !== "photo_editing" || !editingPhotoEditing) return;
+
+    const nextPreview: Record<string, string> = {};
+    if (editingPhotoEditing.before_image_url) {
+      nextPreview.before_image_url = editingPhotoEditing.before_image_url;
+    }
+    if (editingPhotoEditing.after_image_url) {
+      nextPreview.after_image_url = editingPhotoEditing.after_image_url;
+    }
+
+    setImagePreview(nextPreview);
+
+    requestAnimationFrame(() => {
+      if (inputRefs.current.before_image_url && editingPhotoEditing.before_image_url) {
+        inputRefs.current.before_image_url.value = editingPhotoEditing.before_image_url;
+      }
+      if (inputRefs.current.after_image_url && editingPhotoEditing.after_image_url) {
+        inputRefs.current.after_image_url.value = editingPhotoEditing.after_image_url;
+      }
+    });
+  }, [editingPhotoEditing, formTable, showCreateForm]);
 
   if (!mounted) {
     return null;
@@ -910,6 +1663,7 @@ export function AdminPage() {
 
   const getTableData = (): AdminListItem[] => {
     switch (selectedTable) {
+      case "dashboard": return [];
       case "industries": return industries;
       case "clients":
         if (!selectedIndustryId) return industries as AdminListItem[];
@@ -936,7 +1690,20 @@ export function AdminPage() {
         !isSidebarOpen && "-translate-x-full"
       )}>
         <div className="p-6 lg:p-8 border-b border-ink/5 flex items-center justify-between">
-          <h1 className="font-bold text-2xl tracking-tighter">MAV<span className="font-normal text-ink/40">ADMIN</span></h1>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedTable("dashboard");
+              setSelectedIndustryId(null);
+              setSelectedCarouselClient(null);
+              setShowCreateForm(false);
+              setIsSidebarOpen(false);
+            }}
+            className="font-bold text-2xl tracking-tighter text-left"
+            aria-label="Go to dashboard"
+          >
+            MAV<span className="font-normal text-ink/40">ADMIN</span>
+          </button>
           <button
             type="button"
             onClick={() => setIsSidebarOpen(false)}
@@ -948,6 +1715,24 @@ export function AdminPage() {
         </div>
 
         <nav className="p-4 space-y-1 overflow-y-auto max-h-[calc(100vh-160px)]">
+          <button
+            onClick={() => {
+              setSelectedTable("dashboard");
+              setSelectedIndustryId(null);
+              setSelectedCarouselClient(null);
+              setShowCreateForm(false);
+              setIsSidebarOpen(false);
+            }}
+            className={clsx(
+              "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-sm font-medium",
+              selectedTable === "dashboard"
+                ? "bg-ink text-white shadow-lg shadow-ink/20"
+                : "text-ink/60 hover:bg-sand hover:text-ink"
+            )}
+          >
+            <LayoutDashboard size={18} />
+            Dashboard
+          </button>
           {Object.entries(TABLE_CONFIG)
             .filter(([key]) => (
               [
@@ -1035,13 +1820,81 @@ export function AdminPage() {
                   : TABLE_CONFIG[selectedTable].label}
               </h2>
               <p className="text-sm text-ink/40">
-                {selectedTable === "clients" && !selectedIndustryId
-                  ? `${industries.length} industries`
-                  : `${currentData.length} entries found`}
+                {selectedTable === "dashboard"
+                  ? `${dashboardStats.totalEntries} total items across 7 sections`
+                  : selectedTable === "clients" && !selectedIndustryId
+                    ? `${industries.length} industries`
+                    : `${currentData.length} entries found`}
               </p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            {selectedTable === "reels" && reelsOrderDirty && (
+              <button
+                type="button"
+                onClick={() => handleReelsOrderSave(reels)}
+                disabled={reelOrderState === "saving"}
+                className="bg-white text-ink px-5 py-3 rounded-xl font-medium text-sm flex items-center gap-2 border border-ink/10 hover:border-ink/30 hover:bg-sand transition-all disabled:opacity-50"
+              >
+                {reelOrderState === "saving" && <Loader2 className="animate-spin" size={16} />}
+                Save Changes
+              </button>
+            )}
+            {selectedTable === "stories" && storiesOrderDirty && (
+              <button
+                type="button"
+                onClick={() => handleStoryOrderSave(stories)}
+                disabled={storyOrderSaving}
+                className="bg-white text-ink px-5 py-3 rounded-xl font-medium text-sm flex items-center gap-2 border border-ink/10 hover:border-ink/30 hover:bg-sand transition-all disabled:opacity-50"
+              >
+                {storyOrderSaving && <Loader2 className="animate-spin" size={16} />}
+                Save Changes
+              </button>
+            )}
+            {selectedTable === "photo_editing" && photoEditingOrderDirty && (
+              <button
+                type="button"
+                onClick={() => handlePhotoEditingOrderSave(photoEditing)}
+                disabled={photoEditingOrderState === "saving"}
+                className="bg-white text-ink px-5 py-3 rounded-xl font-medium text-sm flex items-center gap-2 border border-ink/10 hover:border-ink/30 hover:bg-sand transition-all disabled:opacity-50"
+              >
+                {photoEditingOrderState === "saving" && <Loader2 className="animate-spin" size={16} />}
+                Save Changes
+              </button>
+            )}
+            {selectedTable === "testimonials" && testimonialsOrderDirty && (
+              <button
+                type="button"
+                onClick={() => handleTestimonialOrderSave(testimonials)}
+                disabled={testimonialOrderSaving}
+                className="bg-white text-ink px-5 py-3 rounded-xl font-medium text-sm flex items-center gap-2 border border-ink/10 hover:border-ink/30 hover:bg-sand transition-all disabled:opacity-50"
+              >
+                {testimonialOrderSaving && <Loader2 className="animate-spin" size={16} />}
+                Save Changes
+              </button>
+            )}
+            {selectedTable === "copywriting" && copywritingOrderDirty && (
+              <button
+                type="button"
+                onClick={() => handleCopywritingOrderSave(copywritingOrder)}
+                disabled={copywritingOrderState === "loading"}
+                className="bg-white text-ink px-5 py-3 rounded-xl font-medium text-sm flex items-center gap-2 border border-ink/10 hover:border-ink/30 hover:bg-sand transition-all disabled:opacity-50"
+              >
+                {copywritingOrderState === "loading" && <Loader2 className="animate-spin" size={16} />}
+                Save Changes
+              </button>
+            )}
+            {selectedTable === "carousels" && selectedCarouselClient && carouselOrderDirty && (
+              <button
+                type="button"
+                onClick={() => handleCarouselOrderSave(carouselOrder)}
+                disabled={carouselOrderState === "loading"}
+                className="bg-white text-ink px-5 py-3 rounded-xl font-medium text-sm flex items-center gap-2 border border-ink/10 hover:border-ink/30 hover:bg-sand transition-all disabled:opacity-50"
+              >
+                {carouselOrderState === "loading" && <Loader2 className="animate-spin" size={16} />}
+                Save Changes
+              </button>
+            )}
             {selectedTable === "clients" && (
               <button
                 onClick={() => {
@@ -1054,7 +1907,7 @@ export function AdminPage() {
                 <Plus size={18} /> Add Industry
               </button>
             )}
-            {(selectedTable !== "clients" || selectedIndustryId) && (
+            {selectedTable !== "dashboard" && (selectedTable !== "clients" || selectedIndustryId) && (
               <button
                 onClick={() => setShowCreateForm(true)}
                 className="bg-ink text-white px-6 py-3 rounded-xl font-medium text-sm flex items-center gap-2 hover:bg-ink/90 transition-all shadow-lg shadow-ink/20"
@@ -1073,7 +1926,113 @@ export function AdminPage() {
             </div>
           )}
 
-          {selectedTable === "clients" && selectedIndustryId ? (
+          {selectedTable === "dashboard" ? (
+            <div className="space-y-8">
+              <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[
+                  {
+                    label: "Industries",
+                    value: industries.length,
+                    helper: "Organize client work",
+                  },
+                  {
+                    label: "Unique Clients",
+                    value: dashboardStats.uniqueClientCount,
+                    helper: "Across graphic designs",
+                  },
+                  {
+                    label: "Carousel Clients",
+                    value: dashboardStats.uniqueCarouselClients,
+                    helper: "Clients with carousels",
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="bg-white rounded-3xl border border-ink/5 p-6 shadow-sm"
+                  >
+                    <p className="text-xs uppercase tracking-widest text-ink/40">{item.label}</p>
+                    <p className="mt-3 text-3xl font-bold text-ink">{item.value}</p>
+                    <p className="mt-2 text-sm text-ink/40">{item.helper}</p>
+                  </div>
+                ))}
+              </section>
+
+              <section>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold">Data by Section</h3>
+                  <span className="text-xs uppercase tracking-widest text-ink/40">
+                    Sidebar items
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                  {([
+                    {
+                      key: "clients" as TableKey,
+                      count: clients.length,
+                      helper: `${dashboardStats.uniqueClientCount} clients • ${clients.length} images`,
+                    },
+                    {
+                      key: "carousels" as TableKey,
+                      count: carousels.length,
+                      helper: `${dashboardStats.uniqueCarouselClients} clients • ${carousels.length} images`,
+                    },
+                    {
+                      key: "reels" as TableKey,
+                      count: reels.length,
+                      helper: `${reels.length} video entries`,
+                    },
+                    {
+                      key: "stories" as TableKey,
+                      count: stories.length,
+                      helper: `${stories.length} story entries`,
+                    },
+                    {
+                      key: "copywriting" as TableKey,
+                      count: copywriting.length,
+                      helper: `${copywriting.length} copy assets`,
+                    },
+                    {
+                      key: "photo_editing" as TableKey,
+                      count: photoEditing.length,
+                      helper: `${photoEditing.length} before/after sets`,
+                    },
+                    {
+                      key: "testimonials" as TableKey,
+                      count: testimonials.length,
+                      helper: `${testimonials.length} quotes`,
+                    },
+                  ] as const).map((item) => {
+                    const Icon = TABLE_CONFIG[item.key].icon;
+                    return (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => {
+                          setSelectedTable(item.key);
+                          setSelectedIndustryId(null);
+                          setSelectedCarouselClient(null);
+                          setShowCreateForm(false);
+                          setIsSidebarOpen(false);
+                        }}
+                        className="bg-white rounded-3xl border border-ink/5 p-6 text-left hover:border-ink/20 hover:shadow-xl transition-all"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <div className="w-10 h-10 rounded-2xl bg-sand flex items-center justify-center text-ink/50">
+                              <Icon size={18} />
+                            </div>
+                            <h4 className="mt-4 text-lg font-bold">{TABLE_CONFIG[item.key].label}</h4>
+                          </div>
+                          <span className="text-3xl font-bold text-ink">{item.count}</span>
+                        </div>
+                        <p className="mt-3 text-sm text-ink/40">{item.helper}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            </div>
+          ) : selectedTable === "clients" && selectedIndustryId ? (
             <div className="flex flex-col md:flex-row gap-6 items-start h-full">
               {/* Left: Industry Card */}
               <div className="w-full md:w-80 flex-shrink-0">
@@ -1238,13 +2197,12 @@ export function AdminPage() {
                     {selectedCarouselClient}
                   </h3>
                   <p className="text-white/60 mt-1 text-sm">
-                    {carouselPreviewImages.length} Images
+                    {carouselOrder.length} Images
                   </p>
                   <div className="mt-6 flex flex-col gap-3">
                     <button
                       onClick={() => {
                         setSelectedCarouselClient(null);
-                        setPreviewCarouselIndex(0);
                       }}
                       className="text-xs uppercase tracking-widest font-bold opacity-50 hover:opacity-100 flex items-center gap-2 transition-opacity"
                     >
@@ -1255,12 +2213,111 @@ export function AdminPage() {
               </div>
 
               <div className="flex-1 w-full min-h-[50vh] bg-white/40 rounded-3xl border border-ink/5 p-6">
-                {carouselPreviewImages.length === 0 ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+                  <div className="rounded-2xl border border-ink/10 bg-white p-4">
+                    <p className="text-xs uppercase tracking-widest text-ink/40 font-semibold">Client Name</p>
+                    <div className="mt-3 flex flex-col sm:flex-row gap-3">
+                      <input
+                        type="text"
+                        value={carouselRenameDraft}
+                        onChange={(event) => setCarouselRenameDraft(event.target.value)}
+                        className="flex-1 rounded-xl border border-ink/10 bg-sand/40 px-4 py-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-ink/20"
+                        placeholder="Client name"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleCarouselRename}
+                        disabled={carouselRenameState === "loading"}
+                        className="rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-white hover:bg-ink/90 transition-colors disabled:opacity-60"
+                      >
+                        {carouselRenameState === "loading" ? "Saving..." : "Save Name"}
+                      </button>
+                    </div>
+                    {carouselRenameMessage && (
+                      <p className={clsx(
+                        "mt-2 text-xs",
+                        carouselRenameState === "error" ? "text-red-500" : "text-emerald-600"
+                      )}>
+                        {carouselRenameMessage}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="rounded-2xl border border-ink/10 bg-white p-4">
+                    <p className="text-xs uppercase tracking-widest text-ink/40 font-semibold">Add Images</p>
+                    <div className="mt-3 flex flex-col gap-3">
+                      <label className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-ink/20 bg-sand/30 px-4 py-4 text-sm text-ink/60 cursor-pointer hover:border-ink/40 transition-colors">
+                        <UploadCloud size={16} /> Upload Images
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={(event) => handleCarouselImageUpload(event.target.files)}
+                          className="hidden"
+                        />
+                      </label>
+
+                      {carouselBatchImages.length > 0 && (
+                        <div className="grid grid-cols-4 gap-2">
+                          {carouselBatchImages.map((image) => (
+                            <div key={image.id} className="relative rounded-lg overflow-hidden border border-ink/10">
+                              <img src={image.url} alt="New carousel" className="h-16 w-full object-cover" />
+                              <button
+                                type="button"
+                                onClick={() => setCarouselBatchImages((prev) => prev.filter((item) => item.id !== image.id))}
+                                className="absolute top-1 right-1 rounded-full bg-white/80 p-1 text-ink/70 hover:text-ink"
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={handleCarouselAddImages}
+                        disabled={carouselUploadState === "loading"}
+                        className="rounded-xl border border-ink/10 bg-ink text-white px-4 py-2 text-sm font-semibold hover:bg-ink/90 transition-colors disabled:opacity-60"
+                      >
+                        {carouselUploadState === "loading" ? "Adding..." : "Add Images"}
+                      </button>
+                      {carouselUploadMessage && (
+                        <p className={clsx(
+                          "text-xs",
+                          carouselUploadState === "error" ? "text-red-500" : "text-emerald-600"
+                        )}>
+                          {carouselUploadMessage}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                  <div>
+                    <h4 className="text-sm font-semibold text-ink">Carousel Images</h4>
+                    <p className="text-xs text-ink/40">Use arrows to reorder, then save.</p>
+                  </div>
+                </div>
+                {carouselOrderMessage && (
+                  <p className={clsx(
+                    "mb-4 text-xs",
+                    carouselOrderState === "error" ? "text-red-500" : "text-emerald-600"
+                  )}>
+                    {carouselOrderMessage}
+                  </p>
+                )}
+
+                {carouselOrder.length === 0 ? (
                   <p className="text-sm text-ink/40 text-center">No images in this carousel yet.</p>
                 ) : (
-                  <div className="grid grid-cols-3 lg:grid-cols-4 gap-3">
-                    {carouselPreviewImages.map((image) => (
-                      <div key={image.id} className="rounded-xl overflow-hidden bg-sand border border-ink/10">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    {carouselOrder.map((image, index) => (
+                      <div
+                        key={image.id}
+                        className="relative rounded-xl overflow-hidden bg-sand border border-ink/10 group"
+                      >
                         {image.image_url ? (
                           <img
                             src={image.image_url}
@@ -1272,6 +2329,36 @@ export function AdminPage() {
                             No image
                           </div>
                         )}
+                        <div className="absolute top-2 left-2 rounded-full bg-white/80 px-2 py-1 text-[10px] font-semibold text-ink/70">
+                          #{index + 1}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleCarouselImageDelete(image.id)}
+                          disabled={carouselDeletingId === image.id}
+                          className="absolute top-2 right-2 rounded-full bg-white/80 p-2 text-ink/70 hover:text-red-500 disabled:opacity-50"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+
+                        <div className="absolute bottom-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            type="button"
+                            onClick={() => moveItemUp(index, carouselOrder, setCarouselOrder, setCarouselOrderDirty)}
+                            disabled={index === 0}
+                            className="rounded-full bg-white/90 p-1.5 text-ink/70 hover:text-ink disabled:opacity-30 disabled:hover:text-ink/70"
+                          >
+                            <ArrowUp size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => moveItemDown(index, carouselOrder, setCarouselOrder, setCarouselOrderDirty)}
+                            disabled={index === carouselOrder.length - 1}
+                            className="rounded-full bg-white/90 p-1.5 text-ink/70 hover:text-ink disabled:opacity-30 disabled:hover:text-ink/70"
+                          >
+                            <ArrowDown size={12} />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1338,6 +2425,197 @@ export function AdminPage() {
                     </>
                   )}
                 </div>
+              ) : selectedTable === "reels" ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {reels.map((item, index) => (
+                    <div
+                      key={item.id}
+                      className="bg-white rounded-3xl p-5 border border-ink/5 hover:border-ink/20 hover:shadow-xl transition-all group"
+                    >
+                      <div className="aspect-video w-full bg-black rounded-2xl mb-4 flex items-center justify-center relative overflow-hidden">
+                        {item.video_url ? (
+                          <video
+                            src={item.video_url}
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
+                            className="absolute inset-0 w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="text-xs text-white/60">No video</div>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between mt-auto pt-4 border-t border-ink/5">
+                        <span className="text-xs text-ink/30 font-mono uppercase">
+                          {item.created_at ? new Date(item.created_at).toLocaleDateString() : "N/A"}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => moveItemUp(index, reels, setReels, setReelsOrderDirty)}
+                            disabled={index === 0}
+                            className="w-9 h-9 rounded-full bg-sand text-ink/70 hover:text-ink hover:bg-ink/10 transition-colors flex items-center justify-center disabled:opacity-30 disabled:hover:bg-sand disabled:hover:text-ink/70"
+                          >
+                            <ArrowUp size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => moveItemDown(index, reels, setReels, setReelsOrderDirty)}
+                            disabled={index === reels.length - 1}
+                            className="w-9 h-9 rounded-full bg-sand text-ink/70 hover:text-ink hover:bg-ink/10 transition-colors flex items-center justify-center disabled:opacity-30 disabled:hover:bg-sand disabled:hover:text-ink/70"
+                          >
+                            <ArrowDown size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleReelDelete(item.id)}
+                            disabled={reelDeleteState === "loading" && reelDeleteId === item.id}
+                            className="w-9 h-9 rounded-full bg-red-50 text-red-500 hover:bg-red-100 transition-colors flex items-center justify-center disabled:opacity-60"
+                            aria-label="Delete reel"
+                          >
+                            {reelDeleteState === "loading" && reelDeleteId === item.id ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                              <Trash2 size={14} />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : selectedTable === "photo_editing" ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {photoEditing.map((item, index) => {
+                    const title = (item.title || item.client || "").trim();
+                    const showTitle = title.length > 0 && title.toLowerCase() !== "untitled";
+                    const previewTitle = showTitle ? title : "Preview";
+
+                    return (
+                      <div
+                        key={item.id}
+                        className="bg-white rounded-3xl p-5 border border-ink/5 hover:border-ink/20 hover:shadow-xl transition-all group"
+                      >
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex-1 min-w-0 pr-3">
+                            {showTitle && (
+                              <h3 className="font-bold text-lg truncate">{title}</h3>
+                            )}
+                            <p className="text-xs text-ink/40">Before &amp; After</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => moveItemUp(index, photoEditing, setPhotoEditing, setPhotoEditingOrderDirty)}
+                              disabled={index === 0}
+                              className="w-9 h-9 rounded-full bg-sand text-ink/70 hover:text-ink hover:bg-ink/10 transition-colors flex items-center justify-center disabled:opacity-30 disabled:hover:bg-sand disabled:hover:text-ink/70"
+                            >
+                              <ArrowUp size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => moveItemDown(index, photoEditing, setPhotoEditing, setPhotoEditingOrderDirty)}
+                              disabled={index === photoEditing.length - 1}
+                              className="w-9 h-9 rounded-full bg-sand text-ink/70 hover:text-ink hover:bg-ink/10 transition-colors flex items-center justify-center disabled:opacity-30 disabled:hover:bg-sand disabled:hover:text-ink/70"
+                            >
+                              <ArrowDown size={14} />
+                            </button>
+                            <div className="w-px h-6 bg-ink/10 mx-1" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingPhotoEditing(item);
+                                setCreateTableOverride("photo_editing");
+                                setUploadState("idle");
+                                setUploadMessage("");
+                                setShowCreateForm(true);
+                                setIsSidebarOpen(false);
+                              }}
+                              className="w-9 h-9 rounded-full bg-ink/5 text-ink/60 hover:bg-ink/10 hover:text-ink transition-colors flex items-center justify-center"
+                              aria-label="Edit photo edit"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handlePhotoEditingDelete(item.id)}
+                              disabled={photoEditingDeleteState === "loading" && photoEditingDeleteId === item.id}
+                              className="w-9 h-9 rounded-full bg-red-50 text-red-500 hover:bg-red-100 transition-colors flex items-center justify-center disabled:opacity-60"
+                              aria-label="Delete photo edit"
+                            >
+                              {photoEditingDeleteState === "loading" && photoEditingDeleteId === item.id ? (
+                                <Loader2 size={14} className="animate-spin" />
+                              ) : (
+                                <Trash2 size={14} />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPreviewModal({
+                                type: "beforeAfter",
+                                title: previewTitle,
+                                before: item.before_image_url ?? null,
+                                after: item.after_image_url ?? null,
+                              });
+                            }}
+                            className="group relative rounded-2xl overflow-hidden border border-ink/10 bg-sand/40"
+                          >
+                            {item.before_image_url ? (
+                              <img
+                                src={item.before_image_url}
+                                alt="Before"
+                                className="w-full h-36 object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                              />
+                            ) : (
+                              <div className="flex items-center justify-center h-36 text-xs text-ink/40">No before image</div>
+                            )}
+                            <div className="absolute top-2 left-2 rounded-full bg-white/80 px-2 py-1 text-[10px] font-semibold text-ink/70">
+                              Before
+                            </div>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPreviewModal({
+                                type: "beforeAfter",
+                                title: previewTitle,
+                                before: item.before_image_url ?? null,
+                                after: item.after_image_url ?? null,
+                              });
+                            }}
+                            className="group relative rounded-2xl overflow-hidden border border-ink/10 bg-sand/40"
+                          >
+                            {item.after_image_url ? (
+                              <img
+                                src={item.after_image_url}
+                                alt="After"
+                                className="w-full h-36 object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                              />
+                            ) : (
+                              <div className="flex items-center justify-center h-36 text-xs text-ink/40">No after image</div>
+                            )}
+                            <div className="absolute top-2 left-2 rounded-full bg-white/80 px-2 py-1 text-[10px] font-semibold text-ink/70">
+                              After
+                            </div>
+                          </button>
+                        </div>
+
+                        <div className="flex items-center justify-between mt-auto pt-4 border-t border-ink/5">
+                          <span className="text-xs text-ink/30 font-mono uppercase">
+                            {item.created_at ? new Date(item.created_at).toLocaleDateString() : "N/A"}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   <AnimatePresence>
@@ -1383,6 +2661,159 @@ export function AdminPage() {
                           </div>
                         </motion.div>
                       ))
+                    ) : selectedTable === "stories" ? (
+                      <>
+                        {(storyOrderSaving || storyOrderError) && (
+                          <div
+                            className={clsx(
+                              "mb-4 text-xs font-medium",
+                              storyOrderError ? "text-red-500" : "text-ink/40"
+                            )}
+                          >
+                            {storyOrderSaving ? "Saving order..." : storyOrderError}
+                          </div>
+                        )}
+                        <div className="flex flex-col gap-6">
+                          {stories.map((story, index) => (
+                            <div
+                              key={story.id}
+                              className="bg-white rounded-3xl p-5 border border-ink/5 hover:border-ink/20 hover:shadow-xl transition-all group"
+                            >
+                              <div className="relative aspect-video w-full bg-black rounded-2xl overflow-hidden">
+                                {story.video_url ? (
+                                  <video
+                                    src={story.video_url}
+                                    autoPlay
+                                    muted
+                                    loop
+                                    playsInline
+                                    className="absolute inset-0 w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="flex items-center justify-center h-full text-xs text-white/60">
+                                    No video
+                                  </div>
+                                )}
+                                <div className="absolute top-3 right-3 flex gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      void handleStoryDelete(story.id);
+                                    }}
+                                    disabled={deletingStoryId === story.id}
+                                    className="w-9 h-9 rounded-full bg-white/90 text-red-500 hover:bg-white transition-colors flex items-center justify-center disabled:opacity-60"
+                                    aria-label="Delete story"
+                                  >
+                                    {deletingStoryId === story.id ? (
+                                      <Loader2 size={16} className="animate-spin" />
+                                    ) : (
+                                      <Trash2 size={16} />
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between mt-4 pt-4 border-t border-ink/5">
+                                <span className="text-xs text-ink/30 font-mono uppercase">
+                                  {story.created_at ? new Date(story.created_at).toLocaleDateString() : "N/A"}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => moveItemUp(index, stories, setStories, setStoriesOrderDirty)}
+                                    disabled={index === 0}
+                                    className="w-9 h-9 rounded-full bg-sand text-ink/70 hover:text-ink hover:bg-ink/10 transition-colors flex items-center justify-center disabled:opacity-30 disabled:hover:bg-sand disabled:hover:text-ink/70"
+                                  >
+                                    <ArrowUp size={14} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => moveItemDown(index, stories, setStories, setStoriesOrderDirty)}
+                                    disabled={index === stories.length - 1}
+                                    className="w-9 h-9 rounded-full bg-sand text-ink/70 hover:text-ink hover:bg-ink/10 transition-colors flex items-center justify-center disabled:opacity-30 disabled:hover:bg-sand disabled:hover:text-ink/70"
+                                  >
+                                    <ArrowDown size={14} />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    ) : selectedTable === "testimonials" ? (
+                      <>
+                        {(testimonialOrderSaving || testimonialOrderError) && (
+                          <div
+                            className={clsx(
+                              "mb-4 text-xs font-medium",
+                              testimonialOrderError ? "text-red-500" : "text-ink/40"
+                            )}
+                          >
+                            {testimonialOrderSaving ? "Saving order..." : testimonialOrderError}
+                          </div>
+                        )}
+                        <div className="flex flex-col gap-4">
+                          {testimonials.map((testimonial, index) => (
+                            <div
+                              key={testimonial.id}
+                              className="bg-white rounded-3xl p-5 border border-ink/5 hover:border-ink/20 hover:shadow-xl transition-all group"
+                            >
+                              <div className="flex items-start gap-4">
+                                <div className="flex flex-col gap-1 mt-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => moveItemUp(index, testimonials, setTestimonials, setTestimonialsOrderDirty)}
+                                    disabled={index === 0}
+                                    className="text-ink/30 hover:text-ink disabled:opacity-30 disabled:hover:text-ink/30"
+                                  >
+                                    <ArrowUp size={16} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => moveItemDown(index, testimonials, setTestimonials, setTestimonialsOrderDirty)}
+                                    disabled={index === testimonials.length - 1}
+                                    className="text-ink/30 hover:text-ink disabled:opacity-30 disabled:hover:text-ink/30"
+                                  >
+                                    <ArrowDown size={16} />
+                                  </button>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="font-bold text-lg truncate">{testimonial.client_name}</h3>
+                                  <p className="text-sm text-ink/50">{testimonial.quote}</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      setEditingTestimonial(testimonial);
+                                      setUploadState("idle");
+                                      setUploadMessage("");
+                                      setShowCreateForm(true);
+                                    }}
+                                    className="w-9 h-9 rounded-full bg-ink/5 text-ink/60 hover:bg-ink/10 hover:text-ink transition-colors flex items-center justify-center"
+                                    aria-label="Edit testimonial"
+                                  >
+                                    <Pencil size={14} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      void handleTestimonialDelete(testimonial.id);
+                                    }}
+                                    disabled={deletingTestimonialId === testimonial.id}
+                                    className="w-9 h-9 rounded-full bg-red-50 text-red-500 hover:bg-red-100 transition-colors flex items-center justify-center disabled:opacity-60"
+                                    aria-label="Delete testimonial"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </>
                     ) : selectedTable === "carousels" ? (
                       Array.from(
                         carousels
@@ -1405,7 +2836,6 @@ export function AdminPage() {
                             type="button"
                             onClick={() => {
                               setSelectedCarouselClient(name);
-                              setPreviewCarouselIndex(0);
                             }}
                             className="w-full text-left"
                           >
@@ -1426,13 +2856,92 @@ export function AdminPage() {
                           </div>
                         </motion.div>
                       ))
+                    ) : selectedTable === "copywriting" ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                        {copywritingOrder.map((item, index) => {
+                          const imageSrc = item.image_url ?? undefined;
+                          const previewTitle = "Preview";
+
+                          return (
+                            <div
+                              key={item.id}
+                              className="bg-white rounded-3xl p-5 border border-ink/5 hover:border-ink/20 hover:shadow-xl transition-all group"
+                            >
+                              <div className="flex items-start justify-between mb-4">
+                                <div className="flex-1" />
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => moveItemUp(index, copywritingOrder, setCopywritingOrder, setCopywritingOrderDirty)}
+                                    disabled={index === 0}
+                                    className="w-8 h-8 rounded-full bg-sand text-ink/70 hover:text-ink hover:bg-ink/10 transition-colors flex items-center justify-center disabled:opacity-30 disabled:hover:bg-sand disabled:hover:text-ink/70"
+                                  >
+                                    <ArrowUp size={14} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => moveItemDown(index, copywritingOrder, setCopywritingOrder, setCopywritingOrderDirty)}
+                                    disabled={index === copywritingOrder.length - 1}
+                                    className="w-8 h-8 rounded-full bg-sand text-ink/70 hover:text-ink hover:bg-ink/10 transition-colors flex items-center justify-center disabled:opacity-30 disabled:hover:bg-sand disabled:hover:text-ink/70"
+                                  >
+                                    <ArrowDown size={14} />
+                                  </button>
+                                  <div className="w-px h-6 bg-ink/10 mx-1" />
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      void handleCopywritingDelete(item.id);
+                                    }}
+                                    disabled={copywritingDeletingId === item.id}
+                                    className="w-8 h-8 rounded-full bg-red-50 text-red-500 hover:bg-red-100 transition-colors flex items-center justify-center disabled:opacity-50"
+                                    aria-label="Delete copywriting image"
+                                  >
+                                    {copywritingDeletingId === item.id ? <Loader2 className="animate-spin" size={14} /> : <Trash2 size={14} />}
+                                  </button>
+                                </div>
+                              </div>
+
+                              {imageSrc && (
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    setPreviewModal({
+                                      type: "single",
+                                      title: previewTitle,
+                                      image: imageSrc,
+                                    });
+                                  }}
+                                  className="aspect-video w-full bg-sand rounded-2xl mb-4 overflow-hidden relative group"
+                                >
+                                  <img
+                                    src={imageSrc}
+                                    alt="Copywriting preview"
+                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                                  />
+                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                                </button>
+                              )}
+
+                              <div className="flex items-center justify-between mt-auto pt-4 border-t border-ink/5">
+                                <span className="text-xs text-ink/30 font-mono uppercase">
+                                  {item.created_at ? new Date(item.created_at).toLocaleDateString() : "N/A"}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     ) : (
                       currentData.map((item) => {
                         const imageSrc = item.image_url ?? item.avatar_url ?? item.before_image_url ?? item.after_image_url ?? undefined;
                         const beforeImage = (item as any).before_image_url ?? null;
                         const afterImage = (item as any).after_image_url ?? null;
                         const canShowBeforeAfter = Boolean(beforeImage && afterImage);
-                        const previewTitle = item.title || item.client_name || item.name || "Preview";
+                        const rawTitle = (item.title || item.client_name || item.name || item.client || "").trim();
+                        const showTitle = rawTitle.length > 0 && rawTitle.toLowerCase() !== "untitled";
+                        const previewTitle = showTitle ? rawTitle : "Preview";
                         const industryName = 'industry_id' in item ? getIndustryName((item as any).industry_id) : null;
 
                         return (
@@ -1441,40 +2950,29 @@ export function AdminPage() {
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            onClick={() => {
-                              if (selectedTable !== "testimonials") return;
-                              setEditingTestimonial(item as TestimonialItem);
-                              setUploadState("idle");
-                              setUploadMessage("");
-                              setShowCreateForm(true);
-                            }}
-                            className={clsx(
-                              "bg-white rounded-3xl p-5 border border-ink/5 hover:border-ink/20 hover:shadow-xl transition-all group",
-                              selectedTable === "testimonials" && "cursor-pointer"
-                            )}
+                            className="bg-white rounded-3xl p-5 border border-ink/5 hover:border-ink/20 hover:shadow-xl transition-all group"
                           >
-                            <div className="flex items-start justify-between mb-4">
-                              <div className="flex-1 min-w-0 pr-4">
-                                <h3 className="font-bold text-lg truncate">{item.title || item.client_name || item.name || "Untitled"}</h3>
-                                <p className="text-sm text-ink/40 truncate">
-                                  {industryName && <span className="mr-1 font-medium text-ink/80 bg-ink/5 px-2 py-0.5 rounded text-xs">{industryName}</span>}
-                                  {item.category && <span className="mr-1 font-medium text-ink/60">{item.category} •</span>}
-                                  {item.client || item.role || item.description || (item.category ? "" : "No description")}
-                                </p>
+                              <div className="flex items-start justify-between mb-4">
+                                <div className="flex-1 min-w-0 pr-4">
+                                  {showTitle && (
+                                    <h3 className="font-bold text-lg truncate">{rawTitle}</h3>
+                                  )}
+                                  <p className="text-sm text-ink/40 truncate">
+                                    {industryName && <span className="mr-1 font-medium text-ink/80 bg-ink/5 px-2 py-0.5 rounded text-xs">{industryName}</span>}
+                                    {item.category && <span className="mr-1 font-medium text-ink/60">{item.category} •</span>}
+                                    {item.client || item.role || item.description || (item.category ? "" : "No description")}
+                                  </p>
+                                </div>
+                                <div className="w-8 h-8 rounded-full bg-sand flex items-center justify-center text-ink/40">
+                                  <ChevronRight size={16} />
+                                </div>
                               </div>
-                              <div className="w-8 h-8 rounded-full bg-sand flex items-center justify-center text-ink/40">
-                                <ChevronRight size={16} />
-                              </div>
-                            </div>
 
                             {/* Image Preview if available */}
                             {imageSrc && (
                               <button
                                 type="button"
                                 onClick={(event) => {
-                                  if (selectedTable === "testimonials") {
-                                    event.stopPropagation();
-                                  }
                                   if (canShowBeforeAfter) {
                                     setPreviewModal({
                                       type: "beforeAfter",
@@ -1634,7 +3132,9 @@ export function AdminPage() {
                     ? "Edit Testimonial"
                     : isEditingIndustry
                       ? "Edit Industry"
-                      : `New ${showClientForm ? "Client" : TABLE_CONFIG[formTable].singularLabel}`}
+                      : isEditingPhotoEditing
+                        ? "Edit Photo Edit"
+                        : `New ${showClientForm ? "Client" : TABLE_CONFIG[formTable].singularLabel}`}
                 </h3>
                 <button onClick={closeCreateForm} className="p-2 hover:bg-ink/5 rounded-full transition-colors">
                   <X size={20} />
@@ -1646,7 +3146,9 @@ export function AdminPage() {
                   ? editingTestimonial?.id ?? "edit"
                   : isEditingIndustry
                     ? editingIndustry?.id ?? "edit"
-                    : "create"}
+                    : isEditingPhotoEditing
+                      ? editingPhotoEditing?.id ?? "edit"
+                      : "create"}
                 ref={createFormRef}
                 onSubmit={handleUpload}
                 className="flex-1 overflow-y-auto p-6 space-y-6"
