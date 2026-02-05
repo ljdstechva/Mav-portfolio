@@ -143,6 +143,19 @@ type FieldConfig = {
   required?: boolean;
 };
 
+const getCanvaEmbedUrl = (rawUrl: string | null | undefined) => {
+  if (!rawUrl) return null;
+  try {
+    const url = new URL(rawUrl);
+    if (!url.hostname.endsWith("canva.com")) return null;
+    if (!url.pathname.includes("/design/")) return null;
+    url.searchParams.set("embed", "1");
+    return url.toString();
+  } catch {
+    return null;
+  }
+};
+
 const TABLE_CONFIG: Record<
   TableKey,
   { label: string; singularLabel: string; icon: React.ElementType; fields: FieldConfig[] }
@@ -298,11 +311,12 @@ export function AdminPage() {
   const [previewModal, setPreviewModal] = useState<
     | null
     | {
-      type: "single" | "beforeAfter";
+      type: "single" | "beforeAfter" | "video";
       title?: string;
       image?: string | null;
       before?: string | null;
       after?: string | null;
+      video?: string | null;
     }
   >(null);
   const [industryDeletePrompt, setIndustryDeletePrompt] = useState<{ id: string; name: string } | null>(null);
@@ -1501,6 +1515,7 @@ export function AdminPage() {
     };
   }, [clients, carousels, reels, stories, copywriting, photoEditing, testimonials]);
 
+
   const closeCreateForm = () => {
     setShowCreateForm(false);
     setCreateTableOverride(null);
@@ -2031,6 +2046,10 @@ export function AdminPage() {
                   })}
                 </div>
               </section>
+
+
+
+
             </div>
           ) : selectedTable === "clients" && selectedIndustryId ? (
             <div className="flex flex-col md:flex-row gap-6 items-start h-full">
@@ -2425,6 +2444,7 @@ export function AdminPage() {
                     </>
                   )}
                 </div>
+
               ) : selectedTable === "reels" ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {reels.map((item, index) => (
@@ -2434,14 +2454,45 @@ export function AdminPage() {
                     >
                       <div className="aspect-video w-full bg-black rounded-2xl mb-4 flex items-center justify-center relative overflow-hidden">
                         {item.video_url ? (
-                          <video
-                            src={item.video_url}
-                            autoPlay
-                            muted
-                            loop
-                            playsInline
-                            className="absolute inset-0 w-full h-full object-cover"
-                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setPreviewModal({
+                                type: "video",
+                                title: item.client ?? "Reel",
+                                video: item.video_url ?? null,
+                              })
+                            }
+                            className="relative w-full h-full cursor-pointer hover:opacity-95 transition-opacity group/video"
+                          >
+                            {getCanvaEmbedUrl(item.video_url) ? (
+                              <iframe
+                                src={getCanvaEmbedUrl(item.video_url)!}
+                                title="Canva video"
+                                className="absolute inset-0 w-full h-full pointer-events-none"
+                                allow="autoplay; fullscreen; picture-in-picture"
+                                allowFullScreen
+                                loading="lazy"
+                              />
+                            ) : (
+                              <video
+                                src={item.video_url}
+                                autoPlay
+                                muted
+                                loop
+                                playsInline
+                                className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                              />
+                            )}
+                            {/* Click Overlay */}
+                            <div className="absolute inset-0 z-10 bg-transparent" />
+                            
+                            <div className="absolute inset-0 z-20 flex items-center justify-center opacity-0 group-hover/video:opacity-100 transition-opacity bg-black/20">
+                               <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white">
+                                  <Video size={24} />
+                               </div>
+                            </div>
+                          </button>
                         ) : (
                           <div className="text-xs text-white/60">No video</div>
                         )}
@@ -2661,6 +2712,7 @@ export function AdminPage() {
                           </div>
                         </motion.div>
                       ))
+
                     ) : selectedTable === "stories" ? (
                       <>
                         {(storyOrderSaving || storyOrderError) && (
@@ -2681,20 +2733,51 @@ export function AdminPage() {
                             >
                               <div className="relative aspect-video w-full bg-black rounded-2xl overflow-hidden">
                                 {story.video_url ? (
-                                  <video
-                                    src={story.video_url}
-                                    autoPlay
-                                    muted
-                                    loop
-                                    playsInline
-                                    className="absolute inset-0 w-full h-full object-cover"
-                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setPreviewModal({
+                                        type: "video",
+                                        title: story.client ?? "Story",
+                                        video: story.video_url ?? null,
+                                      })
+                                    }
+                                    className="relative w-full h-full cursor-pointer hover:opacity-95 transition-opacity group/video"
+                                  >
+                                    {getCanvaEmbedUrl(story.video_url) ? (
+                                      <iframe
+                                        src={getCanvaEmbedUrl(story.video_url)!}
+                                        title="Canva video"
+                                        className="absolute inset-0 w-full h-full pointer-events-none"
+                                        allow="autoplay; fullscreen; picture-in-picture"
+                                        allowFullScreen
+                                        loading="lazy"
+                                      />
+                                    ) : (
+                                      <video
+                                        src={story.video_url}
+                                        autoPlay
+                                        muted
+                                        loop
+                                        playsInline
+                                        className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                                      />
+                                    )}
+                                    {/* Click Overlay */}
+                                    <div className="absolute inset-0 z-10 bg-transparent" />
+                                    
+                                    <div className="absolute inset-0 z-20 flex items-center justify-center opacity-0 group-hover/video:opacity-100 transition-opacity bg-black/20">
+                                       <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white">
+                                          <Video size={24} />
+                                       </div>
+                                    </div>
+                                  </button>
                                 ) : (
                                   <div className="flex items-center justify-center h-full text-xs text-white/60">
                                     No video
                                   </div>
                                 )}
-                                <div className="absolute top-3 right-3 flex gap-1">
+                                <div className="absolute top-3 right-3 flex gap-1 z-30">
                                   <button
                                     type="button"
                                     onClick={(event) => {
@@ -2939,6 +3022,7 @@ export function AdminPage() {
                         const beforeImage = (item as any).before_image_url ?? null;
                         const afterImage = (item as any).after_image_url ?? null;
                         const canShowBeforeAfter = Boolean(beforeImage && afterImage);
+                        const canvaEmbedUrl = getCanvaEmbedUrl(item.video_url);
                         const rawTitle = (item.title || item.client_name || item.name || item.client || "").trim();
                         const showTitle = rawTitle.length > 0 && rawTitle.toLowerCase() !== "untitled";
                         const previewTitle = showTitle ? rawTitle : "Preview";
@@ -2999,19 +3083,50 @@ export function AdminPage() {
                               </button>
                             )}
 
+
                             {/* Video Preview if available */}
                             {(["reels", "stories"] as TableKey[]).includes(selectedTable) && item.video_url && (
-                              <div className="aspect-video w-full bg-black rounded-2xl mb-4 flex items-center justify-center relative overflow-hidden">
-                                <video
-                                  src={item.video_url}
-                                  autoPlay
-                                  muted
-                                  loop
-                                  playsInline
-                                  className="absolute inset-0 w-full h-full object-cover"
-                                />
-                              </div>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setPreviewModal({
+                                    type: "video",
+                                    title: previewTitle,
+                                    video: item.video_url ?? null,
+                                  })
+                                }
+                                className="aspect-video w-full bg-black rounded-2xl mb-4 flex items-center justify-center relative overflow-hidden cursor-pointer hover:opacity-95 transition-opacity group"
+                              >
+                                {canvaEmbedUrl ? (
+                                  <iframe
+                                    src={canvaEmbedUrl}
+                                    title="Canva video"
+                                    className="absolute inset-0 w-full h-full pointer-events-none"
+                                    allow="autoplay; fullscreen; picture-in-picture"
+                                    allowFullScreen
+                                    loading="lazy"
+                                  />
+                                ) : (
+                                  <video
+                                    src={item.video_url}
+                                    autoPlay
+                                    muted
+                                    loop
+                                    playsInline
+                                    className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                                  />
+                                )}
+                                {/* Click Overlay */}
+                                <div className="absolute inset-0 z-10 bg-transparent" />
+                                
+                                <div className="absolute inset-0 z-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                                   <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white">
+                                      <Video size={24} />
+                                   </div>
+                                </div>
+                              </button>
                             )}
+
 
                             <div className="flex items-center justify-between mt-auto pt-4 border-t border-ink/5">
                               <span className="text-xs text-ink/30 font-mono uppercase">
@@ -3089,6 +3204,35 @@ export function AdminPage() {
                           <div className="flex items-center justify-center h-64 text-sm text-ink/40">No image</div>
                         )}
                       </div>
+                    </div>
+                  </div>
+                ) : previewModal.type === "video" ? (
+                  <div className="p-6 bg-sand/20">
+                    <div className="rounded-2xl overflow-hidden bg-black border border-ink/10 aspect-video">
+                      {previewModal.video ? (
+                        (() => {
+                          const canvaEmbedUrl = getCanvaEmbedUrl(previewModal.video);
+                          return canvaEmbedUrl ? (
+                            <iframe
+                              src={canvaEmbedUrl}
+                              title="Canva video"
+                              className="w-full h-full"
+                              allow="autoplay; fullscreen; picture-in-picture"
+                              allowFullScreen
+                              loading="lazy"
+                            />
+                          ) : (
+                            <video
+                              src={previewModal.video}
+                              controls
+                              playsInline
+                              className="w-full h-full"
+                            />
+                          );
+                        })()
+                      ) : (
+                        <div className="flex items-center justify-center h-64 text-sm text-ink/40">No video</div>
+                      )}
                     </div>
                   </div>
                 ) : (

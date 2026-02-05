@@ -66,6 +66,18 @@ type GalleryItem = {
   text: string;
 };
 
+const getCanvaEmbedUrl = (rawUrl: string) => {
+  try {
+    const url = new URL(rawUrl);
+    if (!url.hostname.endsWith("canva.com")) return null;
+    if (!url.pathname.includes("/design/")) return null;
+    url.searchParams.set("embed", "1");
+    return url.toString();
+  } catch {
+    return null;
+  }
+};
+
 export function Portfolio() {
   const [selectedCategory, setSelectedCategory] = useState<PortfolioCategory | null>(null);
   const [selectedIndustry, setSelectedIndustry] = useState<PortfolioIndustry | null>(null);
@@ -659,25 +671,39 @@ function ReelsList({
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {visibleReels.map((reel) => (
-              <motion.div
-                key={reel.id}
-                className="reel-card bg-black rounded-3xl overflow-hidden aspect-[9/16] relative shadow-lg"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <video
-                  src={reel.video_url}
-                  controls
-                  className="w-full h-full object-cover"
-                  playsInline
-                  autoPlay={autoplay}
-                  muted={autoplay}
-                  loop={autoplay}
-                />
-              </motion.div>
-            ))}
+            {visibleReels.map((reel) => {
+              const canvaEmbedUrl = getCanvaEmbedUrl(reel.video_url);
+              return (
+                <motion.div
+                  key={reel.id}
+                  className="reel-card bg-black rounded-3xl overflow-hidden aspect-[9/16] relative shadow-lg"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {canvaEmbedUrl ? (
+                    <iframe
+                      src={canvaEmbedUrl}
+                      title="Canva video"
+                      className="w-full h-full"
+                      allow="autoplay; fullscreen; picture-in-picture"
+                      allowFullScreen
+                      loading="lazy"
+                    />
+                  ) : (
+                    <video
+                      src={reel.video_url}
+                      controls
+                      className="w-full h-full object-cover"
+                      playsInline
+                      autoPlay={autoplay}
+                      muted={autoplay}
+                      loop={autoplay}
+                    />
+                  )}
+                </motion.div>
+              );
+            })}
           </div>
 
           <div className="mt-12 flex justify-center">
