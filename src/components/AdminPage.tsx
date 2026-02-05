@@ -6,8 +6,6 @@ import { getSupabaseClient, getSupabaseConfigError } from "@/lib/supabaseClient"
 import { motion, AnimatePresence, Reorder } from "framer-motion";
 import {
   LayoutDashboard,
-
-  Palette,
   Layers,
   Video,
   FileText,
@@ -17,7 +15,6 @@ import {
   Plus,
   Loader2,
   Trash2,
-  GripVertical,
   UploadCloud,
   X,
   ChevronRight,
@@ -250,6 +247,7 @@ type LoginState = "idle" | "loading" | "error";
 type UploadState = "idle" | "loading" | "error" | "success";
 type DeleteState = "idle" | "loading" | "error";
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 type CarouselUploadItem = {
   id: string;
   file: File;
@@ -287,6 +285,7 @@ export function AdminPage() {
   const [testimonialOrderError, setTestimonialOrderError] = useState("");
 
   const [adminLoaded, setAdminLoaded] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [adminDataError, setAdminDataError] = useState<string | null>(null);
 
@@ -335,10 +334,12 @@ export function AdminPage() {
   const [reelDeleteState, setReelDeleteState] = useState<DeleteState>("idle");
   const [reelDeleteId, setReelDeleteId] = useState<string | null>(null);
   const [reelOrderState, setReelOrderState] = useState<"idle" | "saving" | "error">("idle");
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [reelOrderError, setReelOrderError] = useState("");
   const [photoEditingDeleteState, setPhotoEditingDeleteState] = useState<DeleteState>("idle");
   const [photoEditingDeleteId, setPhotoEditingDeleteId] = useState<string | null>(null);
   const [photoEditingOrderState, setPhotoEditingOrderState] = useState<"idle" | "saving" | "error">("idle");
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [photoEditingOrderError, setPhotoEditingOrderError] = useState("");
   const [carouselBatchImages, setCarouselBatchImages] = useState<{ id: string; url: string }[]>([]);
   const [carouselUploadState, setCarouselUploadState] = useState<UploadState>("idle");
@@ -354,6 +355,7 @@ export function AdminPage() {
   const [copywritingOrder, setCopywritingOrder] = useState<CopywritingItem[]>([]);
   const [copywritingOrderDirty, setCopywritingOrderDirty] = useState(false);
   const [copywritingOrderState, setCopywritingOrderState] = useState<UploadState>("idle");
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [copywritingOrderMessage, setCopywritingOrderMessage] = useState("");
   const [copywritingDeletingId, setCopywritingDeletingId] = useState<string | null>(null);
 
@@ -3019,14 +3021,14 @@ export function AdminPage() {
                     ) : (
                       currentData.map((item) => {
                         const imageSrc = item.image_url ?? item.avatar_url ?? item.before_image_url ?? item.after_image_url ?? undefined;
-                        const beforeImage = (item as any).before_image_url ?? null;
-                        const afterImage = (item as any).after_image_url ?? null;
+                        const beforeImage = (item as AdminListItem).before_image_url ?? null;
+                        const afterImage = (item as AdminListItem).after_image_url ?? null;
                         const canShowBeforeAfter = Boolean(beforeImage && afterImage);
                         const canvaEmbedUrl = getCanvaEmbedUrl(item.video_url);
                         const rawTitle = (item.title || item.client_name || item.name || item.client || "").trim();
                         const showTitle = rawTitle.length > 0 && rawTitle.toLowerCase() !== "untitled";
                         const previewTitle = showTitle ? rawTitle : "Preview";
-                        const industryName = 'industry_id' in item ? getIndustryName((item as any).industry_id) : null;
+                        const industryName = 'industry_id' in item ? getIndustryName((item as { industry_id?: string | null }).industry_id) : null;
 
                         return (
                           <motion.div
@@ -3056,7 +3058,7 @@ export function AdminPage() {
                             {imageSrc && (
                               <button
                                 type="button"
-                                onClick={(event) => {
+                                onClick={() => {
                                   if (canShowBeforeAfter) {
                                     setPreviewModal({
                                       type: "beforeAfter",

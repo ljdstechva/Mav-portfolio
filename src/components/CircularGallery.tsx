@@ -222,8 +222,16 @@ class Media {
 
   createShader() {
     const texture = new Texture(this.gl, {
-      generateMipmaps: true
+      generateMipmaps: false,
+      minFilter: this.gl.LINEAR,
+      magFilter: this.gl.LINEAR
     });
+    texture.wrapS = this.gl.CLAMP_TO_EDGE;
+    texture.wrapT = this.gl.CLAMP_TO_EDGE;
+    const empty = document.createElement('canvas');
+    empty.width = 1;
+    empty.height = 1;
+    texture.image = empty;
     this.program = new Program(this.gl, {
       depthTest: false,
       depthWrite: false,
@@ -265,6 +273,10 @@ class Media {
             vUv.x * ratio.x + (1.0 - ratio.x) * 0.5,
             vUv.y * ratio.y + (1.0 - ratio.y) * 0.5
           );
+          // If image dimensions are zero (not loaded), use default uv to avoid black screen on some GPUs
+          if (uImageSizes.x == 0.0 || uImageSizes.y == 0.0) {
+              uv = vUv;
+          }
           vec4 color = texture2D(tMap, uv);
           
           float d = roundedBoxSDF(vUv - 0.5, vec2(0.5 - uBorderRadius), uBorderRadius);
@@ -273,8 +285,10 @@ class Media {
           float edgeSmooth = 0.002;
           float alpha = 1.0 - smoothstep(-edgeSmooth, edgeSmooth, d);
           
-          gl_FragColor = vec4(color.rgb, alpha);
+          // Premultiply alpha for correct blending if needed, but standard blending usually sufficient
+          gl_FragColor = vec4(color.rgb, alpha * color.a);
         }
+
       `,
       uniforms: {
         tMap: { value: texture },
@@ -286,13 +300,34 @@ class Media {
       },
       transparent: true
     });
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.src = this.image;
-    img.onload = () => {
-      texture.image = img;
-      this.program.uniforms.uImageSizes.value = [img.naturalWidth, img.naturalHeight];
+    const loadTexture = async () => {
+      try {
+        const response = await fetch(this.image, { mode: 'cors' });
+        if (!response.ok) throw new Error('Image fetch failed');
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = () => {
+          texture.image = img;
+          this.program.uniforms.uImageSizes.value = [img.naturalWidth, img.naturalHeight];
+          URL.revokeObjectURL(objectUrl);
+        };
+        img.src = objectUrl;
+      } catch {
+        const img = new Image();
+        if (/^https?:\/\//.test(this.image)) {
+          const sameOrigin = typeof window !== 'undefined' && this.image.startsWith(window.location.origin);
+          if (!sameOrigin) img.crossOrigin = 'anonymous';
+        }
+        img.onload = () => {
+          texture.image = img;
+          this.program.uniforms.uImageSizes.value = [img.naturalWidth, img.naturalHeight];
+        };
+        img.src = this.image;
+      }
     };
+    void loadTexture();
+
   }
 
   createMesh() {
@@ -369,7 +404,7 @@ class Media {
 }
 
 interface AppConfig {
-  items?: { image: string; text: string }[];
+  items?: { image: string; text: string; fullImage?: string }[];
   bend?: number;
   textColor?: string;
   borderRadius?: number;
@@ -396,7 +431,7 @@ class App {
   scene!: Transform;
   planeGeometry!: Plane;
   medias: Media[] = [];
-  mediasImages: { image: string; text: string }[] = [];
+  mediasImages: { image: string; text: string; fullImage?: string }[] = [];
   onItemClick?: (item: { image: string; text: string }, index: number) => void;
   screen!: { width: number; height: number };
   viewport!: { width: number; height: number };
@@ -473,63 +508,18 @@ class App {
   }
 
   createMedias(
-    items: { image: string; text: string }[] | undefined,
+    items: { image: string; text: string; fullImage?: string }[] | undefined,
     bend: number = 1,
     textColor: string,
     borderRadius: number,
     font: string
   ) {
-    const defaultItems = [
-      {
-        image: `https://picsum.photos/seed/1/800/600?grayscale`,
-        text: 'Bridge'
-      },
-      {
-        image: `https://picsum.photos/seed/2/800/600?grayscale`,
-        text: 'Desk Setup'
-      },
-      {
-        image: `https://picsum.photos/seed/3/800/600?grayscale`,
-        text: 'Waterfall'
-      },
-      {
-        image: `https://picsum.photos/seed/4/800/600?grayscale`,
-        text: 'Strawberries'
-      },
-      {
-        image: `https://picsum.photos/seed/5/800/600?grayscale`,
-        text: 'Deep Diving'
-      },
-      {
-        image: `https://picsum.photos/seed/16/800/600?grayscale`,
-        text: 'Train Track'
-      },
-      {
-        image: `https://picsum.photos/seed/17/800/600?grayscale`,
-        text: 'Santorini'
-      },
-      {
-        image: `https://picsum.photos/seed/8/800/600?grayscale`,
-        text: 'Blurry Lights'
-      },
-      {
-        image: `https://picsum.photos/seed/9/800/600?grayscale`,
-        text: 'New York'
-      },
-      {
-        image: `https://picsum.photos/seed/10/800/600?grayscale`,
-        text: 'Good Boy'
-      },
-      {
-        image: `https://picsum.photos/seed/21/800/600?grayscale`,
-        text: 'Coastline'
-      },
-      {
-        image: `https://picsum.photos/seed/12/800/600?grayscale`,
-        text: 'Palm Trees'
-      }
-    ];
-    const galleryItems = items && items.length ? items : defaultItems;
+    const galleryItems = items && items.length ? items : [];
+    if (galleryItems.length === 0) {
+      this.mediasImages = [];
+      this.medias = [];
+      return;
+    }
     this.mediasImages = galleryItems.concat(galleryItems);
     this.medias = this.mediasImages.map((data, index) => {
       return new Media({
@@ -698,15 +688,17 @@ class App {
   }
 }
 
+type CircularGalleryItem = { image: string; text: string; fullImage?: string };
+
 interface CircularGalleryProps {
-  items?: { image: string; text: string }[];
+  items?: CircularGalleryItem[];
   bend?: number;
   textColor?: string;
   borderRadius?: number;
   font?: string;
   scrollSpeed?: number;
   scrollEase?: number;
-  onItemClick?: (item: { image: string; text: string }, index: number) => void;
+  onItemClick?: (item: CircularGalleryItem, index: number) => void;
 }
 
 export default function CircularGallery({
@@ -726,7 +718,7 @@ export default function CircularGallery({
     onItemClickRef.current = onItemClick;
   }, [onItemClick]);
 
-  const handleItemClick = (item: { image: string; text: string }, index: number) => {
+  const handleItemClick = (item: CircularGalleryItem, index: number) => {
     onItemClickRef.current?.(item, index);
   };
 

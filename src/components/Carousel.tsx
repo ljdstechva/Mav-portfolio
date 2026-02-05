@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { motion, PanInfo, useMotionValue, useTransform } from 'framer-motion';
+import { motion, PanInfo, useMotionValue, useTransform, MotionValue, Transition } from 'framer-motion';
 import React, { JSX } from 'react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 
@@ -29,13 +29,12 @@ interface CarouselItemProps {
   item: CarouselItemData;
   index: number;
   itemWidth: number;
-  round: boolean;
   trackItemOffset: number;
-  x: any;
-  transition: any;
+  x: MotionValue<number>;
+  transition: Transition;
 }
 
-function CarouselItem({ item, index, itemWidth, round, trackItemOffset, x, transition }: CarouselItemProps) {
+function CarouselItem({ item, index, itemWidth, trackItemOffset, x, transition }: CarouselItemProps) {
   const range = [-(index + 1) * trackItemOffset, -index * trackItemOffset, -(index - 1) * trackItemOffset];
   const outputRange = [90, 0, -90];
   const rotateY = useTransform(x, range, outputRange, { clamp: false });
@@ -81,6 +80,7 @@ export default function Carousel({
   autoplayDelay = 3000,
   pauseOnHover = false,
   loop = false,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   round = false
 }: CarouselProps): JSX.Element {
   const containerPadding = 16;
@@ -92,11 +92,15 @@ export default function Carousel({
     return [items[items.length - 1], ...items, items[0]];
   }, [items, loop]);
 
-  const [position, setPosition] = useState<number>(loop ? 1 : 0);
-  const x = useMotionValue(0);
+  const startingPosition = loop ? 1 : 0;
+  const [position, setPosition] = useState<number>(startingPosition);
+  const x = useMotionValue(-startingPosition * trackItemOffset);
   const [isHovered, setIsHovered] = useState<boolean>(false);
   const [isJumping, setIsJumping] = useState<boolean>(false);
   const [isAnimating, setIsAnimating] = useState<boolean>(false);
+
+  // Track previous items length to detect resets
+  const prevItemsLengthRef = React.useRef(items.length);
 
   const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -124,17 +128,28 @@ export default function Carousel({
     return () => clearInterval(timer);
   }, [autoplay, autoplayDelay, isHovered, pauseOnHover, itemsForRender.length]);
 
+  // Reset position when items change significantly
   useEffect(() => {
-    const startingPosition = loop ? 1 : 0;
-    setPosition(startingPosition);
-    x.set(-startingPosition * trackItemOffset);
+    if (prevItemsLengthRef.current !== items.length) {
+      prevItemsLengthRef.current = items.length;
+      const newPosition = loop ? 1 : 0;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPosition(newPosition);
+      x.set(-newPosition * trackItemOffset);
+    }
   }, [items.length, loop, trackItemOffset, x]);
 
+  // Clamp position when items are removed
+  const maxPosition = Math.max(0, itemsForRender.length - 1);
+  const clampedPosition = !loop && position > maxPosition ? maxPosition : position;
+  
+  // Sync clamped position if it differs
   useEffect(() => {
-    if (!loop && position > itemsForRender.length - 1) {
-      setPosition(Math.max(0, itemsForRender.length - 1));
+    if (clampedPosition !== position) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPosition(clampedPosition);
     }
-  }, [itemsForRender.length, loop, position]);
+  }, [clampedPosition, position]);
 
   const effectiveTransition = isJumping ? { duration: 0 } : SPRING_OPTIONS;
 
@@ -248,7 +263,6 @@ export default function Carousel({
               item={item}
               index={index}
               itemWidth={itemWidth}
-              round={round}
               trackItemOffset={trackItemOffset}
               x={x}
               transition={effectiveTransition}

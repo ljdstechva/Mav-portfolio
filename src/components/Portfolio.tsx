@@ -19,7 +19,6 @@ import {
   X
 } from "lucide-react";
 import clsx from "clsx";
-import NextImage from "next/image";
 import ChromaGrid from "./ChromaGrid";
 import { MenuItem } from "./FlowingMenu";
 import CircularGallery from "./CircularGallery";
@@ -64,6 +63,15 @@ type PhotoEditingItem = {
 type GalleryItem = {
   image: string;
   text: string;
+  fullImage?: string;
+};
+
+const getPreviewImageUrl = (rawUrl: string) => {
+  if (!rawUrl || rawUrl.startsWith("/") || rawUrl.startsWith("data:") || rawUrl.startsWith("blob:")) {
+    return rawUrl;
+  }
+  const encoded = encodeURIComponent(rawUrl);
+  return `/_next/image?url=${encoded}&w=828&q=70`;
 };
 
 const getCanvaEmbedUrl = (rawUrl: string) => {
@@ -1149,7 +1157,11 @@ function IndustryGallery({ industry, onBack }: { industry: PortfolioIndustry, on
                 </div>
                 <div className="h-[320px] md:h-[420px] overflow-hidden rounded-[24px] border border-ink/10 bg-sand/60">
                   <CircularGallery
-                    items={gallery.items}
+                    items={gallery.items.map((item) => ({
+                      ...item,
+                      image: getPreviewImageUrl(item.image),
+                      fullImage: item.image
+                    }))}
                     bend={1}
                     borderRadius={0.06}
                     scrollSpeed={2}
@@ -1157,7 +1169,10 @@ function IndustryGallery({ industry, onBack }: { industry: PortfolioIndustry, on
                     textColor="#1f1a15"
                     onItemClick={(item: GalleryItem, index: number) => {
                       if (gallery.items.length === 0) return;
-                      setSelectedMedia(item);
+                      setSelectedMedia({
+                        image: item.fullImage ?? item.image,
+                        text: item.text
+                      });
                       const offset = galleryList
                         .slice(0, galleryList.findIndex((g) => g.clientName === gallery.clientName))
                         .reduce((count, g) => count + g.items.length, 0);
@@ -1243,12 +1258,12 @@ function IndustryGallery({ industry, onBack }: { industry: PortfolioIndustry, on
                      exit={{ opacity: 0 }}
                      transition={{ duration: 0.25, ease: "easeOut" }}
                    >
-                      <NextImage
+                      <img
                         src={selectedMedia.image}
                         alt={selectedMedia.text}
-                        fill
-                        sizes="(max-width: 768px) 100vw, 80vw"
-                        className="object-contain"
+                        className="h-full w-full object-contain"
+                        loading="eager"
+                        decoding="async"
                       />
                    </motion.div>
                  </AnimatePresence>

@@ -185,13 +185,14 @@ export function Hero() {
 
           {/* Hero Image */}
           <div className="relative z-10 w-full h-full flex justify-center items-end">
-            <Image
+            <img
               src="/Hero.png"
               alt="Hero Portrait"
               width={550}
               height={700}
               className="object-contain max-h-[115%] drop-shadow-2xl"
-              priority
+              loading="eager"
+              decoding="async"
             />
           </div>
 

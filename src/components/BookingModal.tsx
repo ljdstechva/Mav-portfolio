@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Calendar } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export default function BookingModal({
   isOpen,
@@ -13,10 +13,8 @@ export default function BookingModal({
 }) {
   const [loading, setLoading] = useState(true);
 
-  // Reset loading state when modal opens
-  useEffect(() => {
-    if (isOpen) setLoading(true);
-  }, [isOpen]);
+  // Reset loading state when modal opens - using key prop on iframe instead of effect
+  const iframeKey = isOpen ? "open" : "closed";
 
   return (
     <AnimatePresence>
@@ -62,6 +60,7 @@ export default function BookingModal({
                   </div>
                 )}
                 <iframe
+                  key={iframeKey}
                   src="https://calendly.com/smm-mavenicaann/30min"
                   width="100%"
                   height="100%"

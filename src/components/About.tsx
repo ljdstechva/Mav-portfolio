@@ -66,7 +66,7 @@ export function About() {
             </div>
 
             <p className="text-lg text-ink/70 leading-relaxed">
-              Hi, I'm Mav, a Social Media Manager and Graphic Design Content Creator who helps brands show up consistently with clear strategy and scroll-stopping visuals. I turn your message into content that feels cohesive, on-brand, and built for engagement.
+              Hi, I&apos;m Mav, a Social Media Manager and Graphic Design Content Creator who helps brands show up consistently with clear strategy and scroll-stopping visuals. I turn your message into content that feels cohesive, on-brand, and built for engagement.
             </p>
 
             <p className="text-ink/70 leading-relaxed">

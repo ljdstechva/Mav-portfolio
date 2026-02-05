@@ -114,8 +114,6 @@ export default function Preloader() {
         assetTotalRef.current = urlList.length;
         updateProgress();
 
-        const cacheAvailable = 'caches' in window;
-        const cache = cacheAvailable ? await caches.open('portfolio-assets-v1') : null;
         const queue = urlList.slice();
         const concurrency = 4;
 
@@ -124,20 +122,8 @@ export default function Preloader() {
             const url = queue.shift();
             if (!url) continue;
             try {
-              if (cache) {
-                const cached = await cache.match(url, { ignoreSearch: true });
-                if (cached) {
-                  assetLoadedRef.current += 1;
-                  updateProgress();
-                  continue;
-                }
-              }
-
-              const response = await fetch(url, { mode: 'no-cors' });
-              if (cache && response && (response.ok || response.type === 'opaque')) {
-                await cache.put(url, response);
-              }
-            } catch (error) {
+              await fetch(url, { mode: 'cors' });
+            } catch {
               // ignore fetch errors
             } finally {
               assetLoadedRef.current += 1;
