@@ -2,14 +2,14 @@
 
 import { useMemo, useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  ArrowLeft, 
+import {
+  ArrowLeft,
   ArrowRight,
-  Sparkles, 
-  Heart, 
-  Cpu, 
-  Utensils, 
-  ShoppingBag, 
+  Sparkles,
+  Heart,
+  Cpu,
+  Utensils,
+  ShoppingBag,
   Building2,
   Palette,
   Layers,
@@ -21,7 +21,7 @@ import {
 import clsx from "clsx";
 import ChromaGrid from "./ChromaGrid";
 import { MenuItem } from "./FlowingMenu";
-import CircularGallery from "./CircularGallery";
+import GalleryCarousel from "./GalleryCarousel";
 import Carousel, { CarouselItemData } from "./Carousel";
 import StarBorder from "./StarBorder";
 import { GlobalSpotlight, MagicStyles } from "./MagicBento";
@@ -105,9 +105,9 @@ export function Portfolio() {
 
   const toggleIndustry = (industry: PortfolioIndustry) => {
     if (selectedIndustry?.id === industry.id) {
-        setSelectedIndustry(null);
+      setSelectedIndustry(null);
     } else {
-        setSelectedIndustry(industry);
+      setSelectedIndustry(industry);
     }
   };
 
@@ -314,39 +314,39 @@ export function Portfolio() {
     >
       <div className="container mx-auto">
         <div className="mb-12">
-           {/* Breadcrumbs / Header */}
-           <motion.div layout className="flex items-center gap-2 mb-4 text-sm text-ink/50">
-             <span className={clsx("cursor-pointer hover:text-ink", !selectedCategory && "font-bold text-ink")} onClick={goBackToCategories}>Portfolio</span>
-             
-             {selectedCategory && (
-                <>
-                  <span>/</span>
-                  <span 
-                    className={clsx("cursor-pointer hover:text-ink", "font-bold text-ink")} 
-                    onClick={selectedCategory.id === 'graphics' ? () => setSelectedIndustry(null) : undefined}
-                  >
-                    {selectedCategory.name}
-                  </span>
-                </>
-             )}
-           </motion.div>
-           
-           <motion.h2 layout className="text-4xl md:text-5xl font-bold text-ink mb-4">
-              {selectedCategory 
-                  ? selectedCategory.name 
-                  : "Portfolio"}
-           </motion.h2>
-           
-           <motion.p layout className="text-lg text-ink/60 max-w-2xl">
-              {selectedCategory
-                  ? selectedCategory.description
-                  : "Explore my creative work across different disciplines."}
-           </motion.p>
+          {/* Breadcrumbs / Header */}
+          <motion.div layout className="flex items-center gap-2 mb-4 text-sm text-ink/50">
+            <span className={clsx("cursor-pointer hover:text-ink", !selectedCategory && "font-bold text-ink")} onClick={goBackToCategories}>Portfolio</span>
+
+            {selectedCategory && (
+              <>
+                <span>/</span>
+                <span
+                  className={clsx("cursor-pointer hover:text-ink", "font-bold text-ink")}
+                  onClick={selectedCategory.id === 'graphics' ? () => setSelectedIndustry(null) : undefined}
+                >
+                  {selectedCategory.name}
+                </span>
+              </>
+            )}
+          </motion.div>
+
+          <motion.h2 layout className="text-4xl md:text-5xl font-bold text-ink mb-4">
+            {selectedCategory
+              ? selectedCategory.name
+              : "Portfolio"}
+          </motion.h2>
+
+          <motion.p layout className="text-lg text-ink/60 max-w-2xl">
+            {selectedCategory
+              ? selectedCategory.description
+              : "Explore my creative work across different disciplines."}
+          </motion.p>
         </div>
 
-        <motion.div 
-          animate={{ height }} 
-          transition={{ duration: 0.45, ease: "easeInOut" }} 
+        <motion.div
+          animate={{ height }}
+          transition={{ duration: 0.45, ease: "easeInOut" }}
           className="relative overflow-hidden"
         >
           <div ref={contentRef}>
@@ -359,8 +359,8 @@ export function Portfolio() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
                 >
-                  <CategoryGrid 
-                    onSelect={setSelectedCategory} 
+                  <CategoryGrid
+                    onSelect={setSelectedCategory}
                   />
                 </motion.div>
               )}
@@ -373,14 +373,14 @@ export function Portfolio() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
                 >
-                   <IndustryList 
-                      selectedIndustry={selectedIndustry}
-                      onSelect={toggleIndustry}
-                      onBack={goBackToCategories}
-                      industries={industries}
-                      loading={industriesLoading}
-                      error={industriesError}
-                    />
+                  <IndustryList
+                    selectedIndustry={selectedIndustry}
+                    onSelect={toggleIndustry}
+                    onBack={goBackToCategories}
+                    industries={industries}
+                    loading={industriesLoading}
+                    error={industriesError}
+                  />
                 </motion.div>
               )}
 
@@ -392,7 +392,7 @@ export function Portfolio() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
                 >
-                  <CarouselList 
+                  <CarouselList
                     clients={carouselClients}
                     onBack={goBackToCategories}
                     loading={industriesLoading}
@@ -408,7 +408,7 @@ export function Portfolio() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
                 >
-                  <ReelsList 
+                  <ReelsList
                     reels={reels}
                     onBack={goBackToCategories}
                     loading={industriesLoading}
@@ -424,7 +424,7 @@ export function Portfolio() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
                 >
-                  <ReelsList 
+                  <ReelsList
                     reels={stories}
                     onBack={goBackToCategories}
                     loading={industriesLoading}
@@ -441,7 +441,7 @@ export function Portfolio() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
                 >
-                  <PhotoEditingList 
+                  <PhotoEditingList
                     items={photoEditing}
                     onBack={goBackToCategories}
                     loading={industriesLoading}
@@ -457,12 +457,12 @@ export function Portfolio() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
                 >
-                   <div className="relative rounded-[28px] overflow-hidden bg-white flex flex-col">
-                      <CopywritingGallery 
-                         industry={copywritingIndustry} 
-                         onBack={goBackToCategories} 
-                      />
-                   </div>
+                  <div className="relative rounded-[28px] overflow-hidden bg-white flex flex-col">
+                    <CopywritingGallery
+                      industry={copywritingIndustry}
+                      onBack={goBackToCategories}
+                    />
+                  </div>
                 </motion.div>
               )}
 
@@ -476,7 +476,7 @@ export function Portfolio() {
                   exit={{ opacity: 0, y: -20 }}
                 >
                   <button onClick={goBackToCategories} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
-                     <ArrowLeft size={20} /> Back to Categories
+                    <ArrowLeft size={20} /> Back to Categories
                   </button>
 
                   <div className="py-20 text-center bg-sand/30 rounded-3xl">
@@ -514,7 +514,7 @@ function PhotoEditingList({
   return (
     <div className="w-full">
       <button onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
-         <ArrowLeft size={20} /> Back to Categories
+        <ArrowLeft size={20} /> Back to Categories
       </button>
 
       {items.length === 0 ? (
@@ -522,21 +522,21 @@ function PhotoEditingList({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {items.map((item) => (
-            <div 
-              key={item.id} 
+            <div
+              key={item.id}
               className="bg-white rounded-3xl p-6 shadow-sm border border-ink/5 hover:shadow-lg transition-all"
             >
               {item.title && <h3 className="text-xl font-bold text-ink mb-4">{item.title}</h3>}
-              <div 
+              <div
                 className="flex gap-4 h-64 md:h-80 cursor-pointer"
                 onClick={() => setSelectedItem(item)}
               >
                 <div className="flex-1 flex flex-col gap-2">
                   <span className="text-xs font-bold uppercase tracking-widest text-ink/40">Before</span>
                   <div className="relative flex-1 rounded-xl overflow-hidden bg-sand/20 group">
-                    <img 
-                      src={item.before_image_url} 
-                      alt="Before" 
+                    <img
+                      src={item.before_image_url}
+                      alt="Before"
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                   </div>
@@ -544,9 +544,9 @@ function PhotoEditingList({
                 <div className="flex-1 flex flex-col gap-2">
                   <span className="text-xs font-bold uppercase tracking-widest text-ink/40">After</span>
                   <div className="relative flex-1 rounded-xl overflow-hidden bg-sand/20 group">
-                    <img 
-                      src={item.after_image_url} 
-                      alt="After" 
+                    <img
+                      src={item.after_image_url}
+                      alt="After"
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                   </div>
@@ -575,7 +575,7 @@ function PhotoEditingList({
             >
               <div className="w-full flex items-center justify-between mb-6 text-white">
                 {selectedItem.title && <h3 className="text-2xl font-bold">{selectedItem.title}</h3>}
-                <button 
+                <button
                   onClick={() => setSelectedItem(null)}
                   className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors ml-auto"
                 >
@@ -587,9 +587,9 @@ function PhotoEditingList({
                 <div className="flex-1 flex flex-col gap-2 relative">
                   <span className="absolute top-4 left-4 z-10 bg-black/50 text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest backdrop-blur-md">Before</span>
                   <div className="w-full h-full rounded-2xl overflow-hidden bg-black/50">
-                    <img 
-                      src={selectedItem.before_image_url} 
-                      alt="Before" 
+                    <img
+                      src={selectedItem.before_image_url}
+                      alt="Before"
                       className="w-full h-full object-contain"
                     />
                   </div>
@@ -605,9 +605,9 @@ function PhotoEditingList({
                 <div className="flex-1 flex flex-col gap-2 relative">
                   <span className="absolute top-4 left-4 z-10 bg-black/50 text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest backdrop-blur-md">After</span>
                   <div className="w-full h-full rounded-2xl overflow-hidden bg-black/50">
-                    <img 
-                      src={selectedItem.after_image_url} 
-                      alt="After" 
+                    <img
+                      src={selectedItem.after_image_url}
+                      alt="After"
                       className="w-full h-full object-contain"
                     />
                   </div>
@@ -637,25 +637,25 @@ function ReelsList({
 
   useEffect(() => {
     const prevCount = prevCountRef.current;
-    
+
     if (visibleCount > prevCount) {
-        // Show More was clicked
-        const timer = setTimeout(() => {
-            const card = document.querySelector(".reel-card") as HTMLElement | null;
-            if (card) {
-                const step = card.offsetHeight + 24; // Height + gap
-                window.scrollBy({ top: step, behavior: "smooth" });
-            }
-        }, 500);
-        return () => clearTimeout(timer);
-    } else if (visibleCount < prevCount) {
-        // Show Less was clicked
-        const portfolioSection = document.getElementById("portfolio");
-        if (portfolioSection) {
-            portfolioSection.scrollIntoView({ behavior: "smooth" });
+      // Show More was clicked
+      const timer = setTimeout(() => {
+        const card = document.querySelector(".reel-card") as HTMLElement | null;
+        if (card) {
+          const step = card.offsetHeight + 24; // Height + gap
+          window.scrollBy({ top: step, behavior: "smooth" });
         }
+      }, 500);
+      return () => clearTimeout(timer);
+    } else if (visibleCount < prevCount) {
+      // Show Less was clicked
+      const portfolioSection = document.getElementById("portfolio");
+      if (portfolioSection) {
+        portfolioSection.scrollIntoView({ behavior: "smooth" });
+      }
     }
-    
+
     prevCountRef.current = visibleCount;
   }, [visibleCount]);
 
@@ -671,7 +671,7 @@ function ReelsList({
   return (
     <div className="w-full">
       <button onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
-         <ArrowLeft size={20} /> Back to Categories
+        <ArrowLeft size={20} /> Back to Categories
       </button>
 
       {reels.length === 0 ? (
@@ -716,14 +716,14 @@ function ReelsList({
 
           <div className="mt-12 flex justify-center">
             {hasMore ? (
-              <button 
+              <button
                 onClick={showMore}
                 className="px-8 py-3 bg-ink text-white rounded-full font-medium hover:bg-ink/90 transition-colors"
               >
                 Show More
               </button>
             ) : showLessButton ? (
-              <button 
+              <button
                 onClick={showLess}
                 className="px-8 py-3 bg-sand text-ink rounded-full font-medium hover:bg-sand/80 transition-colors"
               >
@@ -751,25 +751,25 @@ function CarouselList({
 
   useEffect(() => {
     const handleResize = () => {
-        const padding = 32; // Mobile padding
-        const verticalPadding = 200; // Title + Button space
-        const maxW = 500; // Target max width for desktop
-        
-        const availableWidth = window.innerWidth - padding;
-        const availableHeight = window.innerHeight - verticalPadding;
-        
-        // Calculate max width that fits vertically with 4:5 ratio + 100px controls
-        // height = width * 1.25 + 100
-        // width = (height - 100) / 1.25
-        const maxWidthFromHeight = (availableHeight - 100) / 1.25;
-        
-        const finalWidth = Math.min(maxW, availableWidth, maxWidthFromHeight);
-        setCarouselWidth(Math.max(280, finalWidth)); // Min width 280
+      const padding = 32; // Mobile padding
+      const verticalPadding = 200; // Title + Button space
+      const maxW = 500; // Target max width for desktop
+
+      const availableWidth = window.innerWidth - padding;
+      const availableHeight = window.innerHeight - verticalPadding;
+
+      // Calculate max width that fits vertically with 4:5 ratio + 100px controls
+      // height = width * 1.25 + 100
+      // width = (height - 100) / 1.25
+      const maxWidthFromHeight = (availableHeight - 100) / 1.25;
+
+      const finalWidth = Math.min(maxW, availableWidth, maxWidthFromHeight);
+      setCarouselWidth(Math.max(280, finalWidth)); // Min width 280
     };
-    
+
     // Initial calculation
     handleResize();
-    
+
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
@@ -779,7 +779,7 @@ function CarouselList({
   return (
     <div className="w-full">
       <button onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
-         <ArrowLeft size={20} /> Back to Categories
+        <ArrowLeft size={20} /> Back to Categories
       </button>
 
       {clients.length === 0 ? (
@@ -797,9 +797,9 @@ function CarouselList({
             >
               <div className="aspect-[4/5] bg-sand/20 relative overflow-hidden">
                 {client.items[0]?.image ? (
-                  <img 
-                    src={client.items[0].image} 
-                    alt={client.clientName} 
+                  <img
+                    src={client.items[0].image}
+                    alt={client.clientName}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                 ) : (
@@ -840,9 +840,9 @@ function CarouselList({
                 <h3 className="text-3xl font-bold">{selectedClient.clientName}</h3>
                 <p className="opacity-60">{selectedClient.items.length} slides</p>
               </div>
-              
+
               <div className="relative">
-                <Carousel 
+                <Carousel
                   items={selectedClient.items}
                   baseWidth={carouselWidth}
                   autoplay={false}
@@ -850,7 +850,7 @@ function CarouselList({
                 />
               </div>
 
-              <button 
+              <button
                 onClick={() => setSelectedClient(null)}
                 className="mt-4 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-full text-sm font-medium transition-colors"
               >
@@ -895,8 +895,8 @@ function CategoryGrid({ onSelect }: { onSelect: (c: PortfolioCategory) => void }
     <div className="w-full">
       <MagicStyles />
       <GlobalSpotlight gridRef={gridRef} />
-      <div 
-        ref={gridRef} 
+      <div
+        ref={gridRef}
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
       >
         {PORTFOLIO_CATEGORIES.map((category, index) => (
@@ -909,18 +909,18 @@ function CategoryGrid({ onSelect }: { onSelect: (c: PortfolioCategory) => void }
             color="rgb(255, 0, 128)" // Pink
             speed="5s"
           >
-             <div className={clsx("relative z-10 w-14 h-14 rounded-2xl flex items-center justify-center mb-6 text-2xl transition-colors", category.color)}>
-                <category.icon size={28} />
-             </div>
-             
-             <h3 className="relative z-10 text-2xl font-bold text-ink mb-2">{category.name}</h3>
-             <p className="relative z-10 text-ink/60 mb-6">{category.description}</p>
-             
-             <div className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-100 transform translate-x-4 group-hover:translate-x-0 transition-all z-10">
-               <div className="w-10 h-10 rounded-full bg-ink text-white flex items-center justify-center">
-                 <ArrowLeft className="rotate-180" size={20} />
-               </div>
-             </div>
+            <div className={clsx("relative z-10 w-14 h-14 rounded-2xl flex items-center justify-center mb-6 text-2xl transition-colors", category.color)}>
+              <category.icon size={28} />
+            </div>
+
+            <h3 className="relative z-10 text-2xl font-bold text-ink mb-2">{category.name}</h3>
+            <p className="relative z-10 text-ink/60 mb-6">{category.description}</p>
+
+            <div className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-100 transform translate-x-4 group-hover:translate-x-0 transition-all z-10">
+              <div className="w-10 h-10 rounded-full bg-ink text-white flex items-center justify-center">
+                <ArrowLeft className="rotate-180" size={20} />
+              </div>
+            </div>
           </StarBorder>
         ))}
       </div>
@@ -948,56 +948,56 @@ function IndustryList({
   return (
     <div className="w-full">
       <button onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
-         <ArrowLeft size={20} /> Back to Categories
+        <ArrowLeft size={20} /> Back to Categories
       </button>
 
-       <div className="relative rounded-[28px] border border-ink/10 overflow-hidden bg-white shadow-[0_25px_80px_-45px_rgba(6,0,16,0.25)] flex flex-col">
-         {loading && (
-           <div className="p-6 text-sm text-ink/50">Loading industries...</div>
-         )}
-         {error && !loading && (
-           <div className="p-6 text-sm text-red-500">{error}</div>
-         )}
-         {!loading && !error && industries.length === 0 && (
-           <div className="p-6 text-sm text-ink/50">No industries available yet.</div>
-         )}
-         {!loading && !error && industries.map((industry, index) => {
-             const isSelected = selectedIndustry?.id === industry.id;
-             return (
-               <div key={industry.id} className="flex flex-col">
-                  <MenuItem 
-                     link="#"
-                     text={industry.name}
-                     image={industry.projects[0]?.image ?? "/images/About.png"}
-                    speed={14}
-                    textColor="#b08968"
-                    marqueeBgColor="#7a563b"
-                    marqueeTextColor="#ffffff"
-                    borderColor="rgba(0,0,0,0.1)"
-                    itemHeight={itemHeight}
-                    isFirst={index === 0}
-                    onItemClick={() => onSelect(industry)}
-                 />
-                 <AnimatePresence>
-                    {isSelected && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.3, ease: "easeInOut" }}
-                        className="overflow-hidden bg-sand/10"
-                      >
-                  <IndustryGallery 
-                             industry={industry} 
-                             // We don't need onBack here anymore as toggling closes it
-                             onBack={() => onSelect(industry)} 
-                          />
-                      </motion.div>
-                    )}
-                 </AnimatePresence>
-               </div>
-             );
-         })}
+      <div className="relative rounded-[28px] border border-ink/10 overflow-hidden bg-white shadow-[0_25px_80px_-45px_rgba(6,0,16,0.25)] flex flex-col">
+        {loading && (
+          <div className="p-6 text-sm text-ink/50">Loading industries...</div>
+        )}
+        {error && !loading && (
+          <div className="p-6 text-sm text-red-500">{error}</div>
+        )}
+        {!loading && !error && industries.length === 0 && (
+          <div className="p-6 text-sm text-ink/50">No industries available yet.</div>
+        )}
+        {!loading && !error && industries.map((industry, index) => {
+          const isSelected = selectedIndustry?.id === industry.id;
+          return (
+            <div key={industry.id} className="flex flex-col">
+              <MenuItem
+                link="#"
+                text={industry.name}
+                image={industry.projects[0]?.image ?? "/images/About.png"}
+                speed={14}
+                textColor="#b08968"
+                marqueeBgColor="#7a563b"
+                marqueeTextColor="#ffffff"
+                borderColor="rgba(0,0,0,0.1)"
+                itemHeight={itemHeight}
+                isFirst={index === 0}
+                onItemClick={() => onSelect(industry)}
+              />
+              <AnimatePresence>
+                {isSelected && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                    className="overflow-hidden bg-sand/10"
+                  >
+                    <IndustryGallery
+                      industry={industry}
+                      // We don't need onBack here anymore as toggling closes it
+                      onBack={() => onSelect(industry)}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -1017,14 +1017,14 @@ function CopywritingGallery({ industry, onBack }: { industry: PortfolioIndustry,
       ) : (
         <div className="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6">
           {industry.projects.map((project) => (
-            <div 
-              key={project.id} 
+            <div
+              key={project.id}
               className="break-inside-avoid relative group rounded-2xl overflow-hidden cursor-pointer"
               onClick={() => setSelectedImage({ image: project.image })}
             >
-              <img 
-                src={project.image} 
-                alt={project.title || "Copywriting sample"} 
+              <img
+                src={project.image}
+                alt={project.title || "Copywriting sample"}
                 className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
@@ -1050,13 +1050,13 @@ function CopywritingGallery({ industry, onBack }: { industry: PortfolioIndustry,
               onClick={(e) => e.stopPropagation()}
             >
               <div className="w-full bg-sand/20 relative">
-                <img 
-                  src={selectedImage.image} 
-                  alt="Copywriting sample" 
+                <img
+                  src={selectedImage.image}
+                  alt="Copywriting sample"
                   className="w-full h-full max-h-[85vh] object-contain p-4"
                 />
               </div>
-              <button 
+              <button
                 onClick={() => setSelectedImage(null)}
                 className="absolute top-4 right-4 bg-white/50 hover:bg-white text-ink p-2 rounded-full transition-colors z-10"
               >
@@ -1136,145 +1136,140 @@ function IndustryGallery({ industry, onBack }: { industry: PortfolioIndustry, on
 
   return (
     <div className="w-full p-4 md:p-8">
-       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-         <div>
-           <h3 className="text-2xl font-bold text-ink">{industry.name} Gallery</h3>
-           <p className="text-sm text-ink/60">Showcasing selected works from {industry.name}</p>
-         </div>
-         <div className="text-xs uppercase tracking-[0.25em] text-ink/50">
-           {galleryList.reduce((count, gallery) => count + gallery.items.length, 0)} pieces
-         </div>
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div>
+          <h3 className="text-2xl font-bold text-ink">{industry.name} Gallery</h3>
+          <p className="text-sm text-ink/60">Showcasing selected works from {industry.name}</p>
         </div>
-        {galleryList.length > 0 ? (
-          <div className="space-y-8">
-            {galleryList.map((gallery) => (
-              <div key={gallery.clientName} className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-lg font-bold text-ink">{gallery.clientName}</h4>
-                  <span className="text-xs uppercase tracking-[0.2em] text-ink/50">
-                    {gallery.items.length} images
-                  </span>
-                </div>
-                <div className="h-[320px] md:h-[420px] overflow-hidden rounded-[24px] border border-ink/10 bg-sand/60">
-                  <CircularGallery
-                    items={gallery.items.map((item) => ({
-                      ...item,
-                      image: getPreviewImageUrl(item.image),
-                      fullImage: item.image
-                    }))}
-                    bend={1}
-                    borderRadius={0.06}
-                    scrollSpeed={2}
-                    scrollEase={0.05}
-                    textColor="#1f1a15"
-                    onItemClick={(item: GalleryItem, index: number) => {
-                      if (gallery.items.length === 0) return;
-                      setSelectedMedia({
-                        image: item.fullImage ?? item.image,
-                        text: item.text
-                      });
-                      const offset = galleryList
-                        .slice(0, galleryList.findIndex((g) => g.clientName === gallery.clientName))
-                        .reduce((count, g) => count + g.items.length, 0);
-                      const total = galleryList.reduce((count, g) => count + g.items.length, 0);
-                      const nextIndex = (offset + index) % Math.max(total, 1);
-                      selectedIndexRef.current = nextIndex;
-                      setSelectedIndex(nextIndex);
-                    }}
-                  />
-                </div>
+        <div className="text-xs uppercase tracking-[0.25em] text-ink/50">
+          {galleryList.reduce((count, gallery) => count + gallery.items.length, 0)} pieces
+        </div>
+      </div>
+      {galleryList.length > 0 ? (
+        <div className="space-y-8">
+          {galleryList.map((gallery) => (
+            <div key={gallery.clientName} className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-lg font-bold text-ink">{gallery.clientName}</h4>
+                <span className="text-xs uppercase tracking-[0.2em] text-ink/50">
+                  {gallery.items.length} images
+                </span>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex h-[320px] items-center justify-center text-sm text-ink/60 rounded-[24px] border border-ink/10 bg-sand/60">
-            No images available.
-          </div>
-        )}
+              <div className="h-[320px] md:h-[420px] overflow-hidden rounded-[24px] border border-ink/10 bg-sand/60 flex items-center justify-center">
+                <GalleryCarousel
+                  items={gallery.items.map((item) => ({
+                    ...item,
+                    image: item.image,
+                    fullImage: item.image
+                  }))}
+                  onItemClick={(item: GalleryItem, index: number) => {
+                    if (gallery.items.length === 0) return;
+                    setSelectedMedia({
+                      image: item.fullImage ?? item.image,
+                      text: item.text
+                    });
+                    const offset = galleryList
+                      .slice(0, galleryList.findIndex((g) => g.clientName === gallery.clientName))
+                      .reduce((count, g) => count + g.items.length, 0);
+                    const total = galleryList.reduce((count, g) => count + g.items.length, 0);
+                    const nextIndex = (offset + index) % Math.max(total, 1);
+                    selectedIndexRef.current = nextIndex;
+                    setSelectedIndex(nextIndex);
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="flex h-[320px] items-center justify-center text-sm text-ink/60 rounded-[24px] border border-ink/10 bg-sand/60">
+          No images available.
+        </div>
+      )}
 
-        <AnimatePresence>
-          {selectedMedia && (
+      <AnimatePresence>
+        {selectedMedia && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onPointerDown={(event) => {
+              event.stopPropagation();
+            }}
+            onPointerUp={(event) => {
+              event.stopPropagation();
+              setSelectedMedia(null);
+            }}
+          >
             <motion.div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onPointerDown={(event) => {
-                event.stopPropagation();
-              }}
-              onPointerUp={(event) => {
-                event.stopPropagation();
-                setSelectedMedia(null);
-              }}
+              className="group relative w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl"
+              initial={{ scale: 0.96, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.98, opacity: 0 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              onPointerDown={(event) => event.stopPropagation()}
+              onPointerUp={(event) => event.stopPropagation()}
             >
-              <motion.div
-                className="group relative w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl"
-                initial={{ scale: 0.96, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.98, opacity: 0 }}
-                transition={{ duration: 0.25, ease: "easeOut" }}
-                onPointerDown={(event) => event.stopPropagation()}
-                onPointerUp={(event) => event.stopPropagation()}
+              <button
+                className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/80 p-3 text-ink opacity-0 shadow-lg transition-all duration-200 group-hover:opacity-100 hover:scale-110 cursor-pointer"
+                onClick={() => showNext(-1)}
+                aria-label="Previous image"
               >
-               <button
-                 className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/80 p-3 text-ink opacity-0 shadow-lg transition-all duration-200 group-hover:opacity-100 hover:scale-110 cursor-pointer"
-                 onClick={() => showNext(-1)}
-                 aria-label="Previous image"
-               >
-                 <ArrowLeft size={18} />
-               </button>
-               <button
-                 className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/80 p-3 text-ink opacity-0 shadow-lg transition-all duration-200 group-hover:opacity-100 hover:scale-110 cursor-pointer"
-                 onClick={() => showNext(1)}
-                 aria-label="Next image"
-               >
-                 <ArrowLeft size={18} className="rotate-180" />
-               </button>
-               <div
-                 className="relative w-full bg-sand"
-                 style={{ aspectRatio: "4 / 5" }} 
-                 onTouchStart={(event) => {
-                   const touch = event.touches[0];
-                   swipeStartX.current = touch.clientX;
-                   swipeStartY.current = touch.clientY;
-                 }}
-                 onTouchEnd={(event) => {
-                   if (swipeStartX.current === null || swipeStartY.current === null) return;
-                   const touch = event.changedTouches[0];
-                   const deltaX = touch.clientX - swipeStartX.current;
-                   const deltaY = touch.clientY - swipeStartY.current;
-                   swipeStartX.current = null;
-                   swipeStartY.current = null;
-                   if (Math.abs(deltaX) < 40 || Math.abs(deltaY) > 80) return;
-                   showNext(deltaX < 0 ? 1 : -1);
-                 }}
-               >
-                 <AnimatePresence mode="wait" initial={false}>
-                   <motion.div
-                     key={selectedMedia.image}
-                     className="absolute inset-0"
-                     initial={{ opacity: 0 }}
-                     animate={{ opacity: 1, x: 0 }}
-                     exit={{ opacity: 0 }}
-                     transition={{ duration: 0.25, ease: "easeOut" }}
-                   >
-                      <img
-                        src={selectedMedia.image}
-                        alt={selectedMedia.text}
-                        className="h-full w-full object-contain"
-                        loading="eager"
-                        decoding="async"
-                      />
-                   </motion.div>
-                 </AnimatePresence>
-               </div>
-               <div className="bg-white p-4 text-center hidden">
-                  <h4 className="text-xl font-bold text-ink">{selectedMedia.text}</h4>
-               </div>
-             </motion.div>
-           </motion.div>
-         )}
-       </AnimatePresence>
+                <ArrowLeft size={18} />
+              </button>
+              <button
+                className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/80 p-3 text-ink opacity-0 shadow-lg transition-all duration-200 group-hover:opacity-100 hover:scale-110 cursor-pointer"
+                onClick={() => showNext(1)}
+                aria-label="Next image"
+              >
+                <ArrowLeft size={18} className="rotate-180" />
+              </button>
+              <div
+                className="relative w-full bg-sand"
+                style={{ aspectRatio: "4 / 5" }}
+                onTouchStart={(event) => {
+                  const touch = event.touches[0];
+                  swipeStartX.current = touch.clientX;
+                  swipeStartY.current = touch.clientY;
+                }}
+                onTouchEnd={(event) => {
+                  if (swipeStartX.current === null || swipeStartY.current === null) return;
+                  const touch = event.changedTouches[0];
+                  const deltaX = touch.clientX - swipeStartX.current;
+                  const deltaY = touch.clientY - swipeStartY.current;
+                  swipeStartX.current = null;
+                  swipeStartY.current = null;
+                  if (Math.abs(deltaX) < 40 || Math.abs(deltaY) > 80) return;
+                  showNext(deltaX < 0 ? 1 : -1);
+                }}
+              >
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={selectedMedia.image}
+                    className="absolute inset-0"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.25, ease: "easeOut" }}
+                  >
+                    <img
+                      src={selectedMedia.image}
+                      alt={selectedMedia.text}
+                      className="h-full w-full object-contain"
+                      loading="eager"
+                      decoding="async"
+                    />
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+              <div className="bg-white p-4 text-center hidden">
+                <h4 className="text-xl font-bold text-ink">{selectedMedia.text}</h4>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
