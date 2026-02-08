@@ -8,13 +8,16 @@ import Magnet from "./Magnet";
 import { CalendlyModal } from "./CalendlyModal";
 
 const TOOLS = [
-  { name: "Canva", src: "/logos/canva.png" },
   { name: "ClickUp", src: "/logos/clickup.svg" },
   { name: "ChatGPT", src: "/logos/chatgpt.svg" },
   { name: "Trello", src: "/logos/trello.svg" },
   { name: "Google Workspace", src: "/logos/google-workspace.svg" },
   { name: "Gemini", src: "/logos/gemini.svg" },
-  { name: "CapCut", src: "/logos/capcut.png" },
+  { name: "Nanobanana", src: "/logos/nanobanana.svg" },
+  { name: "Canva", src: "/logos/canva.svg" },
+  { name: "CapCut", src: "/logos/capcut.svg" },
+  { name: "Google Docs", src: "/logos/google-docs.svg" },
+  { name: "Google Sheets", src: "/logos/google-sheets.svg" },
 ];
 
 function Marquee({ children, baseVelocity = 100 }: { children: React.ReactNode; baseVelocity?: number }) {
@@ -23,18 +26,18 @@ function Marquee({ children, baseVelocity = 100 }: { children: React.ReactNode; 
 
   const directionFactor = useRef<number>(1);
   const velocitySpring = useSpring(baseVelocity, { stiffness: 50, damping: 20 });
-  
+
   useAnimationFrame((t, delta) => {
     let moveBy = directionFactor.current * (velocitySpring.get() || 0) * (delta / 1000);
-    if (velocitySpring.get() === 0) return; 
+    if (velocitySpring.get() === 0) return;
     baseX.set(baseX.get() + moveBy);
   });
 
   return (
-    <div 
-        className="overflow-hidden whitespace-nowrap flex flex-nowrap"
-        onMouseEnter={() => velocitySpring.set(baseVelocity * 0.2)} 
-        onMouseLeave={() => velocitySpring.set(baseVelocity)}       
+    <div
+      className="overflow-hidden whitespace-nowrap flex flex-nowrap"
+      onMouseEnter={() => velocitySpring.set(baseVelocity * 0.2)}
+      onMouseLeave={() => velocitySpring.set(baseVelocity)}
     >
       <motion.div className="flex flex-nowrap gap-16 md:gap-24 px-8" style={{ x }}>
         {/* Render children multiple times to ensure seamless loop on wide screens */}
@@ -89,7 +92,7 @@ export function Hero() {
   return (
     <section className="relative min-h-[95vh] flex flex-col justify-center overflow-hidden bg-[#FDF8F5] pt-24 pb-0">
       <div className="container mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center px-4 md:px-8 flex-grow">
-        
+
         {/* Text Content */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -106,7 +109,7 @@ export function Hero() {
               Available for Hire
             </span>
           </div>
-          
+
           <h1 className="text-5xl md:text-6xl lg:text-7xl font-serif font-medium text-ink leading-[1.1] tracking-tight">
             Hi, I'm Mav
           </h1>
@@ -117,7 +120,7 @@ export function Hero() {
               <span className="inline-block h-[1em] w-[2px] bg-ink/70 animate-[blink_1s_step-end_infinite]" aria-hidden="true" />
             </span>
           </div>
-          
+
           <p className="text-xl text-ink/70 max-w-xl leading-relaxed">
             I help brands show up consistently with scroll-stopping visuals, strategic content,
             and social media management that turns attention into action.
@@ -125,7 +128,7 @@ export function Hero() {
 
           <div className="flex flex-col sm:flex-row gap-4 pt-4">
             <Magnet padding={50} magnetStrength={5}>
-              <button 
+              <button
                 onClick={() => setIsModalOpen(true)}
                 className="group relative px-8 py-4 bg-ink text-sand rounded-full font-medium transition-all hover:bg-ink/90 overflow-hidden cursor-pointer"
               >
@@ -134,7 +137,7 @@ export function Hero() {
                 </span>
               </button>
             </Magnet>
-            
+
             <Magnet padding={50} magnetStrength={5}>
               <a
                 href="#portfolio"
@@ -171,16 +174,16 @@ export function Hero() {
 
           {/* Glowing Animated Border Container */}
           <div className="absolute inset-x-3 bottom-[-3px] h-[calc(75%+6px)] rounded-t-[3.2rem] rounded-b-[2.2rem] overflow-hidden z-0">
-             <div className="absolute inset-[-50%] animate-[spin_8s_linear_infinite] bg-[conic-gradient(transparent_200deg,#ec4899_360deg)] blur-[80px] opacity-60"></div>
+            <div className="absolute inset-[-50%] animate-[spin_8s_linear_infinite] bg-[conic-gradient(transparent_200deg,#ec4899_360deg)] blur-[80px] opacity-60"></div>
           </div>
 
           {/* Main Card Background */}
           <div className="absolute inset-x-4 bottom-0 h-[75%] bg-[#EFEAE4] rounded-t-[3rem] rounded-b-[2rem] border border-white/50 shadow-2xl overflow-hidden z-10">
-             {/* Decorative grid or pattern inside card */}
-             <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:16px_16px]"></div>
-             
-             {/* Circle behind head */}
-             <div className="absolute top-[10%] left-1/2 -translate-x-1/2 w-64 h-64 bg-white/40 rounded-full blur-2xl"></div>
+            {/* Decorative grid or pattern inside card */}
+            <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:16px_16px]"></div>
+
+            {/* Circle behind head */}
+            <div className="absolute top-[10%] left-1/2 -translate-x-1/2 w-64 h-64 bg-white/40 rounded-full blur-2xl"></div>
           </div>
 
           {/* Hero Image */}
@@ -198,83 +201,103 @@ export function Hero() {
 
           {/* Floating UI Elements (Interactive) */}
           <motion.div
-            animate={{ 
+            animate={{
               y: [0, -10, 0],
               rotate: [0, 2, 0]
             }}
-            transition={{ 
-              repeat: Infinity, 
-              duration: 5, 
+            transition={{
+              repeat: Infinity,
+              duration: 5,
               ease: [0.45, 0, 0.55, 1] // Custom smooth bezier
             }}
             className="absolute top-[30%] lg:top-[35%] xl:top-[25%] right-[-1rem] xl:right-[-1rem] 2xl:right-[10%] bg-white p-4 rounded-xl shadow-lg border border-ink/5 z-30 max-w-[180px]"
           >
-             <div className="flex items-center gap-2 mb-2">
-                <div className="p-1.5 bg-green-100 rounded-full text-green-600">
-                  <Star size={12} fill="currentColor" />
-                </div>
-                <span className="text-xs font-bold text-ink">Social-First</span>
-             </div>
-              <p className="text-[10px] text-ink/60 leading-tight">
-                Strategy-led content optimized for growth and engagement.
-              </p>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-1.5 bg-green-100 rounded-full text-green-600">
+                <Star size={12} fill="currentColor" />
+              </div>
+              <span className="text-xs font-bold text-ink">Social-First</span>
+            </div>
+            <p className="text-[10px] text-ink/60 leading-tight">
+              Strategy-led content optimized for growth and engagement.
+            </p>
           </motion.div>
 
           <motion.div
-            animate={{ 
+            animate={{
               y: [0, 10, 0],
               rotate: [0, -2, 0]
             }}
-            transition={{ 
-              repeat: Infinity, 
-              duration: 6, 
+            transition={{
+              repeat: Infinity,
+              duration: 6,
               ease: [0.45, 0, 0.55, 1], // Custom smooth bezier
-              delay: 1 
+              delay: 1
             }}
             className="absolute bottom-[25%] left-[0%] md:left-[5%] bg-white/80 backdrop-blur-md p-3 rounded-xl shadow-lg border border-white/40 z-20 flex items-center gap-3"
           >
-             <div className="h-10 w-10 rounded-full bg-sienna/10 flex items-center justify-center text-sienna">
-               <MousePointer2 size={20} />
-             </div>
-              <div>
-                <p className="text-xs font-bold text-ink">Content Creator</p>
-                <p className="text-[10px] text-ink/50">Social Media Management</p>
-              </div>
+            <div className="h-10 w-10 rounded-full bg-sienna/10 flex items-center justify-center text-sienna">
+              <MousePointer2 size={20} />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-ink">Content Creator</p>
+              <p className="text-[10px] text-ink/50">Social Media Management</p>
+            </div>
           </motion.div>
 
         </motion.div>
       </div>
 
-      {/* Infinite Logo Marquee Section */}
-      <div className="w-full mt-12 py-10 bg-[#F7F2EC] border-y border-ink/5 overflow-hidden">
-        <div className="relative flex w-full overflow-hidden">
-            <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-[#F7F2EC] to-transparent z-10" />
-            <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-[#F7F2EC] to-transparent z-10" />
-            
-            <Marquee baseVelocity={-0.5}>
-              {TOOLS.map((tool, idx) => (
-                <div 
-                    key={`${tool.name}-${idx}`}  
-                    className="relative w-32 h-16 flex items-center justify-center shrink-0 group cursor-pointer hover:scale-110 transition-transform duration-300"
-                    title={tool.name}
-                >
-                      <Image 
-                        src={tool.src} 
-                        alt={`${tool.name} logo`}
-                        width={120}
-                        height={60}
-                        className="object-contain max-h-12 w-auto"
-                      />
-                </div>
-              ))}
-            </Marquee>
+      {/* Double Marquee Section */}
+      <div className="w-full mt-12 py-10 bg-[#F7F2EC] border-y border-ink/5 overflow-hidden flex flex-col gap-4">
+        <div className="relative flex w-full flex-col gap-6 overflow-hidden">
+          <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-[#F7F2EC] to-transparent z-10 pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-[#F7F2EC] to-transparent z-10 pointer-events-none" />
+
+          {/* Top row - Going Right */}
+          <Marquee baseVelocity={0.5}>
+            {TOOLS.map((tool, idx) => (
+              <div
+                key={`top-${tool.name}-${idx}`}
+                className="relative w-32 h-16 flex items-center justify-center shrink-0 group cursor-pointer hover:scale-110 transition-transform duration-300"
+                title={tool.name}
+              >
+                <Image
+                  src={tool.src}
+                  alt={`${tool.name} logo`}
+                  width={120}
+                  height={60}
+                  className="object-contain max-h-12 w-auto grayscale group-hover:grayscale-0 opacity-70 group-hover:opacity-100 transition-all duration-300"
+                />
+              </div>
+            ))}
+          </Marquee>
+
+          {/* Bottom row - Going Left */}
+          <Marquee baseVelocity={-0.5}>
+            {TOOLS.map((tool, idx) => (
+              <div
+                key={`bottom-${tool.name}-${idx}`}
+                className="relative w-32 h-16 flex items-center justify-center shrink-0 group cursor-pointer hover:scale-110 transition-transform duration-300"
+                title={tool.name}
+              >
+                <Image
+                  src={tool.src}
+                  alt={`${tool.name} logo`}
+                  width={120}
+                  height={60}
+                  className="object-contain max-h-12 w-auto grayscale group-hover:grayscale-0 opacity-70 group-hover:opacity-100 transition-all duration-300"
+                />
+              </div>
+            ))}
+          </Marquee>
         </div>
       </div>
-      
-      <CalendlyModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        url="https://calendly.com/smm-mavenicaann/30min" 
+
+      <CalendlyModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        url="https://calendly.com/smm-mavenicaann/30min"
       />
     </section>
   );

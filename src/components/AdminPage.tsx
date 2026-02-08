@@ -358,6 +358,9 @@ export function AdminPage() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [copywritingOrderMessage, setCopywritingOrderMessage] = useState("");
   const [copywritingDeletingId, setCopywritingDeletingId] = useState<string | null>(null);
+  const [clientUploadState, setClientUploadState] = useState<UploadState>("idle");
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [clientUploadMessage, setClientUploadMessage] = useState("");
 
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
@@ -1233,46 +1236,46 @@ export function AdminPage() {
   };
 
   const handleStoryOrderSave = async (orderedStories: StoryItem[]) => {
-      if (!session) return;
-      if (orderedStories.length === 0) return;
+    if (!session) return;
+    if (orderedStories.length === 0) return;
 
-      setStoryOrderSaving(true);
-      setStoryOrderError("");
+    setStoryOrderSaving(true);
+    setStoryOrderError("");
 
-      try {
-        const response = await fetch("/api/admin-reorder", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
-          },
-          body: JSON.stringify({
-            table: "stories",
-            order: orderedStories.map((story, index) => ({
-              id: story.id,
-              sort_order: index,
-            })),
-          }),
-        });
+    try {
+      const response = await fetch("/api/admin-reorder", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({
+          table: "stories",
+          order: orderedStories.map((story, index) => ({
+            id: story.id,
+            sort_order: index,
+          })),
+        }),
+      });
 
-        if (!response.ok) {
-          let message = "Failed to save story order";
-          try {
-            const payload = await response.json();
-            if (payload?.message) message = payload.message;
-          } catch (error) {
-            // ignore json parse errors
-          }
-          throw new Error(message);
+      if (!response.ok) {
+        let message = "Failed to save story order";
+        try {
+          const payload = await response.json();
+          if (payload?.message) message = payload.message;
+        } catch (error) {
+          // ignore json parse errors
         }
-
-        setStoriesOrderDirty(false);
-      } catch (error) {
-        setStoryOrderError(error instanceof Error ? error.message : "Failed to save story order");
-      } finally {
-        setStoryOrderSaving(false);
+        throw new Error(message);
       }
-    };
+
+      setStoriesOrderDirty(false);
+    } catch (error) {
+      setStoryOrderError(error instanceof Error ? error.message : "Failed to save story order");
+    } finally {
+      setStoryOrderSaving(false);
+    }
+  };
 
   const handleTestimonialDelete = async (testimonialId: string) => {
     if (!session) return;
@@ -1310,48 +1313,48 @@ export function AdminPage() {
   };
 
   const handleTestimonialOrderSave = async (orderedTestimonials: TestimonialItem[]) => {
-      if (!session) return;
-      if (orderedTestimonials.length === 0) return;
+    if (!session) return;
+    if (orderedTestimonials.length === 0) return;
 
-      setTestimonialOrderSaving(true);
-      setTestimonialOrderError("");
+    setTestimonialOrderSaving(true);
+    setTestimonialOrderError("");
 
-      try {
-        const response = await fetch("/api/admin-reorder", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
-          },
-          body: JSON.stringify({
-            table: "testimonials",
-            order: orderedTestimonials.map((testimonial, index) => ({
-              id: testimonial.id,
-              sort_order: index,
-            })),
-          }),
-        });
+    try {
+      const response = await fetch("/api/admin-reorder", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({
+          table: "testimonials",
+          order: orderedTestimonials.map((testimonial, index) => ({
+            id: testimonial.id,
+            sort_order: index,
+          })),
+        }),
+      });
 
-        if (!response.ok) {
-          let message = "Failed to save testimonial order";
-          try {
-            const payload = await response.json();
-            if (payload?.message) message = payload.message;
-          } catch (error) {
-            // ignore json parse errors
-          }
-          throw new Error(message);
+      if (!response.ok) {
+        let message = "Failed to save testimonial order";
+        try {
+          const payload = await response.json();
+          if (payload?.message) message = payload.message;
+        } catch (error) {
+          // ignore json parse errors
         }
-
-        setTestimonialsOrderDirty(false);
-      } catch (error) {
-        setTestimonialOrderError(
-          error instanceof Error ? error.message : "Failed to save testimonial order"
-        );
-      } finally {
-        setTestimonialOrderSaving(false);
+        throw new Error(message);
       }
-    };
+
+      setTestimonialsOrderDirty(false);
+    } catch (error) {
+      setTestimonialOrderError(
+        error instanceof Error ? error.message : "Failed to save testimonial order"
+      );
+    } finally {
+      setTestimonialOrderSaving(false);
+    }
+  };
 
   const handleReelsOrderSave = async (orderedReels: ReelItem[]) => {
     if (!session) return;
@@ -1484,6 +1487,83 @@ export function AdminPage() {
       alert(error instanceof Error ? error.message : "Delete failed");
     }
   };
+
+  const handleClientPhotosUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    if (!selectedIndustryId || !selectedClientName) return;
+
+    setClientUploadState("loading");
+    setClientUploadMessage("");
+
+    try {
+      if (!supabase) throw new Error("Supabase client not initialized");
+
+      const newImages: { url: string; sort_order: number }[] = [];
+      const currentIndustryClients = clients.filter(c => c.industry_id === selectedIndustryId);
+      const baseSortOrder = currentIndustryClients.length;
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const extension = file.name.split(".").pop() || "png";
+        const filePath = `clients/image_url/${crypto.randomUUID()}.${extension}`;
+
+        const { error: uploadError } = await supabase.storage.from("portfolio").upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: file.type || "image/png",
+        });
+
+        if (uploadError) throw uploadError;
+
+        const { data } = supabase.storage.from("portfolio").getPublicUrl(filePath);
+        if (data.publicUrl) {
+          newImages.push({
+            url: data.publicUrl,
+            sort_order: baseSortOrder + i
+          });
+        }
+      }
+
+      // Insert into DB
+      for (const img of newImages) {
+        const response = await fetch("/api/admin-insert", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          },
+          body: JSON.stringify({
+            table: "clients",
+            values: {
+              industry_id: selectedIndustryId,
+              name: selectedClientName,
+              image_url: img.url,
+              sort_order: String(img.sort_order)
+            }
+          }),
+        });
+
+        if (!response.ok) {
+          console.error("Failed to insert image", img);
+        }
+      }
+
+      setClientUploadState("success");
+      setClientUploadMessage("Photos added successfully");
+      await fetchAdminData();
+
+      setTimeout(() => {
+        setClientUploadState("idle");
+        setClientUploadMessage("");
+      }, 2000);
+
+    } catch (error) {
+      console.error(error);
+      setClientUploadState("error");
+      setClientUploadMessage("Failed to upload photos");
+    }
+  };
+
 
   const getIndustryName = (id?: string | null) => {
     if (!id) return null;
@@ -2121,18 +2201,35 @@ export function AdminPage() {
                         </button>
                         <div className="mb-4 flex items-center justify-between gap-4">
                           <h3 className="text-lg font-bold text-ink">{selectedClientName}</h3>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (!selectedIndustryId) return;
-                              setClientDeletePrompt({ industryId: selectedIndustryId, name: selectedClientName });
-                              setClientDeleteText("");
-                              setClientDeleteError("");
-                            }}
-                            className="text-xs uppercase tracking-widest font-bold text-red-500 hover:text-red-600 flex items-center gap-2 transition-colors"
-                          >
-                            <Trash2 size={14} /> Delete Client
-                          </button>
+                          <div className="flex items-center gap-3">
+                            <label className={clsx(
+                              "cursor-pointer bg-ink text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-ink/90 transition-all flex items-center gap-2",
+                              clientUploadState === "loading" && "opacity-50 cursor-not-allowed"
+                            )}>
+                              {clientUploadState === "loading" ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
+                              {clientUploadState === "loading" ? "Uploading..." : "Add Photos"}
+                              <input
+                                type="file"
+                                multiple
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => handleClientPhotosUpload(e.target.files)}
+                                disabled={clientUploadState === "loading"}
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!selectedIndustryId) return;
+                                setClientDeletePrompt({ industryId: selectedIndustryId, name: selectedClientName });
+                                setClientDeleteText("");
+                                setClientDeleteError("");
+                              }}
+                              className="text-xs uppercase tracking-widest font-bold text-red-500 hover:text-red-600 flex items-center gap-2 transition-colors"
+                            >
+                              <Trash2 size={14} /> Delete Client
+                            </button>
+                          </div>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                           {clients
@@ -2178,29 +2275,29 @@ export function AdminPage() {
                             animate={{ opacity: 1, scale: 1 }}
                             className="bg-white rounded-2xl p-4 border border-ink/5 hover:border-ink/20 hover:shadow-lg transition-all text-left cursor-pointer"
                           >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-base truncate">{name}</h3>
-                          <p className="text-xs text-ink/40">{items.length} images</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              if (!selectedIndustryId) return;
-                              setClientDeletePrompt({ industryId: selectedIndustryId, name });
-                              setClientDeleteText("");
-                              setClientDeleteError("");
-                            }}
-                            className="w-8 h-8 rounded-full bg-red-50 text-red-500 hover:bg-red-100 transition-colors flex items-center justify-center"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                          <div className="w-8 h-8 rounded-full bg-sand flex items-center justify-center text-ink/40">
-                            <ChevronRight size={16} />
-                          </div>
-                        </div>
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-bold text-base truncate">{name}</h3>
+                                <p className="text-xs text-ink/40">{items.length} images</p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    if (!selectedIndustryId) return;
+                                    setClientDeletePrompt({ industryId: selectedIndustryId, name });
+                                    setClientDeleteText("");
+                                    setClientDeleteError("");
+                                  }}
+                                  className="w-8 h-8 rounded-full bg-red-50 text-red-500 hover:bg-red-100 transition-colors flex items-center justify-center"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                                <div className="w-8 h-8 rounded-full bg-sand flex items-center justify-center text-ink/40">
+                                  <ChevronRight size={16} />
+                                </div>
+                              </div>
                             </div>
                           </motion.div>
                         ))}
@@ -2488,11 +2585,11 @@ export function AdminPage() {
                             )}
                             {/* Click Overlay */}
                             <div className="absolute inset-0 z-10 bg-transparent" />
-                            
+
                             <div className="absolute inset-0 z-20 flex items-center justify-center opacity-0 group-hover/video:opacity-100 transition-opacity bg-black/20">
-                               <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white">
-                                  <Video size={24} />
-                               </div>
+                              <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white">
+                                <Video size={24} />
+                              </div>
                             </div>
                           </button>
                         ) : (
@@ -2767,11 +2864,11 @@ export function AdminPage() {
                                     )}
                                     {/* Click Overlay */}
                                     <div className="absolute inset-0 z-10 bg-transparent" />
-                                    
+
                                     <div className="absolute inset-0 z-20 flex items-center justify-center opacity-0 group-hover/video:opacity-100 transition-opacity bg-black/20">
-                                       <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white">
-                                          <Video size={24} />
-                                       </div>
+                                      <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white">
+                                        <Video size={24} />
+                                      </div>
                                     </div>
                                   </button>
                                 ) : (
@@ -3038,21 +3135,21 @@ export function AdminPage() {
                             exit={{ opacity: 0, scale: 0.95 }}
                             className="bg-white rounded-3xl p-5 border border-ink/5 hover:border-ink/20 hover:shadow-xl transition-all group"
                           >
-                              <div className="flex items-start justify-between mb-4">
-                                <div className="flex-1 min-w-0 pr-4">
-                                  {showTitle && (
-                                    <h3 className="font-bold text-lg truncate">{rawTitle}</h3>
-                                  )}
-                                  <p className="text-sm text-ink/40 truncate">
-                                    {industryName && <span className="mr-1 font-medium text-ink/80 bg-ink/5 px-2 py-0.5 rounded text-xs">{industryName}</span>}
-                                    {item.category && <span className="mr-1 font-medium text-ink/60">{item.category} •</span>}
-                                    {item.client || item.role || item.description || (item.category ? "" : "No description")}
-                                  </p>
-                                </div>
-                                <div className="w-8 h-8 rounded-full bg-sand flex items-center justify-center text-ink/40">
-                                  <ChevronRight size={16} />
-                                </div>
+                            <div className="flex items-start justify-between mb-4">
+                              <div className="flex-1 min-w-0 pr-4">
+                                {showTitle && (
+                                  <h3 className="font-bold text-lg truncate">{rawTitle}</h3>
+                                )}
+                                <p className="text-sm text-ink/40 truncate">
+                                  {industryName && <span className="mr-1 font-medium text-ink/80 bg-ink/5 px-2 py-0.5 rounded text-xs">{industryName}</span>}
+                                  {item.category && <span className="mr-1 font-medium text-ink/60">{item.category} •</span>}
+                                  {item.client || item.role || item.description || (item.category ? "" : "No description")}
+                                </p>
                               </div>
+                              <div className="w-8 h-8 rounded-full bg-sand flex items-center justify-center text-ink/40">
+                                <ChevronRight size={16} />
+                              </div>
+                            </div>
 
                             {/* Image Preview if available */}
                             {imageSrc && (
@@ -3120,11 +3217,11 @@ export function AdminPage() {
                                 )}
                                 {/* Click Overlay */}
                                 <div className="absolute inset-0 z-10 bg-transparent" />
-                                
+
                                 <div className="absolute inset-0 z-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
-                                   <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white">
-                                      <Video size={24} />
-                                   </div>
+                                  <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white">
+                                    <Video size={24} />
+                                  </div>
                                 </div>
                               </button>
                             )}
