@@ -943,7 +943,18 @@ function IndustryList({
   loading: boolean;
   error: string | null;
 }) {
-  const itemHeight = 100;
+  const [itemHeight, setItemHeight] = useState(100);
+
+  useEffect(() => {
+    const updateHeight = () => {
+      // 70px for mobile, 100px for desktop
+      setItemHeight(window.innerWidth < 768 ? 70 : 100);
+    };
+
+    updateHeight();
+    window.addEventListener("resize", updateHeight);
+    return () => window.removeEventListener("resize", updateHeight);
+  }, []);
 
   return (
     <div className="w-full">

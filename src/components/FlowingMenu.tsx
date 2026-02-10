@@ -176,7 +176,7 @@ export const MenuItem: React.FC<MenuItemProps> = ({
       }}
     >
       <a
-        className="flex items-center justify-center h-full w-full relative cursor-pointer uppercase no-underline font-semibold text-[4vh]"
+        className="flex items-center justify-center h-full w-full relative cursor-pointer uppercase no-underline font-semibold text-2xl md:text-[4vh]"
         href={link}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
@@ -193,7 +193,7 @@ export const MenuItem: React.FC<MenuItemProps> = ({
         <div className="h-full w-fit flex" ref={marqueeInnerRef}>
           {[...Array(repetitions)].map((_, idx) => (
             <div className="marquee-part flex items-center flex-shrink-0" key={idx} style={{ color: marqueeTextColor }}>
-              <span className="whitespace-nowrap uppercase font-normal text-[4vh] leading-[1] px-[1vw]">{text}</span>
+              <span className="whitespace-nowrap uppercase font-normal text-2xl md:text-[4vh] leading-[1] px-[1vw]">{text}</span>
               <div
                 className="w-[200px] h-[7vh] my-[2em] mx-[2vw] py-[1em] rounded-[50px] bg-cover bg-center"
                 style={{ backgroundImage: `url(${image})` }}
@@ -202,7 +202,7 @@ export const MenuItem: React.FC<MenuItemProps> = ({
           ))}
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 
