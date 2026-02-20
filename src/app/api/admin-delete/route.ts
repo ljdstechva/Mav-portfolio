@@ -1,34 +1,21 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { ensureSupabaseAuthed } from "@/lib/supabaseAdminAuth";
 
 export const runtime = "nodejs";
 
 type AllowedTable = "industries" | "clients" | "reels" | "carousels" | "stories" | "photo_editing" | "testimonials" | "copywriting";
-
-async function ensureAuthed(request: Request) {
-  const authHeader = request.headers.get("authorization") ?? "";
-  const token = authHeader.startsWith("Bearer ")
-    ? authHeader.replace("Bearer ", "")
-    : "";
-
-  if (!token) {
-    return false;
-  }
-
-  try {
-    const supabase = createSupabaseServerClient();
-    const { data, error } = await supabase.auth.getUser(token);
-    if (error || !data.user) {
-      return false;
-    }
-    return true;
-  } catch (error) {
-    return false;
-  }
-}
+const ID_DELETE_TABLES: ReadonlyArray<Exclude<AllowedTable, "industries" | "clients">> = [
+  "reels",
+  "carousels",
+  "stories",
+  "photo_editing",
+  "testimonials",
+  "copywriting",
+];
 
 export async function POST(request: Request) {
-  if (!(await ensureAuthed(request))) {
+  if (!(await ensureSupabaseAuthed(request))) {
     return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
   }
 
@@ -70,48 +57,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true }, { status: 200 });
   }
 
-  if (body.table === "reels") {
-    const { error } = await supabase.from("reels").delete().eq("id", body.id);
-    if (error) {
-      return NextResponse.json({ message: error.message }, { status: 500 });
-    }
-    return NextResponse.json({ ok: true }, { status: 200 });
-  }
-
-  if (body.table === "carousels") {
-    const { error } = await supabase.from("carousels").delete().eq("id", body.id);
-    if (error) {
-      return NextResponse.json({ message: error.message }, { status: 500 });
-    }
-    return NextResponse.json({ ok: true }, { status: 200 });
-  }
-
-  if (body.table === "stories") {
-    const { error } = await supabase.from("stories").delete().eq("id", body.id);
-    if (error) {
-      return NextResponse.json({ message: error.message }, { status: 500 });
-    }
-    return NextResponse.json({ ok: true }, { status: 200 });
-  }
-
-  if (body.table === "photo_editing") {
-    const { error } = await supabase.from("photo_editing").delete().eq("id", body.id);
-    if (error) {
-      return NextResponse.json({ message: error.message }, { status: 500 });
-    }
-    return NextResponse.json({ ok: true }, { status: 200 });
-  }
-
-  if (body.table === "copywriting") {
-    const { error } = await supabase.from("copywriting").delete().eq("id", body.id);
-    if (error) {
-      return NextResponse.json({ message: error.message }, { status: 500 });
-    }
-    return NextResponse.json({ ok: true }, { status: 200 });
-  }
-
-  if (body.table === "testimonials") {
-    const { error } = await supabase.from("testimonials").delete().eq("id", body.id);
+  if (ID_DELETE_TABLES.includes(body.table)) {
+    const { error } = await supabase.from(body.table).delete().eq("id", body.id);
     if (error) {
       return NextResponse.json({ message: error.message }, { status: 500 });
     }

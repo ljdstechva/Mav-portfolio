@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { ArrowLeft, ArrowRight } from 'lucide-react';
-import clsx from 'clsx';
 
 export type GalleryItem = {
     image: string;
@@ -24,19 +23,25 @@ export default function GalleryCarousel({ items, onItemClick }: GalleryCarouselP
     useEffect(() => {
         const handleResize = () => {
             const width = window.innerWidth;
+            let nextItemsPerView = 6;
+            let nextGap = 20;
+
             // Mobile < 768px: 2 items
             // Tablet < 1024px: 3 items
             // Desktop >= 1024px: 6 items
             if (width < 768) {
-                setItemsPerView(2);
-                setGap(12);
+                nextItemsPerView = 2;
+                nextGap = 12;
             } else if (width < 1024) {
-                setItemsPerView(3);
-                setGap(16);
-            } else {
-                setItemsPerView(6);
-                setGap(20);
+                nextItemsPerView = 3;
+                nextGap = 16;
             }
+
+            setItemsPerView(nextItemsPerView);
+            setGap(nextGap);
+            setCurrentIndex((prev) =>
+                Math.min(prev, Math.max(0, items.length - nextItemsPerView))
+            );
         };
 
         // Initial check
@@ -44,32 +49,25 @@ export default function GalleryCarousel({ items, onItemClick }: GalleryCarouselP
 
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
-    }, []);
+    }, [items.length]);
 
     // Calculate maximum index to prevent empty space at the end
     const maxIndex = Math.max(0, items.length - itemsPerView);
-
-    // If currentIndex exceeds maxIndex (e.g. after resize), clamp it
-    useEffect(() => {
-        const newMax = Math.max(0, items.length - itemsPerView);
-        if (currentIndex > newMax) {
-            setCurrentIndex(newMax);
-        }
-    }, [itemsPerView, items.length, currentIndex]);
+    const visibleIndex = Math.min(currentIndex, maxIndex);
 
     const nextSlide = () => {
-        if (currentIndex >= maxIndex) {
+        if (visibleIndex >= maxIndex) {
             setCurrentIndex(0); // Optional: Loop back to start
         } else {
-            setCurrentIndex(currentIndex + 1);
+            setCurrentIndex(visibleIndex + 1);
         }
     };
 
     const prevSlide = () => {
-        if (currentIndex <= 0) {
+        if (visibleIndex <= 0) {
             setCurrentIndex(maxIndex); // Optional: Loop to end
         } else {
-            setCurrentIndex(currentIndex - 1);
+            setCurrentIndex(visibleIndex - 1);
         }
     };
 
@@ -81,7 +79,7 @@ export default function GalleryCarousel({ items, onItemClick }: GalleryCarouselP
                     className="flex"
                     style={{ gap: `${gap}px` }}
                     initial={false}
-                    animate={{ x: `calc(-${currentIndex} * ((100% + ${gap}px) / ${itemsPerView}))` }}
+                    animate={{ x: `calc(-${visibleIndex} * ((100% + ${gap}px) / ${itemsPerView}))` }}
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 >
                     {items.map((item, index) => (

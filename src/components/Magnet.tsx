@@ -53,7 +53,11 @@ export default function Magnet({
       animate={{ x, y }}
       transition={{ type: "spring", stiffness: 150, damping: 15, mass: 0.1 }}
       className={`inline-block relative ${!disabled ? '!cursor-pointer' : ''}`}
-      style={{ touchAction: "none" }} // Prevents scroll interference on touch
+      style={{
+        touchAction: "none",
+        padding: disabled ? 0 : padding,
+        margin: disabled ? 0 : -padding,
+      }} // Keep layout size stable while enlarging the magnetic hit area
     >
       {children}
     </motion.div>

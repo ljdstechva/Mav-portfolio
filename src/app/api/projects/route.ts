@@ -29,7 +29,7 @@ async function ensureAuthed(request: Request) {
       return false;
     }
     return true;
-  } catch (error) {
+  } catch {
     return false;
   }
 }

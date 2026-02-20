@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState, useRef } from 'react';
 import { usePathname } from 'next/navigation';
@@ -16,6 +16,7 @@ export default function Preloader() {
   
   // Ref to track if we've already started the exit sequence
   const isExiting = useRef(false);
+  const percentRef = useRef(0);
 
   useEffect(() => {
     if (!isLandingRoute) return;
@@ -68,7 +69,9 @@ export default function Preloader() {
         if (prev >= 100) return 100;
         // Move towards target, but at least increment by 1 if behind
         const diff = targetPercent - prev;
-        return diff > 0 ? prev + Math.ceil(diff * 0.1) : prev;
+        const next = diff > 0 ? prev + Math.ceil(diff * 0.1) : prev;
+        percentRef.current = next;
+        return next;
       });
 
       setLoadedCount(domLoaded + imagesLoaded + assetLoadedRef.current);
@@ -77,6 +80,27 @@ export default function Preloader() {
       const actionIndex = Math.min(Math.floor((targetPercent / 100) * actions.length), actions.length - 1);
       setCurrentAction(actions[actionIndex]);
     };
+
+    const preloadRemoteImage = async (url: string) =>
+      new Promise<void>((resolve) => {
+        const image = new Image();
+        let finished = false;
+        const finish = () => {
+          if (finished) return;
+          finished = true;
+          resolve();
+        };
+        const timeoutId = window.setTimeout(finish, 5000);
+        image.onload = () => {
+          window.clearTimeout(timeoutId);
+          finish();
+        };
+        image.onerror = () => {
+          window.clearTimeout(timeoutId);
+          finish();
+        };
+        image.src = url;
+      });
 
     const preloadAssets = async () => {
       try {
@@ -100,16 +124,6 @@ export default function Preloader() {
           if (item.before_image_url) urls.add(item.before_image_url);
           if (item.after_image_url) urls.add(item.after_image_url);
         });
-        (data.reels ?? []).forEach((item: { video_url?: string | null }) => {
-          if (item.video_url) urls.add(item.video_url);
-        });
-        (data.stories ?? []).forEach((item: { video_url?: string | null; story_url?: string | null; media_url?: string | null; url?: string | null }) => {
-          if (item.video_url) urls.add(item.video_url);
-          if (item.story_url) urls.add(item.story_url);
-          if (item.media_url) urls.add(item.media_url);
-          if (item.url) urls.add(item.url);
-        });
-
         const urlList = Array.from(urls);
         assetTotalRef.current = urlList.length;
         updateProgress();
@@ -122,7 +136,13 @@ export default function Preloader() {
             const url = queue.shift();
             if (!url) continue;
             try {
-              await fetch(url, { mode: 'cors' });
+              const resolvedUrl = new URL(url, window.location.origin);
+              if (resolvedUrl.origin === window.location.origin) {
+                await fetch(resolvedUrl.href, { cache: 'force-cache' });
+              } else {
+                // Avoid cross-origin fetch CORS noise in devtools while still warming image cache.
+                await preloadRemoteImage(resolvedUrl.href);
+              }
             } catch {
               // ignore fetch errors
             } finally {
@@ -133,7 +153,7 @@ export default function Preloader() {
         };
 
         await Promise.all(Array.from({ length: concurrency }, () => loadNext()));
-      } catch (error) {
+      } catch {
         // ignore errors
       }
     };
@@ -159,13 +179,15 @@ export default function Preloader() {
 
     // Safety fallback: Ensure we finish eventually even if assets hang
     const maxTime = setTimeout(() => {
+      percentRef.current = 100;
        setPercent(100);
     }, 12000); // 12s max load time
 
     // Completion check
     const checkCompletion = setInterval(() => {
-      if (percent >= 100 || (document.readyState === 'complete' && percent > 90)) {
+      if (percentRef.current >= 100 || (document.readyState === 'complete' && percentRef.current > 90)) {
         // Ensure we hit 100 visual
+        percentRef.current = 100;
         setPercent(100);
         setCurrentAction("Welcome");
         
@@ -190,7 +212,7 @@ export default function Preloader() {
       clearTimeout(maxTime);
       document.body.style.overflow = '';
     };
-  }, [isLandingRoute, percent]);
+  }, [isLandingRoute]);
 
   if (!isLandingRoute) {
     return null;
@@ -222,7 +244,7 @@ export default function Preloader() {
                transition={{ delay: 0.2 }}
                className="text-right hidden md:block"
             >
-               Portfolio © {new Date().getFullYear()}
+               Portfolio &copy; {new Date().getFullYear()}
             </motion.div>
           </div>
 
@@ -294,3 +316,4 @@ export default function Preloader() {
     </AnimatePresence>
   );
 }
+

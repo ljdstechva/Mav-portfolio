@@ -1,5 +1,4 @@
 import { 
-  ArrowLeft, 
   Sparkles, 
   Heart, 
   Cpu, 

@@ -16,14 +16,13 @@ type Testimonial = {
 };
 
 export function Testimonials() {
+  const configError = getSupabaseConfigError();
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!configError);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
 
   useEffect(() => {
-    const configError = getSupabaseConfigError();
     if (configError) {
-      setLoading(false);
       return;
     }
 
@@ -48,7 +47,7 @@ export function Testimonials() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [configError]);
 
   return (
     <section className="py-24 px-4 md:px-8 bg-[#FDF8F5] relative overflow-hidden" id="testimonials">
@@ -76,7 +75,7 @@ export function Testimonials() {
                Kind Words
              </h2>
              <p className="text-lg text-ink/60 max-w-2xl mx-auto">
-               Don't just take my word for it. Here's what my amazing clients have to say about our collaboration.
+               Don&apos;t just take my word for it. Here&apos;s what my amazing clients have to say about our collaboration.
              </p>
            </motion.div>
         </div>
@@ -156,7 +155,7 @@ function TestimonialCard({ testimonial, index }: { testimonial: Testimonial, ind
            </div>
            
             <p className="text-ink/80 leading-relaxed text-lg font-medium mb-8">
-              "{testimonial.quote}"
+              &ldquo;{testimonial.quote}&rdquo;
             </p>
         </div>
 

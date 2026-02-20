@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import { motion } from "framer-motion";
-import { ArrowUpRight, Instagram, Linkedin, Facebook, Palette, Phone } from "lucide-react";
+import { ArrowUpRight, Phone } from "lucide-react";
 import { useState } from "react";
 import { CalendlyModal } from "./CalendlyModal";
 
@@ -28,7 +28,7 @@ export function Footer() {
                 viewport={{ once: true }}
                 className="font-display text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight"
               >
-                Let's create <br />
+                Let&apos;s create <br />
                 <span className="text-terracotta italic">something amazing</span>
               </motion.h2>
               
@@ -39,7 +39,7 @@ export function Footer() {
                 transition={{ delay: 0.1 }}
                 className="text-sand/60 text-lg md:text-xl max-w-md mb-8"
               >
-                Ready to elevate your brand? I'm currently available for new projects and collaborations.
+                Ready to elevate your brand? I&apos;m currently available for new projects and collaborations.
               </motion.p>
               
               <motion.button 
@@ -114,7 +114,7 @@ export function Footer() {
 
           {/* Bottom Bar */}
           <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-sand/40">
-            <p>© {currentYear} MAV STUDIO. All rights reserved.</p>
+            <p>&copy; {currentYear} MAV STUDIO. All rights reserved.</p>
             <div className="flex gap-6">
               <a href="#" className="hover:text-sand transition-colors">Privacy Policy</a>
               <a href="#" className="hover:text-sand transition-colors">Terms of Service</a>
@@ -131,3 +131,5 @@ export function Footer() {
     </>
   );
 }
+
+

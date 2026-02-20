@@ -1,32 +1,11 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { ensureSupabaseAuthed } from "@/lib/supabaseAdminAuth";
 
 export const runtime = "nodejs";
 
-async function ensureAuthed(request: Request) {
-  const authHeader = request.headers.get("authorization") ?? "";
-  const token = authHeader.startsWith("Bearer ")
-    ? authHeader.replace("Bearer ", "")
-    : "";
-
-  if (!token) {
-    return false;
-  }
-
-  try {
-    const supabase = createSupabaseServerClient();
-    const { data, error } = await supabase.auth.getUser(token);
-    if (error || !data.user) {
-      return false;
-    }
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 export async function GET(request: Request) {
-  if (!(await ensureAuthed(request))) {
+  if (!(await ensureSupabaseAuthed(request))) {
     return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
   }
 

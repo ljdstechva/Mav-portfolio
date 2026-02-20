@@ -1,34 +1,19 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { ensureSupabaseAuthed } from "@/lib/supabaseAdminAuth";
 
 export const runtime = "nodejs";
 
 type AllowedTable = "stories" | "reels" | "photo_editing" | "testimonials";
-
-async function ensureAuthed(request: Request) {
-  const authHeader = request.headers.get("authorization") ?? "";
-  const token = authHeader.startsWith("Bearer ")
-    ? authHeader.replace("Bearer ", "")
-    : "";
-
-  if (!token) {
-    return false;
-  }
-
-  try {
-    const supabase = createSupabaseServerClient();
-    const { data, error } = await supabase.auth.getUser(token);
-    if (error || !data.user) {
-      return false;
-    }
-    return true;
-  } catch {
-    return false;
-  }
-}
+const ORDERABLE_TABLES: ReadonlyArray<AllowedTable> = [
+  "stories",
+  "reels",
+  "photo_editing",
+  "testimonials",
+];
 
 export async function POST(request: Request) {
-  if (!(await ensureAuthed(request))) {
+  if (!(await ensureSupabaseAuthed(request))) {
     return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
   }
 
@@ -38,7 +23,7 @@ export async function POST(request: Request) {
     items?: { id?: string; sort_order?: number }[];
   };
 
-  if (!body.table || !(["stories", "reels", "photo_editing", "testimonials"] as const).includes(body.table)) {
+  if (!body.table || !ORDERABLE_TABLES.includes(body.table)) {
     return NextResponse.json({ message: "Invalid request." }, { status: 400 });
   }
 

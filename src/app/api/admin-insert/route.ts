@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { ensureSupabaseAuthed } from "@/lib/supabaseAdminAuth";
 
 export const runtime = "nodejs";
 
@@ -21,34 +22,10 @@ const TABLE_COLUMNS: Record<AllowedTable, string[]> = {
   stories: ["video_url", "sort_order"],
   copywriting: ["image_url", "sort_order"],
   photo_editing: ["before_image_url", "after_image_url"],
-  testimonials: ["client_name", "quote"],
+  testimonials: ["client_name", "quote", "sort_order"],
 };
 
-const ARRAY_FIELDS = new Set([] as string[]);
 const NUMBER_FIELDS = new Set(["position", "sort_order"]);
-const JSON_FIELDS = new Set([] as string[]);
-
-async function ensureAuthed(request: Request) {
-  const authHeader = request.headers.get("authorization") ?? "";
-  const token = authHeader.startsWith("Bearer ")
-    ? authHeader.replace("Bearer ", "")
-    : "";
-
-  if (!token) {
-    return false;
-  }
-
-  try {
-    const supabase = createSupabaseServerClient();
-    const { data, error } = await supabase.auth.getUser(token);
-    if (error || !data.user) {
-      return false;
-    }
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 function normalizeValue(key: string, value: unknown) {
   if (value === null || value === undefined) {
@@ -59,19 +36,9 @@ function normalizeValue(key: string, value: unknown) {
     if (!trimmed) {
       return null;
     }
-    if (ARRAY_FIELDS.has(key)) {
-      return trimmed.split(",").map((item) => item.trim()).filter(Boolean);
-    }
     if (NUMBER_FIELDS.has(key)) {
       const parsed = Number(trimmed);
       return Number.isNaN(parsed) ? null : parsed;
-    }
-    if (JSON_FIELDS.has(key)) {
-      try {
-        return JSON.parse(trimmed);
-      } catch {
-        return null;
-      }
     }
     return trimmed;
   }
@@ -79,7 +46,7 @@ function normalizeValue(key: string, value: unknown) {
 }
 
 export async function POST(request: Request) {
-  if (!(await ensureAuthed(request))) {
+  if (!(await ensureSupabaseAuthed(request))) {
     return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
   }
 

@@ -1,25 +1,39 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import Image from "next/image";
 import { ArrowRight, Star, MousePointer2 } from "lucide-react";
 import Magnet from "./Magnet";
 import { CalendlyModal } from "./CalendlyModal";
 
-const TOOLS = [
-  { name: "ClickUp", src: "/logos/Clickup.jpg" },
-  { name: "ChatGPT", src: "/logos/chatgpt.svg" },
-  { name: "Trello", src: "/logos/Trello.jpg" },
-  { name: "Google Workspace", src: "/logos/google-workspace.svg" },
-  { name: "Gemini", src: "/logos/Gemini.webp" },
-  { name: "Nanobanana", src: "/logos/nanobanana.jpg" },
-  { name: "Canva", src: "/logos/canva.svg" },
-  { name: "CapCut", src: "/logos/Capcut.jpg" },
-  { name: "Google Docs", src: "/logos/google-docs.svg" },
-  { name: "Google Sheets", src: "/logos/google-sheets.png" },
-  { name: "TikTok", src: "/logos/Tiktok.webp" },
+const TITLES = [
+  "Social Media Management",
+  "Social Media Graphic Designer",
+  "Social Media Content Creator",
+];
+
+type ToolItem = {
+  id: string;
+  name: string;
+  src?: string;
+  icon?: React.ReactNode;
+};
+
+const TOOLS: ToolItem[] = [
+  { id: "clickup", name: "ClickUp", src: "/logos/Clickup.jpg" },
+  { id: "chatgpt", name: "ChatGPT", src: "/logos/chatgpt.svg" },
+  { id: "trello", name: "Trello", src: "/logos/Trello.jpg" },
+  { id: "google-workspace", name: "Google Workspace", src: "/logos/google-workspace.svg" },
+  { id: "gemini", name: "Gemini", src: "/logos/Gemini.webp" },
+  { id: "nanobanana", name: "Nanobanana", src: "/logos/nanobanana.jpg" },
+  { id: "canva", name: "Canva", src: "/logos/canva.svg" },
+  { id: "capcut", name: "CapCut", src: "/logos/Capcut.jpg" },
+  { id: "google-docs", name: "Google Docs", src: "/logos/google-docs.svg" },
+  { id: "google-sheets", name: "Google Sheets", src: "/logos/google-sheets.png" },
+  { id: "tiktok", name: "TikTok", src: "/logos/Tiktok.webp" },
   {
+    id: "facebook",
     name: "Facebook",
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-full h-full" fill="#1877F2">
@@ -28,6 +42,7 @@ const TOOLS = [
     ),
   },
   {
+    id: "instagram",
     name: "Instagram",
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-full h-full">
@@ -46,6 +61,7 @@ const TOOLS = [
     ),
   },
   {
+    id: "linkedin",
     name: "LinkedIn",
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-full h-full" fill="#0A66C2">
@@ -53,8 +69,8 @@ const TOOLS = [
       </svg>
     ),
   },
-  { name: "TikTok", src: "/logos/tiktok.webp" },
   {
+    id: "x",
     name: "X",
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-full h-full" fill="#000000">
@@ -64,43 +80,59 @@ const TOOLS = [
   },
 ];
 
-function Marquee({ children, baseVelocity = 100 }: { children: React.ReactNode; baseVelocity?: number }) {
-  const speed = 30; // seconds per full loop cycle
-  const isReverse = baseVelocity < 0;
+const LogoCard = memo(function LogoCard({ tool }: { tool: ToolItem }) {
+  return (
+    <div
+      className="relative w-24 h-24 bg-white rounded-3xl shrink-0 border border-black/5 shadow-sm flex items-center justify-center p-5 group cursor-pointer hover:scale-105 hover:shadow-md transition-all duration-300"
+      title={tool.name}
+    >
+      {tool.src ? (
+        <Image
+          src={tool.src}
+          alt={`${tool.name} logo`}
+          width={100}
+          height={100}
+          sizes="96px"
+          className="object-contain w-full h-full transition-all duration-300"
+        />
+      ) : (
+        <div className="w-full h-full transition-all duration-300">
+          {tool.icon}
+        </div>
+      )}
+    </div>
+  );
+});
 
+const MarqueeRow = memo(function MarqueeRow({ reverse = false }: { reverse?: boolean }) {
   return (
     <div className="overflow-hidden whitespace-nowrap">
       <motion.div
         className="flex flex-nowrap gap-16 md:gap-24 w-max"
-        animate={{ x: isReverse ? ["-50%", "0%"] : ["0%", "-50%"] }}
+        animate={{ x: reverse ? ["-50%", "0%"] : ["0%", "-50%"] }}
         transition={{
           x: {
             repeat: Infinity,
             repeatType: "loop",
-            duration: speed,
+            duration: 30,
             ease: "linear",
           },
         }}
       >
-        {/* Two identical sets for seamless loop */}
-        <div className="flex flex-nowrap gap-16 md:gap-24 shrink-0">
-          {children}
-        </div>
-        <div className="flex flex-nowrap gap-16 md:gap-24 shrink-0">
-          {children}
-        </div>
+        {[0, 1].map((loop) => (
+          <div key={loop} className="flex flex-nowrap gap-16 md:gap-24 shrink-0">
+            {TOOLS.map((tool) => (
+              <LogoCard key={`${loop}-${tool.id}`} tool={tool} />
+            ))}
+          </div>
+        ))}
       </motion.div>
     </div>
   );
-}
+});
 
 
 export function Hero() {
-  const TITLES = [
-    "Social Media Management",
-    "Social Media Graphic Designer",
-    "Social Media Content Creator",
-  ];
   const [titleIndex, setTitleIndex] = useState(0);
   const [typedText, setTypedText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
@@ -119,9 +151,11 @@ export function Hero() {
     }
 
     if (isEmpty && isDeleting) {
-      setIsDeleting(false);
-      setTitleIndex((prev) => (prev + 1) % TITLES.length);
-      return undefined;
+      const resetTimer = setTimeout(() => {
+        setIsDeleting(false);
+        setTitleIndex((prev) => (prev + 1) % TITLES.length);
+      }, 0);
+      return () => clearTimeout(resetTimer);
     }
 
     const timer = setTimeout(() => {
@@ -130,7 +164,7 @@ export function Hero() {
     }, typingSpeed);
 
     return () => clearTimeout(timer);
-  }, [TITLES, titleIndex, typedText, isDeleting]);
+  }, [titleIndex, typedText, isDeleting]);
 
   return (
     <section className="relative min-h-[95vh] flex flex-col justify-center overflow-hidden bg-[#FDF8F5] pt-24 pb-0">
@@ -154,7 +188,7 @@ export function Hero() {
           </div>
 
           <h1 className="text-5xl md:text-6xl lg:text-7xl font-serif font-medium text-ink leading-[1.1] tracking-tight">
-            Hi, I'm Mav
+            Hi, I&apos;m Mav
           </h1>
 
           <div className="text-2xl md:text-3xl lg:text-4xl font-serif font-medium text-ink/90 tracking-tight min-h-[2.5rem] md:min-h-[3rem] lg:min-h-[3.5rem]">
@@ -231,14 +265,13 @@ export function Hero() {
 
           {/* Hero Image */}
           <div className="relative z-10 w-full h-full flex justify-center items-end">
-            <img
+            <Image
               src="/Hero.png"
               alt="Hero Portrait"
               width={550}
               height={700}
-              className="object-contain max-h-[115%] drop-shadow-2xl"
-              loading="eager"
-              decoding="async"
+              className="object-contain max-h-[115%] w-auto h-auto drop-shadow-2xl"
+              priority
             />
           </div>
 
@@ -298,54 +331,10 @@ export function Hero() {
           <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-[#F7F2EC] to-transparent z-10 pointer-events-none" />
 
           {/* Top row - Going Right */}
-          <Marquee baseVelocity={0.5}>
-            {TOOLS.map((tool, idx) => (
-              <div
-                key={`top-${tool.name}-${idx}`}
-                className="relative w-24 h-24 bg-white rounded-3xl shrink-0 border border-black/5 shadow-sm flex items-center justify-center p-5 group cursor-pointer hover:scale-105 hover:shadow-md transition-all duration-300"
-                title={tool.name}
-              >
-                {tool.src ? (
-                  <Image
-                    src={tool.src}
-                    alt={`${tool.name} logo`}
-                    width={100}
-                    height={100}
-                    className="object-contain w-full h-full transition-all duration-300"
-                  />
-                ) : (
-                  <div className="w-full h-full transition-all duration-300">
-                    {tool.icon}
-                  </div>
-                )}
-              </div>
-            ))}
-          </Marquee>
+          <MarqueeRow />
 
           {/* Bottom row - Going Left */}
-          <Marquee baseVelocity={-0.5}>
-            {TOOLS.map((tool, idx) => (
-              <div
-                key={`bottom-${tool.name}-${idx}`}
-                className="relative w-24 h-24 bg-white rounded-3xl shrink-0 border border-black/5 shadow-sm flex items-center justify-center p-5 group cursor-pointer hover:scale-105 hover:shadow-md transition-all duration-300"
-                title={tool.name}
-              >
-                {tool.src ? (
-                  <Image
-                    src={tool.src}
-                    alt={`${tool.name} logo`}
-                    width={100}
-                    height={100}
-                    className="object-contain w-full h-full transition-all duration-300"
-                  />
-                ) : (
-                  <div className="w-full h-full transition-all duration-300">
-                    {tool.icon}
-                  </div>
-                )}
-              </div>
-            ))}
-          </Marquee>
+          <MarqueeRow reverse />
         </div>
       </div>
 

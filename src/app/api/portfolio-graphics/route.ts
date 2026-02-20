@@ -43,7 +43,7 @@ export async function GET() {
     if (!stories.error) {
       storiesData = stories.data ?? [];
     }
-  } catch (error) {
+  } catch {
     storiesData = [];
   }
 

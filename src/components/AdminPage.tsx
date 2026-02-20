@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
@@ -247,13 +247,6 @@ type LoginState = "idle" | "loading" | "error";
 type UploadState = "idle" | "loading" | "error" | "success";
 type DeleteState = "idle" | "loading" | "error";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-type CarouselUploadItem = {
-  id: string;
-  file: File;
-  previewUrl: string;
-};
-
 export function AdminPage() {
   const [mounted, setMounted] = useState(false);
   const supabaseConfigError = getSupabaseConfigError();
@@ -285,8 +278,6 @@ export function AdminPage() {
   const [testimonialOrderError, setTestimonialOrderError] = useState("");
 
   const [adminLoaded, setAdminLoaded] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [adminDataError, setAdminDataError] = useState<string | null>(null);
 
   // UI State
@@ -334,12 +325,10 @@ export function AdminPage() {
   const [reelDeleteState, setReelDeleteState] = useState<DeleteState>("idle");
   const [reelDeleteId, setReelDeleteId] = useState<string | null>(null);
   const [reelOrderState, setReelOrderState] = useState<"idle" | "saving" | "error">("idle");
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [reelOrderError, setReelOrderError] = useState("");
   const [photoEditingDeleteState, setPhotoEditingDeleteState] = useState<DeleteState>("idle");
   const [photoEditingDeleteId, setPhotoEditingDeleteId] = useState<string | null>(null);
   const [photoEditingOrderState, setPhotoEditingOrderState] = useState<"idle" | "saving" | "error">("idle");
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [photoEditingOrderError, setPhotoEditingOrderError] = useState("");
   const [carouselBatchImages, setCarouselBatchImages] = useState<{ id: string; url: string }[]>([]);
   const [carouselUploadState, setCarouselUploadState] = useState<UploadState>("idle");
@@ -355,11 +344,9 @@ export function AdminPage() {
   const [copywritingOrder, setCopywritingOrder] = useState<CopywritingItem[]>([]);
   const [copywritingOrderDirty, setCopywritingOrderDirty] = useState(false);
   const [copywritingOrderState, setCopywritingOrderState] = useState<UploadState>("idle");
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [copywritingOrderMessage, setCopywritingOrderMessage] = useState("");
   const [copywritingDeletingId, setCopywritingDeletingId] = useState<string | null>(null);
   const [clientUploadState, setClientUploadState] = useState<UploadState>("idle");
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [clientUploadMessage, setClientUploadMessage] = useState("");
 
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -387,7 +374,6 @@ export function AdminPage() {
 
   const fetchAdminData = useCallback(async () => {
     try {
-      setIsRefreshing(true);
       setAdminDataError(null);
       const response = await fetch("/api/admin-data", {
         cache: "no-store",
@@ -400,7 +386,7 @@ export function AdminPage() {
         try {
           const payload = await response.json();
           if (payload?.message) message = payload.message;
-        } catch (error) {
+        } catch {
           // ignore json parse errors
         }
 
@@ -420,7 +406,6 @@ export function AdminPage() {
       }
 
       const data = await response.json();
-      console.log("Fetched admin data:", data);
 
       setIndustries(data.industries);
       setClients(data.clients ?? []);
@@ -446,8 +431,6 @@ export function AdminPage() {
     } catch (error) {
       setAdminDataError(error instanceof Error ? error.message : "Failed to load admin data");
       setAdminLoaded(true);
-    } finally {
-      setIsRefreshing(false);
     }
   }, [session, supabase]);
 
@@ -1136,7 +1119,7 @@ export function AdminPage() {
         try {
           const payload = await response.json();
           if (payload?.message) message = payload.message;
-        } catch (error) {
+        } catch {
           // ignore json parse errors
         }
         throw new Error(message);
@@ -1183,7 +1166,7 @@ export function AdminPage() {
         try {
           const payload = await response.json();
           if (payload?.message) message = payload.message;
-        } catch (error) {
+        } catch {
           // ignore json parse errors
         }
         throw new Error(message);
@@ -1221,7 +1204,7 @@ export function AdminPage() {
         try {
           const payload = await response.json();
           if (payload?.message) message = payload.message;
-        } catch (error) {
+        } catch {
           // ignore json parse errors
         }
         throw new Error(message);
@@ -1263,7 +1246,7 @@ export function AdminPage() {
         try {
           const payload = await response.json();
           if (payload?.message) message = payload.message;
-        } catch (error) {
+        } catch {
           // ignore json parse errors
         }
         throw new Error(message);
@@ -1298,7 +1281,7 @@ export function AdminPage() {
         try {
           const payload = await response.json();
           if (payload?.message) message = payload.message;
-        } catch (error) {
+        } catch {
           // ignore json parse errors
         }
         throw new Error(message);
@@ -1340,7 +1323,7 @@ export function AdminPage() {
         try {
           const payload = await response.json();
           if (payload?.message) message = payload.message;
-        } catch (error) {
+        } catch {
           // ignore json parse errors
         }
         throw new Error(message);
@@ -2012,6 +1995,22 @@ export function AdminPage() {
                 <Plus size={18} /> Add New
               </button>
             )}
+            {selectedTable === "reels" && reelOrderState === "error" && reelOrderError && (
+              <span className="text-xs font-semibold text-red-500">{reelOrderError}</span>
+            )}
+            {selectedTable === "photo_editing" && photoEditingOrderState === "error" && photoEditingOrderError && (
+              <span className="text-xs font-semibold text-red-500">{photoEditingOrderError}</span>
+            )}
+            {selectedTable === "copywriting" && copywritingOrderMessage && (
+              <span
+                className={clsx(
+                  "text-xs font-semibold",
+                  copywritingOrderState === "error" ? "text-red-500" : "text-emerald-600"
+                )}
+              >
+                {copywritingOrderMessage}
+              </span>
+            )}
           </div>
         </header>
 
@@ -2066,12 +2065,12 @@ export function AdminPage() {
                     {
                       key: "clients" as TableKey,
                       count: clients.length,
-                      helper: `${dashboardStats.uniqueClientCount} clients • ${clients.length} images`,
+                      helper: `${dashboardStats.uniqueClientCount} clients - ${clients.length} images`,
                     },
                     {
                       key: "carousels" as TableKey,
                       count: carousels.length,
-                      helper: `${dashboardStats.uniqueCarouselClients} clients • ${carousels.length} images`,
+                      helper: `${dashboardStats.uniqueCarouselClients} clients - ${carousels.length} images`,
                     },
                     {
                       key: "reels" as TableKey,
@@ -2231,6 +2230,16 @@ export function AdminPage() {
                             </button>
                           </div>
                         </div>
+                        {clientUploadMessage && (
+                          <p
+                            className={clsx(
+                              "mb-4 text-xs font-semibold",
+                              clientUploadState === "error" ? "text-red-500" : "text-emerald-600"
+                            )}
+                          >
+                            {clientUploadMessage}
+                          </p>
+                        )}
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                           {clients
                             .filter(c => c.industry_id === selectedIndustryId && c.name === selectedClientName)
@@ -3142,7 +3151,7 @@ export function AdminPage() {
                                 )}
                                 <p className="text-sm text-ink/40 truncate">
                                   {industryName && <span className="mr-1 font-medium text-ink/80 bg-ink/5 px-2 py-0.5 rounded text-xs">{industryName}</span>}
-                                  {item.category && <span className="mr-1 font-medium text-ink/60">{item.category} •</span>}
+                                  {item.category && <span className="mr-1 font-medium text-ink/60">{item.category} -</span>}
                                   {item.client || item.role || item.description || (item.category ? "" : "No description")}
                                 </p>
                               </div>
@@ -4092,3 +4101,4 @@ export function AdminPage() {
     </div>
   );
 }
+

@@ -1,25 +1,13 @@
 "use client";
 
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   ArrowRight,
-  Sparkles,
-  Heart,
-  Cpu,
-  Utensils,
-  ShoppingBag,
-  Building2,
-  Palette,
-  Layers,
-  Video,
-  FileText,
-  Aperture,
   X
 } from "lucide-react";
 import clsx from "clsx";
-import ChromaGrid from "./ChromaGrid";
 import { MenuItem } from "./FlowingMenu";
 import GalleryCarousel from "./GalleryCarousel";
 import Carousel, { CarouselItemData } from "./Carousel";
@@ -64,14 +52,6 @@ type GalleryItem = {
   image: string;
   text: string;
   fullImage?: string;
-};
-
-const getPreviewImageUrl = (rawUrl: string) => {
-  if (!rawUrl || rawUrl.startsWith("/") || rawUrl.startsWith("data:") || rawUrl.startsWith("blob:")) {
-    return rawUrl;
-  }
-  const encoded = encodeURIComponent(rawUrl);
-  return `/_next/image?url=${encoded}&w=828&q=70`;
 };
 
 const getCanvaEmbedUrl = (rawUrl: string) => {
@@ -124,7 +104,7 @@ export function Portfolio() {
           try {
             const payload = await response.json();
             if (payload?.message) message = payload.message;
-          } catch (error) {
+          } catch {
             // ignore json parse errors
           }
           throw new Error(message);
@@ -899,7 +879,7 @@ function CategoryGrid({ onSelect }: { onSelect: (c: PortfolioCategory) => void }
         ref={gridRef}
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
       >
-        {PORTFOLIO_CATEGORIES.map((category, index) => (
+        {PORTFOLIO_CATEGORIES.map((category) => (
           <StarBorder
             as="button"
             key={category.id}
@@ -1000,8 +980,6 @@ function IndustryList({
                   >
                     <IndustryGallery
                       industry={industry}
-                      // We don't need onBack here anymore as toggling closes it
-                      onBack={() => onSelect(industry)}
                     />
                   </motion.div>
                 )}
@@ -1081,7 +1059,7 @@ function CopywritingGallery({ industry, onBack }: { industry: PortfolioIndustry,
   );
 }
 
-function IndustryGallery({ industry, onBack }: { industry: PortfolioIndustry, onBack: () => void }) {
+function IndustryGallery({ industry }: { industry: PortfolioIndustry }) {
   const [selectedMedia, setSelectedMedia] = useState<{ image: string; text: string } | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const swipeStartX = useRef<number | null>(null);
@@ -1113,7 +1091,7 @@ function IndustryGallery({ industry, onBack }: { industry: PortfolioIndustry, on
     }
   }, [selectedIndex]);
 
-  const getCurrentIndex = () => {
+  const getCurrentIndex = useCallback(() => {
     if (selectedIndex !== null) return selectedIndex;
     if (selectedMedia) {
       const index = galleryList
@@ -1122,9 +1100,9 @@ function IndustryGallery({ industry, onBack }: { industry: PortfolioIndustry, on
       if (index >= 0) return index;
     }
     return selectedIndexRef.current;
-  };
+  }, [galleryList, selectedIndex, selectedMedia]);
 
-  const showNext = (direction: 1 | -1) => {
+  const showNext = useCallback((direction: 1 | -1) => {
     const allItems = galleryList.flatMap((gallery) => gallery.items);
     if (allItems.length === 0) return;
     const currentIndex = getCurrentIndex();
@@ -1132,7 +1110,7 @@ function IndustryGallery({ industry, onBack }: { industry: PortfolioIndustry, on
     selectedIndexRef.current = nextIndex;
     setSelectedIndex(nextIndex);
     setSelectedMedia(allItems[nextIndex]);
-  };
+  }, [galleryList, getCurrentIndex]);
 
   useEffect(() => {
     if (!selectedMedia) return;
@@ -1143,7 +1121,7 @@ function IndustryGallery({ industry, onBack }: { industry: PortfolioIndustry, on
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [selectedMedia, selectedIndex, galleryList]);
+  }, [selectedMedia, showNext]);
 
   return (
     <div className="w-full p-4 md:p-8">

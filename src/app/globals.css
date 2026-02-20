@@ -7,6 +7,8 @@
   --sienna: #c98465;
   --clay: #d9c0ab;
   --sage: #c8d1bf;
+  --font-body-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-display-family: Georgia, "Times New Roman", serif;
 }
 
 @theme inline {
