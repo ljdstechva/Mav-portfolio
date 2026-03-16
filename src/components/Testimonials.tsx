@@ -20,6 +20,7 @@ type Testimonial = {
 type MediaOrientation = "landscape" | "portrait" | "square" | "unknown";
 type MediaKind = ReturnType<typeof getTestimonialMediaKind>;
 type BentoSpan = 2 | 3 | 4 | 6;
+type RowMediaKind = "video" | "image" | "text";
 type TestimonialRowItem = {
   testimonial: Testimonial;
   index: number;
@@ -63,6 +64,18 @@ function getBentoSpanClass(span: BentoSpan) {
   if (span === 4) return "md:col-span-2 xl:col-span-4";
   if (span === 3) return "md:col-span-2 xl:col-span-3";
   return "md:col-span-1 xl:col-span-2";
+}
+
+function getRowMediaKind(mediaKind: MediaKind): RowMediaKind {
+  if (mediaKind === "video") return "video";
+  if (mediaKind === "image") return "image";
+  return "text";
+}
+
+function getRowItemLimit(rowMediaKind: RowMediaKind) {
+  if (rowMediaKind === "video") return 1;
+  if (rowMediaKind === "image") return 2;
+  return 3;
 }
 
 function getRowExpansionIndex(rowItems: TestimonialRowItem[]) {
@@ -115,6 +128,7 @@ function buildTestimonialRows(
 ) {
   const rows: TestimonialRowItem[][] = [];
   let currentRow: TestimonialRowItem[] = [];
+  let currentRowKind: RowMediaKind | null = null;
   let usedColumns = 0;
 
   const flushRow = () => {
@@ -124,6 +138,7 @@ function buildTestimonialRows(
 
     rows.push(finalizeRow(currentRow, usedColumns));
     currentRow = [];
+    currentRowKind = null;
     usedColumns = 0;
   };
 
@@ -131,11 +146,20 @@ function buildTestimonialRows(
     const mediaKind = getTestimonialMediaKind(testimonial.avatar_url);
     const mediaOrientation = mediaOrientations[testimonial.id] ?? getDefaultOrientation(mediaKind);
     const preferredSpan = getPreferredBentoSpan(mediaKind, mediaOrientation);
+    const rowMediaKind = getRowMediaKind(mediaKind);
 
-    if (currentRow.length > 0 && usedColumns + preferredSpan > 6) {
+    if (
+      currentRow.length > 0 &&
+      (
+        currentRowKind !== rowMediaKind ||
+        currentRow.length >= getRowItemLimit(rowMediaKind) ||
+        usedColumns + preferredSpan > 6
+      )
+    ) {
       flushRow();
     }
 
+    currentRowKind = rowMediaKind;
     currentRow.push({
       testimonial,
       index,
@@ -313,7 +337,7 @@ export function Testimonials() {
           )}
 
           {!loading &&
-            testimonialRows.map((row, rowIndex) => (
+            testimonialRows.map((row) => (
               <div
                 key={row.map((item) => item.testimonial.id).join(":")}
                 className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-6"
@@ -337,7 +361,7 @@ export function Testimonials() {
                         };
                       });
                     }}
-                    prioritizeMedia={rowIndex === 0 && item.mediaKind === "video" && item.span === 6}
+                    prioritizeMedia={item.mediaKind === "video" && item.span === 6}
                   />
                 ))}
               </div>
