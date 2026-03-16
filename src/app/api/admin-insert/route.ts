@@ -24,6 +24,10 @@ const TABLE_COLUMNS: Record<AllowedTable, string[]> = {
   photo_editing: ["before_image_url", "after_image_url"],
   testimonials: ["client_name", "role", "company", "quote", "avatar_url", "sort_order"],
 };
+const REQUIRED_COLUMNS: Partial<Record<AllowedTable, string[]>> = {
+  industries: ["name"],
+  testimonials: ["client_name", "quote"],
+};
 
 const NUMBER_FIELDS = new Set(["position", "sort_order"]);
 
@@ -71,6 +75,17 @@ export async function POST(request: Request) {
         payload[column] = normalized;
       }
     }
+  }
+
+  for (const column of REQUIRED_COLUMNS[table] ?? []) {
+    const normalized = normalizeValue(column, values[column]);
+    if (normalized === null) {
+      return NextResponse.json(
+        { message: `${column} is required.` },
+        { status: 400 }
+      );
+    }
+    payload[column] = normalized;
   }
 
   if (Object.keys(payload).length === 0) {

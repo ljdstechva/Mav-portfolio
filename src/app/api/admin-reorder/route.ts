@@ -27,6 +27,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Invalid request." }, { status: 400 });
   }
 
+  const table = body.table;
+
   const nextOrder = Array.isArray(body.items) ? body.items : body.order;
 
   if (!Array.isArray(nextOrder)) {
@@ -42,9 +44,18 @@ export async function POST(request: Request) {
   }
 
   const supabase = createSupabaseServerClient();
-  const { error } = await supabase
-    .from(body.table)
-    .upsert(payload, { onConflict: "id" });
+  // Use targeted updates here instead of partial upserts so tables with
+  // required columns do not trip insert-time NOT NULL constraints.
+  const results = await Promise.all(
+    payload.map((item) =>
+      supabase
+        .from(table)
+        .update({ sort_order: item.sort_order })
+        .eq("id", item.id)
+    )
+  );
+
+  const error = results.find((result) => result.error)?.error;
 
   if (error) {
     return NextResponse.json({ message: error.message }, { status: 500 });

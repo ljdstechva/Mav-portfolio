@@ -18,6 +18,15 @@ type Testimonial = {
 };
 
 type MediaOrientation = "landscape" | "portrait" | "square" | "unknown";
+type MediaKind = ReturnType<typeof getTestimonialMediaKind>;
+type BentoSpan = 2 | 3 | 4 | 6;
+type TestimonialRowItem = {
+  testimonial: Testimonial;
+  index: number;
+  mediaKind: MediaKind;
+  mediaOrientation: MediaOrientation;
+  span: BentoSpan;
+};
 
 function getOrientationFromDimensions(width: number, height: number): MediaOrientation {
   if (!width || !height) {
@@ -37,49 +46,129 @@ function getDefaultOrientation(mediaKind: ReturnType<typeof getTestimonialMediaK
   return "unknown";
 }
 
-function getBentoSpanClass(
-  mediaKind: ReturnType<typeof getTestimonialMediaKind>,
-  mediaOrientation: MediaOrientation,
-  index: number
-) {
+function getPreferredBentoSpan(mediaKind: MediaKind, mediaOrientation: MediaOrientation): Exclude<BentoSpan, 6> {
   if (mediaKind === "video") {
-    if (mediaOrientation === "portrait") {
-      return "md:col-span-1 xl:col-span-2 xl:row-span-2";
-    }
-
-    return index % 3 === 0
-      ? "md:col-span-2 xl:col-span-4 xl:row-span-2"
-      : "md:col-span-2 xl:col-span-3 xl:row-span-2";
+    return mediaOrientation === "landscape" ? 4 : 2;
   }
 
   if (mediaKind === "image") {
-    if (mediaOrientation === "portrait") {
-      return "md:col-span-1 xl:col-span-2 xl:row-span-2";
-    }
-
-    if (mediaOrientation === "landscape") {
-      return index % 2 === 0
-        ? "md:col-span-2 xl:col-span-3 xl:row-span-2"
-        : "md:col-span-2 xl:col-span-4 xl:row-span-1";
-    }
-
-    return "md:col-span-1 xl:col-span-2 xl:row-span-1";
+    return mediaOrientation === "landscape" ? 3 : 2;
   }
 
-  return index % 4 === 0
-    ? "md:col-span-2 xl:col-span-3 xl:row-span-1"
-    : "md:col-span-1 xl:col-span-2 xl:row-span-1";
+  return 2;
+}
+
+function getBentoSpanClass(span: BentoSpan) {
+  if (span === 6) return "md:col-span-2 xl:col-span-6";
+  if (span === 4) return "md:col-span-2 xl:col-span-4";
+  if (span === 3) return "md:col-span-2 xl:col-span-3";
+  return "md:col-span-1 xl:col-span-2";
+}
+
+function getRowExpansionIndex(rowItems: TestimonialRowItem[]) {
+  const featuredMediaIndex = rowItems.findIndex(
+    (item) => item.mediaKind === "video" && item.mediaOrientation === "landscape"
+  );
+
+  if (featuredMediaIndex >= 0) {
+    return featuredMediaIndex;
+  }
+
+  const supportingMediaIndex = rowItems.findIndex(
+    (item) => item.mediaKind === "image" && item.mediaOrientation === "landscape"
+  );
+
+  if (supportingMediaIndex >= 0) {
+    return supportingMediaIndex;
+  }
+
+  return rowItems.length - 1;
+}
+
+function finalizeRow(rowItems: TestimonialRowItem[], usedColumns: number) {
+  if (!rowItems.length) {
+    return rowItems;
+  }
+
+  const remainingColumns = 6 - usedColumns;
+
+  if (remainingColumns <= 0) {
+    return rowItems;
+  }
+
+  const expandedRow = [...rowItems];
+  const targetIndex = getRowExpansionIndex(expandedRow);
+  const targetItem = expandedRow[targetIndex];
+  const nextSpan = (targetItem.span + remainingColumns) as BentoSpan;
+
+  expandedRow[targetIndex] = {
+    ...targetItem,
+    span: nextSpan,
+  };
+
+  return expandedRow;
+}
+
+function buildTestimonialRows(
+  testimonials: Testimonial[],
+  mediaOrientations: Record<string, MediaOrientation>
+) {
+  const rows: TestimonialRowItem[][] = [];
+  let currentRow: TestimonialRowItem[] = [];
+  let usedColumns = 0;
+
+  const flushRow = () => {
+    if (!currentRow.length) {
+      return;
+    }
+
+    rows.push(finalizeRow(currentRow, usedColumns));
+    currentRow = [];
+    usedColumns = 0;
+  };
+
+  testimonials.forEach((testimonial, index) => {
+    const mediaKind = getTestimonialMediaKind(testimonial.avatar_url);
+    const mediaOrientation = mediaOrientations[testimonial.id] ?? getDefaultOrientation(mediaKind);
+    const preferredSpan = getPreferredBentoSpan(mediaKind, mediaOrientation);
+
+    if (currentRow.length > 0 && usedColumns + preferredSpan > 6) {
+      flushRow();
+    }
+
+    currentRow.push({
+      testimonial,
+      index,
+      mediaKind,
+      mediaOrientation,
+      span: preferredSpan,
+    });
+    usedColumns += preferredSpan;
+
+    if (usedColumns === 6) {
+      flushRow();
+    }
+  });
+
+  flushRow();
+
+  return rows;
 }
 
 function getCardLayoutClass(
-  mediaKind: ReturnType<typeof getTestimonialMediaKind>,
-  mediaOrientation: MediaOrientation
+  mediaKind: MediaKind,
+  mediaOrientation: MediaOrientation,
+  span: BentoSpan
 ) {
   if (!mediaKind) {
     return "flex h-full flex-col";
   }
 
   if (mediaKind === "video") {
+    if (mediaOrientation === "landscape" && span === 6) {
+      return "grid h-full gap-6 xl:grid-cols-[minmax(0,0.78fr)_minmax(360px,1.22fr)] xl:items-center";
+    }
+
     return mediaOrientation === "portrait"
       ? "grid h-full gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(240px,0.75fr)]"
       : "grid h-full gap-6 xl:grid-rows-[minmax(280px,1.15fr)_auto]";
@@ -93,10 +182,12 @@ function getCardLayoutClass(
 }
 
 function getMediaFrameAspectClass(
-  mediaKind: ReturnType<typeof getTestimonialMediaKind>,
-  mediaOrientation: MediaOrientation
+  mediaKind: MediaKind,
+  mediaOrientation: MediaOrientation,
+  span: BentoSpan
 ) {
   if (mediaKind === "video") {
+    if (span === 6 && mediaOrientation === "landscape") return "aspect-[16/9]";
     if (mediaOrientation === "portrait") return "aspect-[4/5]";
     if (mediaOrientation === "square") return "aspect-square";
     return "aspect-[16/9]";
@@ -107,11 +198,37 @@ function getMediaFrameAspectClass(
   return "aspect-square";
 }
 
+function getCardMinHeightClass(mediaKind: MediaKind, mediaOrientation: MediaOrientation, span: BentoSpan) {
+  if (mediaKind === "video" && mediaOrientation === "landscape" && span === 6) {
+    return "min-h-[420px] md:min-h-[460px]";
+  }
+
+  if (mediaKind === "video") {
+    return "min-h-[360px] md:min-h-[400px]";
+  }
+
+  if (mediaKind === "image" && mediaOrientation === "portrait") {
+    return "min-h-[360px]";
+  }
+
+  if (span >= 4) {
+    return "min-h-[340px]";
+  }
+
+  return "min-h-[320px]";
+}
+
 export function Testimonials() {
   const configError = getSupabaseConfigError();
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(!configError);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [mediaOrientations, setMediaOrientations] = useState<Record<string, MediaOrientation>>({});
+
+  const testimonialRows = useMemo(
+    () => buildTestimonialRows(testimonials, mediaOrientations),
+    [mediaOrientations, testimonials]
+  );
 
   useEffect(() => {
     if (configError) {
@@ -181,20 +298,53 @@ export function Testimonials() {
           </motion.div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:auto-rows-[minmax(220px,auto)] xl:grid-cols-6 xl:auto-flow-dense">
-          {loading && Array.from({ length: 3 }).map((_, index) => <TestimonialSkeleton key={index} index={index} />)}
+        <div className="space-y-6">
+          {loading && (
+            <>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-6">
+                <TestimonialSkeleton span={2} />
+                <TestimonialSkeleton span={2} />
+                <TestimonialSkeleton span={2} />
+              </div>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-6">
+                <TestimonialSkeleton span={6} />
+              </div>
+            </>
+          )}
 
           {!loading &&
-            testimonials.map((testimonial, index) => (
-              <TestimonialCard
-                key={`${testimonial.id}:${testimonial.avatar_url ?? "text"}`}
-                testimonial={testimonial}
-                index={index}
-              />
+            testimonialRows.map((row, rowIndex) => (
+              <div
+                key={row.map((item) => item.testimonial.id).join(":")}
+                className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-6"
+              >
+                {row.map((item) => (
+                  <TestimonialCard
+                    key={`${item.testimonial.id}:${item.testimonial.avatar_url ?? "text"}`}
+                    testimonial={item.testimonial}
+                    index={item.index}
+                    span={item.span}
+                    mediaOrientation={item.mediaOrientation}
+                    onOrientationChange={(orientation) => {
+                      setMediaOrientations((prev) => {
+                        if (prev[item.testimonial.id] === orientation) {
+                          return prev;
+                        }
+
+                        return {
+                          ...prev,
+                          [item.testimonial.id]: orientation,
+                        };
+                      });
+                    }}
+                    prioritizeMedia={rowIndex === 0 && item.mediaKind === "video" && item.span === 6}
+                  />
+                ))}
+              </div>
             ))}
 
           {!loading && testimonials.length === 0 && (
-            <div className="col-span-full rounded-[2rem] border border-ink/10 bg-white/80 p-10 text-center text-ink/55 shadow-sm backdrop-blur">
+            <div className="rounded-[2rem] border border-ink/10 bg-white/80 p-10 text-center text-ink/55 shadow-sm backdrop-blur">
               Testimonials coming soon.
             </div>
           )}
@@ -227,13 +377,26 @@ export function Testimonials() {
   );
 }
 
-function TestimonialCard({ testimonial, index }: { testimonial: Testimonial; index: number }) {
+function TestimonialCard({
+  testimonial,
+  index,
+  span,
+  mediaOrientation,
+  onOrientationChange,
+  prioritizeMedia,
+}: {
+  testimonial: Testimonial;
+  index: number;
+  span: BentoSpan;
+  mediaOrientation: MediaOrientation;
+  onOrientationChange: (orientation: MediaOrientation) => void;
+  prioritizeMedia: boolean;
+}) {
   const displayRole = useMemo(
     () => formatTestimonialAttribution(testimonial.role, testimonial.company),
     [testimonial.company, testimonial.role]
   );
   const mediaKind = getTestimonialMediaKind(testimonial.avatar_url);
-  const [mediaOrientation, setMediaOrientation] = useState<MediaOrientation>(() => getDefaultOrientation(mediaKind));
   const initials = testimonial.client_name
     .split(" ")
     .filter(Boolean)
@@ -242,7 +405,8 @@ function TestimonialCard({ testimonial, index }: { testimonial: Testimonial; ind
     .join("")
     .toUpperCase();
 
-  const spanClass = getBentoSpanClass(mediaKind, mediaOrientation, index);
+  const spanClass = getBentoSpanClass(span);
+  const minHeightClass = getCardMinHeightClass(mediaKind, mediaOrientation, span);
   const cardClass =
     mediaKind === "video"
       ? "border-transparent bg-[linear-gradient(145deg,#1D1713_0%,#34261E_100%)] text-white shadow-[0_24px_80px_rgba(47,29,19,0.22)]"
@@ -257,7 +421,7 @@ function TestimonialCard({ testimonial, index }: { testimonial: Testimonial; ind
       : "border-ink/10 bg-white/70 text-ink/55";
   const prefersMediaFirst =
     mediaKind === "video"
-      ? mediaOrientation !== "portrait"
+      ? !prioritizeMedia && mediaOrientation !== "portrait"
       : mediaKind === "image"
         ? mediaOrientation !== "portrait"
         : false;
@@ -318,7 +482,8 @@ function TestimonialCard({ testimonial, index }: { testimonial: Testimonial; ind
       mediaUrl={testimonial.avatar_url}
       clientName={testimonial.client_name}
       mediaOrientation={mediaOrientation}
-      onOrientationChange={setMediaOrientation}
+      onOrientationChange={onOrientationChange}
+      span={span}
     />
   ) : null;
 
@@ -328,9 +493,9 @@ function TestimonialCard({ testimonial, index }: { testimonial: Testimonial; ind
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.25 }}
       transition={{ duration: 0.55, delay: Math.min(index * 0.08, 0.32) }}
-      className={`${spanClass} min-h-[340px] rounded-[2rem] border p-6 md:p-7 ${cardClass}`}
+      className={`${spanClass} ${minHeightClass} rounded-[2rem] border p-6 md:p-7 ${cardClass}`}
     >
-      <div className={getCardLayoutClass(mediaKind, mediaOrientation)}>
+      <div className={getCardLayoutClass(mediaKind, mediaOrientation, span)}>
         {prefersMediaFirst && mediaBlock}
         {contentBlock}
         {!prefersMediaFirst && mediaBlock}
@@ -345,14 +510,16 @@ function TestimonialMediaFrame({
   clientName,
   mediaOrientation,
   onOrientationChange,
+  span,
 }: {
   mediaKind: "image" | "video";
   mediaUrl: string;
   clientName: string;
   mediaOrientation: MediaOrientation;
   onOrientationChange: (orientation: MediaOrientation) => void;
+  span: BentoSpan;
 }) {
-  const aspectClass = getMediaFrameAspectClass(mediaKind, mediaOrientation);
+  const aspectClass = getMediaFrameAspectClass(mediaKind, mediaOrientation, span);
 
   return (
     <div className="relative overflow-hidden rounded-[1.75rem] border border-black/5 bg-[#1C1714] shadow-inner">
@@ -397,17 +564,13 @@ function TestimonialMediaFrame({
   );
 }
 
-function TestimonialSkeleton({ index }: { index: number }) {
+function TestimonialSkeleton({ span }: { span: BentoSpan }) {
   return (
-    <div
-      className={`overflow-hidden rounded-[2rem] border border-ink/10 bg-white/70 p-6 shadow-sm ${
-        index === 0 ? "md:col-span-2 xl:col-span-4 xl:row-span-2" : "md:col-span-1 xl:col-span-2 xl:row-span-1"
-      }`}
-    >
+    <div className={`${getBentoSpanClass(span)} overflow-hidden rounded-[2rem] border border-ink/10 bg-white/70 p-6 shadow-sm`}>
       <div className="animate-pulse space-y-4">
         <div className="h-5 w-28 rounded-full bg-ink/10" />
         <div className="h-5 w-20 rounded-full bg-ink/10" />
-        <div className="h-56 rounded-[1.5rem] bg-ink/10" />
+        <div className={span === 6 ? "h-72 rounded-[1.5rem] bg-ink/10" : "h-56 rounded-[1.5rem] bg-ink/10"} />
         <div className="space-y-2 pt-2">
           <div className="h-4 w-full rounded-full bg-ink/10" />
           <div className="h-4 w-[92%] rounded-full bg-ink/10" />

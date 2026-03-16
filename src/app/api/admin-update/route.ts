@@ -13,6 +13,10 @@ const TABLE_COLUMNS: Record<AllowedTable, string[]> = {
   photo_editing: ["before_image_url", "after_image_url"],
   copywriting: ["image_url", "sort_order"],
 };
+const REQUIRED_COLUMNS: Partial<Record<AllowedTable, string[]>> = {
+  testimonials: ["client_name", "quote"],
+  industries: ["name"],
+};
 
 function normalizeValue(value: unknown) {
   if (value === null || value === undefined) {
@@ -135,7 +139,14 @@ export async function POST(request: Request) {
 
   for (const column of TABLE_COLUMNS[table]) {
     if (column in values) {
-      payload[column] = normalizeValue(values[column]);
+      const normalized = normalizeValue(values[column]);
+      if ((REQUIRED_COLUMNS[table] ?? []).includes(column) && normalized === null) {
+        return NextResponse.json(
+          { message: `${column} is required.` },
+          { status: 400 }
+        );
+      }
+      payload[column] = normalized;
     }
   }
 
