@@ -17,6 +17,96 @@ type Testimonial = {
   sort_order?: number | null;
 };
 
+type MediaOrientation = "landscape" | "portrait" | "square" | "unknown";
+
+function getOrientationFromDimensions(width: number, height: number): MediaOrientation {
+  if (!width || !height) {
+    return "unknown";
+  }
+
+  const ratio = width / height;
+
+  if (ratio > 1.15) return "landscape";
+  if (ratio < 0.85) return "portrait";
+  return "square";
+}
+
+function getDefaultOrientation(mediaKind: ReturnType<typeof getTestimonialMediaKind>): MediaOrientation {
+  if (mediaKind === "video") return "landscape";
+  if (mediaKind === "image") return "square";
+  return "unknown";
+}
+
+function getBentoSpanClass(
+  mediaKind: ReturnType<typeof getTestimonialMediaKind>,
+  mediaOrientation: MediaOrientation,
+  index: number
+) {
+  if (mediaKind === "video") {
+    if (mediaOrientation === "portrait") {
+      return "md:col-span-1 xl:col-span-2 xl:row-span-2";
+    }
+
+    return index % 3 === 0
+      ? "md:col-span-2 xl:col-span-4 xl:row-span-2"
+      : "md:col-span-2 xl:col-span-3 xl:row-span-2";
+  }
+
+  if (mediaKind === "image") {
+    if (mediaOrientation === "portrait") {
+      return "md:col-span-1 xl:col-span-2 xl:row-span-2";
+    }
+
+    if (mediaOrientation === "landscape") {
+      return index % 2 === 0
+        ? "md:col-span-2 xl:col-span-3 xl:row-span-2"
+        : "md:col-span-2 xl:col-span-4 xl:row-span-1";
+    }
+
+    return "md:col-span-1 xl:col-span-2 xl:row-span-1";
+  }
+
+  return index % 4 === 0
+    ? "md:col-span-2 xl:col-span-3 xl:row-span-1"
+    : "md:col-span-1 xl:col-span-2 xl:row-span-1";
+}
+
+function getCardLayoutClass(
+  mediaKind: ReturnType<typeof getTestimonialMediaKind>,
+  mediaOrientation: MediaOrientation
+) {
+  if (!mediaKind) {
+    return "flex h-full flex-col";
+  }
+
+  if (mediaKind === "video") {
+    return mediaOrientation === "portrait"
+      ? "grid h-full gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(240px,0.75fr)]"
+      : "grid h-full gap-6 xl:grid-rows-[minmax(280px,1.15fr)_auto]";
+  }
+
+  if (mediaOrientation === "portrait") {
+    return "grid h-full gap-6 xl:grid-cols-[minmax(0,0.92fr)_minmax(220px,0.78fr)]";
+  }
+
+  return "grid h-full gap-6 xl:grid-rows-[minmax(220px,0.95fr)_auto]";
+}
+
+function getMediaFrameAspectClass(
+  mediaKind: ReturnType<typeof getTestimonialMediaKind>,
+  mediaOrientation: MediaOrientation
+) {
+  if (mediaKind === "video") {
+    if (mediaOrientation === "portrait") return "aspect-[4/5]";
+    if (mediaOrientation === "square") return "aspect-square";
+    return "aspect-[16/9]";
+  }
+
+  if (mediaOrientation === "portrait") return "aspect-[4/5]";
+  if (mediaOrientation === "landscape") return "aspect-[16/10]";
+  return "aspect-square";
+}
+
 export function Testimonials() {
   const configError = getSupabaseConfigError();
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
@@ -91,12 +181,16 @@ export function Testimonials() {
           </motion.div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-          {loading && Array.from({ length: 3 }).map((_, index) => <TestimonialSkeleton key={index} />)}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:auto-rows-[minmax(220px,auto)] xl:grid-cols-6 xl:auto-flow-dense">
+          {loading && Array.from({ length: 3 }).map((_, index) => <TestimonialSkeleton key={index} index={index} />)}
 
           {!loading &&
             testimonials.map((testimonial, index) => (
-              <TestimonialCard key={testimonial.id} testimonial={testimonial} index={index} />
+              <TestimonialCard
+                key={`${testimonial.id}:${testimonial.avatar_url ?? "text"}`}
+                testimonial={testimonial}
+                index={index}
+              />
             ))}
 
           {!loading && testimonials.length === 0 && (
@@ -139,6 +233,7 @@ function TestimonialCard({ testimonial, index }: { testimonial: Testimonial; ind
     [testimonial.company, testimonial.role]
   );
   const mediaKind = getTestimonialMediaKind(testimonial.avatar_url);
+  const [mediaOrientation, setMediaOrientation] = useState<MediaOrientation>(() => getDefaultOrientation(mediaKind));
   const initials = testimonial.client_name
     .split(" ")
     .filter(Boolean)
@@ -147,8 +242,7 @@ function TestimonialCard({ testimonial, index }: { testimonial: Testimonial; ind
     .join("")
     .toUpperCase();
 
-  const spanClass =
-    mediaKind === "video" ? "lg:col-span-7" : mediaKind === "image" ? "lg:col-span-6" : "lg:col-span-5";
+  const spanClass = getBentoSpanClass(mediaKind, mediaOrientation, index);
   const cardClass =
     mediaKind === "video"
       ? "border-transparent bg-[linear-gradient(145deg,#1D1713_0%,#34261E_100%)] text-white shadow-[0_24px_80px_rgba(47,29,19,0.22)]"
@@ -161,6 +255,72 @@ function TestimonialCard({ testimonial, index }: { testimonial: Testimonial; ind
     mediaKind === "video"
       ? "border-white/10 bg-white/10 text-white/70"
       : "border-ink/10 bg-white/70 text-ink/55";
+  const prefersMediaFirst =
+    mediaKind === "video"
+      ? mediaOrientation !== "portrait"
+      : mediaKind === "image"
+        ? mediaOrientation !== "portrait"
+        : false;
+
+  const contentBlock = (
+    <div className="flex h-full flex-col justify-between">
+      <div>
+        <div className="mb-5 flex flex-wrap items-center gap-2">
+          <span className={`rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.24em] ${chipClass}`}>
+            {mediaKind === "video" ? "Video" : mediaKind === "image" ? "Image" : "Text"}
+          </span>
+          {displayRole && (
+            <span className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${chipClass}`}>
+              {displayRole}
+            </span>
+          )}
+        </div>
+
+        <div className="mb-5 flex items-center justify-between">
+          <div className="flex gap-1">
+            {[...Array(5)].map((_, starIndex) => (
+              <Star
+                key={starIndex}
+                size={14}
+                className={mediaKind === "video" ? "fill-[#FFD27A] text-[#FFD27A]" : "fill-terracotta text-terracotta"}
+              />
+            ))}
+          </div>
+          <Quote className={mediaKind === "video" ? "text-white/10" : "text-ink/10"} size={44} />
+        </div>
+
+        <p className={`text-lg leading-relaxed md:text-[1.15rem] ${quoteColor}`}>
+          &ldquo;{testimonial.quote}&rdquo;
+        </p>
+      </div>
+
+      <div className={`mt-8 flex items-center gap-4 border-t pt-5 ${mediaKind === "video" ? "border-white/10" : "border-ink/10"}`}>
+        <div
+          className={`flex h-12 w-12 items-center justify-center rounded-full text-sm font-bold ${
+            mediaKind === "video" ? "bg-white/10 text-white" : "bg-white text-ink"
+          }`}
+        >
+          {initials || testimonial.client_name.charAt(0)}
+        </div>
+        <div className="min-w-0">
+          <h3 className="truncate text-lg font-bold">{testimonial.client_name}</h3>
+          <p className={`text-xs font-semibold uppercase tracking-[0.24em] ${subTextColor}`}>
+            {displayRole || "Client feedback"}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
+  const mediaBlock = mediaKind && testimonial.avatar_url ? (
+    <TestimonialMediaFrame
+      mediaKind={mediaKind}
+      mediaUrl={testimonial.avatar_url}
+      clientName={testimonial.client_name}
+      mediaOrientation={mediaOrientation}
+      onOrientationChange={setMediaOrientation}
+    />
+  ) : null;
 
   return (
     <motion.article
@@ -170,62 +330,10 @@ function TestimonialCard({ testimonial, index }: { testimonial: Testimonial; ind
       transition={{ duration: 0.55, delay: Math.min(index * 0.08, 0.32) }}
       className={`${spanClass} min-h-[340px] rounded-[2rem] border p-6 md:p-7 ${cardClass}`}
     >
-      <div className={`grid h-full gap-6 ${mediaKind ? "lg:grid-cols-[minmax(0,1.1fr)_minmax(260px,0.9fr)]" : ""}`}>
-        <div className="flex h-full flex-col justify-between">
-          <div>
-            <div className="mb-5 flex flex-wrap items-center gap-2">
-              <span className={`rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.24em] ${chipClass}`}>
-                {mediaKind === "video" ? "Video" : mediaKind === "image" ? "Image" : "Text"}
-              </span>
-              {displayRole && (
-                <span className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${chipClass}`}>
-                  {displayRole}
-                </span>
-              )}
-            </div>
-
-            <div className="mb-5 flex items-center justify-between">
-              <div className="flex gap-1">
-                {[...Array(5)].map((_, starIndex) => (
-                  <Star
-                    key={starIndex}
-                    size={14}
-                    className={mediaKind === "video" ? "fill-[#FFD27A] text-[#FFD27A]" : "fill-terracotta text-terracotta"}
-                  />
-                ))}
-              </div>
-              <Quote className={mediaKind === "video" ? "text-white/10" : "text-ink/10"} size={44} />
-            </div>
-
-            <p className={`text-lg leading-relaxed md:text-[1.15rem] ${quoteColor}`}>
-              &ldquo;{testimonial.quote}&rdquo;
-            </p>
-          </div>
-
-          <div className={`mt-8 flex items-center gap-4 border-t pt-5 ${mediaKind === "video" ? "border-white/10" : "border-ink/10"}`}>
-            <div
-              className={`flex h-12 w-12 items-center justify-center rounded-full text-sm font-bold ${
-                mediaKind === "video" ? "bg-white/10 text-white" : "bg-white text-ink"
-              }`}
-            >
-              {initials || testimonial.client_name.charAt(0)}
-            </div>
-            <div className="min-w-0">
-              <h3 className="truncate text-lg font-bold">{testimonial.client_name}</h3>
-              <p className={`text-xs font-semibold uppercase tracking-[0.24em] ${subTextColor}`}>
-                {displayRole || "Client feedback"}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {mediaKind && testimonial.avatar_url && (
-          <TestimonialMediaFrame
-            mediaKind={mediaKind}
-            mediaUrl={testimonial.avatar_url}
-            clientName={testimonial.client_name}
-          />
-        )}
+      <div className={getCardLayoutClass(mediaKind, mediaOrientation)}>
+        {prefersMediaFirst && mediaBlock}
+        {contentBlock}
+        {!prefersMediaFirst && mediaBlock}
       </div>
     </motion.article>
   );
@@ -235,11 +343,17 @@ function TestimonialMediaFrame({
   mediaKind,
   mediaUrl,
   clientName,
+  mediaOrientation,
+  onOrientationChange,
 }: {
   mediaKind: "image" | "video";
   mediaUrl: string;
   clientName: string;
+  mediaOrientation: MediaOrientation;
+  onOrientationChange: (orientation: MediaOrientation) => void;
 }) {
+  const aspectClass = getMediaFrameAspectClass(mediaKind, mediaOrientation);
+
   return (
     <div className="relative overflow-hidden rounded-[1.75rem] border border-black/5 bg-[#1C1714] shadow-inner">
       <div className="absolute left-4 top-4 z-10 inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-ink shadow-sm">
@@ -248,21 +362,33 @@ function TestimonialMediaFrame({
       </div>
 
       {mediaKind === "video" ? (
-        <div className="relative h-full min-h-[280px]">
-          <video
-            src={mediaUrl}
-            controls
-            playsInline
-            preload="metadata"
-            className="h-full w-full object-cover"
-          />
+        <div className={`relative w-full ${aspectClass}`}>
+          <div className="absolute inset-0 flex items-center justify-center p-4 sm:p-5">
+            <video
+              src={mediaUrl}
+              controls
+              playsInline
+              preload="metadata"
+              onLoadedMetadata={(event) => {
+                onOrientationChange(
+                  getOrientationFromDimensions(event.currentTarget.videoWidth, event.currentTarget.videoHeight)
+                );
+              }}
+              className="h-full w-full rounded-[1.25rem] bg-black object-contain"
+            />
+          </div>
         </div>
       ) : (
-        <div className="relative h-full min-h-[280px]">
+        <div className={`relative w-full ${aspectClass}`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={mediaUrl}
             alt={`${clientName} testimonial media`}
+            onLoad={(event) => {
+              onOrientationChange(
+                getOrientationFromDimensions(event.currentTarget.naturalWidth, event.currentTarget.naturalHeight)
+              );
+            }}
             className="h-full w-full object-cover"
           />
         </div>
@@ -271,18 +397,22 @@ function TestimonialMediaFrame({
   );
 }
 
-function TestimonialSkeleton() {
+function TestimonialSkeleton({ index }: { index: number }) {
   return (
-    <div className="lg:col-span-4 overflow-hidden rounded-[2rem] border border-ink/10 bg-white/70 p-6 shadow-sm">
+    <div
+      className={`overflow-hidden rounded-[2rem] border border-ink/10 bg-white/70 p-6 shadow-sm ${
+        index === 0 ? "md:col-span-2 xl:col-span-4 xl:row-span-2" : "md:col-span-1 xl:col-span-2 xl:row-span-1"
+      }`}
+    >
       <div className="animate-pulse space-y-4">
         <div className="h-5 w-28 rounded-full bg-ink/10" />
         <div className="h-5 w-20 rounded-full bg-ink/10" />
+        <div className="h-56 rounded-[1.5rem] bg-ink/10" />
         <div className="space-y-2 pt-2">
           <div className="h-4 w-full rounded-full bg-ink/10" />
           <div className="h-4 w-[92%] rounded-full bg-ink/10" />
           <div className="h-4 w-[76%] rounded-full bg-ink/10" />
         </div>
-        <div className="h-52 rounded-[1.5rem] bg-ink/10" />
       </div>
     </div>
   );

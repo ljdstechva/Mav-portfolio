@@ -273,13 +273,13 @@ function TestimonialMediaPreview({
 
   if (mediaKind === "video") {
     return (
-      <div className={clsx("overflow-hidden rounded-2xl bg-[#1E1A17]", className)}>
+      <div className={clsx("flex items-center justify-center overflow-hidden rounded-2xl bg-[#1E1A17] p-3", className)}>
         <video
           src={mediaUrl}
           controls
           playsInline
           preload="metadata"
-          className="h-full w-full object-cover"
+          className="h-full w-full rounded-[1rem] bg-black object-contain"
         />
       </div>
     );
@@ -898,6 +898,9 @@ export function AdminPage() {
       console.error(error);
       alert("Media upload failed: " + (error instanceof Error ? error.message : "Unknown error"));
     } finally {
+      if (fileInputRefs.current[fieldName]) {
+        fileInputRefs.current[fieldName]!.value = "";
+      }
       setUploadingField(null);
     }
   };
@@ -3893,7 +3896,6 @@ export function AdminPage() {
                             void handleImageUpload("avatar_url", event.dataTransfer.files);
                           }
                         }}
-                        onClick={() => fileInputRefs.current.avatar_url?.click()}
                       >
                         <input
                           ref={(el) => { fileInputRefs.current.avatar_url = el; }}
@@ -3919,28 +3921,44 @@ export function AdminPage() {
                                   {imagePreview.avatar_url}
                                 </p>
                               </div>
-                              <button
-                                type="button"
-                                onClick={(event) => {
-                                  event.preventDefault();
-                                  event.stopPropagation();
-                                  setImagePreview((prev) => {
-                                    const next = { ...prev };
-                                    delete next.avatar_url;
-                                    return next;
-                                  });
-                                  if (inputRefs.current.avatar_url) {
-                                    inputRefs.current.avatar_url.value = "";
-                                  }
-                                }}
-                                className="inline-flex items-center justify-center rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-100"
-                              >
-                                Remove Media
-                              </button>
+                              <div className="flex items-center gap-3">
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    fileInputRefs.current.avatar_url?.click();
+                                  }}
+                                  className="inline-flex items-center justify-center rounded-full border border-ink/10 bg-white px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-sand"
+                                >
+                                  Replace Media
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    setImagePreview((prev) => {
+                                      const next = { ...prev };
+                                      delete next.avatar_url;
+                                      return next;
+                                    });
+                                    if (inputRefs.current.avatar_url) {
+                                      inputRefs.current.avatar_url.value = "";
+                                    }
+                                  }}
+                                  className="inline-flex items-center justify-center rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-100"
+                                >
+                                  Remove Media
+                                </button>
+                              </div>
                             </div>
                           </div>
                         ) : (
-                          <div className="flex flex-col items-center justify-center py-8 text-center text-ink/40 transition-colors hover:text-ink/70">
+                          <div
+                            onClick={() => fileInputRefs.current.avatar_url?.click()}
+                            className="flex cursor-pointer flex-col items-center justify-center py-8 text-center text-ink/40 transition-colors hover:text-ink/70"
+                          >
                             <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-sm">
                               {uploadingField === "avatar_url" ? <Loader2 className="animate-spin" size={20} /> : <UploadCloud size={20} />}
                             </div>
