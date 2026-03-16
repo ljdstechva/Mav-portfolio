@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 type AllowedTable = "testimonials" | "industries" | "carousels" | "photo_editing" | "copywriting";
 
 const TABLE_COLUMNS: Record<AllowedTable, string[]> = {
-  testimonials: ["client_name", "quote"],
+  testimonials: ["client_name", "role", "company", "quote", "avatar_url"],
   industries: ["name"],
   carousels: ["client", "position", "image_url"],
   photo_editing: ["before_image_url", "after_image_url"],
@@ -135,10 +135,7 @@ export async function POST(request: Request) {
 
   for (const column of TABLE_COLUMNS[table]) {
     if (column in values) {
-      const normalized = normalizeValue(values[column]);
-      if (normalized !== null) {
-        payload[column] = normalized;
-      }
+      payload[column] = normalizeValue(values[column]);
     }
   }
 

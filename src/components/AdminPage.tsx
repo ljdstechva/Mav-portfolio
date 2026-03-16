@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { getSupabaseClient, getSupabaseConfigError } from "@/lib/supabaseClient";
+import { formatTestimonialAttribution, getTestimonialMediaKind } from "@/lib/testimonialMedia";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
 import {
   LayoutDashboard,
@@ -231,7 +232,15 @@ const TABLE_CONFIG: Record<
     icon: MessageSquareQuote,
     fields: [
       { name: "client_name", label: "Client Name", required: true },
+      { name: "role", label: "Role", placeholder: "e.g. Founder" },
+      { name: "company", label: "Company", placeholder: "e.g. North Studio" },
       { name: "quote", label: "Quote", type: "textarea", required: true },
+      {
+        name: "avatar_url",
+        label: "Media URL",
+        type: "url",
+        helper: "Optional image or direct video file URL.",
+      },
     ],
   },
 };
@@ -246,6 +255,47 @@ const IMAGE_FIELDS = new Set([
 type LoginState = "idle" | "loading" | "error";
 type UploadState = "idle" | "loading" | "error" | "success";
 type DeleteState = "idle" | "loading" | "error";
+
+function TestimonialMediaPreview({
+  mediaUrl,
+  clientName,
+  className,
+}: {
+  mediaUrl?: string | null;
+  clientName: string;
+  className?: string;
+}) {
+  const mediaKind = getTestimonialMediaKind(mediaUrl);
+
+  if (!mediaKind || !mediaUrl) {
+    return null;
+  }
+
+  if (mediaKind === "video") {
+    return (
+      <div className={clsx("overflow-hidden rounded-2xl bg-[#1E1A17]", className)}>
+        <video
+          src={mediaUrl}
+          controls
+          playsInline
+          preload="metadata"
+          className="h-full w-full object-cover"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className={clsx("overflow-hidden rounded-2xl bg-sand", className)}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={mediaUrl}
+        alt={`${clientName} testimonial media`}
+        className="h-full w-full object-cover"
+      />
+    </div>
+  );
+}
 
 export function AdminPage() {
   const [mounted, setMounted] = useState(false);
@@ -606,7 +656,10 @@ export function AdminPage() {
             id: editingTestimonial.id,
             values: {
               client_name: values.client_name,
+              role: values.role,
+              company: values.company,
               quote: values.quote,
+              avatar_url: values.avatar_url,
             },
           }),
         });
@@ -744,7 +797,34 @@ export function AdminPage() {
 
       const targetTable = createTableOverride ?? selectedTable;
 
-      if (targetTable === "clients" && fieldName === "image_url") {
+      if (targetTable === "testimonials" && fieldName === "avatar_url") {
+        if (!session?.access_token) {
+          throw new Error("Your admin session expired. Please sign in again.");
+        }
+
+        const file = files[0];
+        const payload = new FormData();
+        payload.append("table", targetTable);
+        payload.append("field", fieldName);
+        payload.append("file", file);
+
+        const response = await fetch("/api/admin-upload", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: payload,
+        });
+
+        const result = await response.json().catch(() => null);
+
+        if (!response.ok || !result?.publicUrl) {
+          throw new Error(result?.message ?? "Supabase upload failed");
+        }
+
+        if (inputRefs.current[fieldName]) inputRefs.current[fieldName]!.value = result.publicUrl;
+        setImagePreview((prev) => ({ ...prev, [fieldName]: result.publicUrl }));
+      } else if (targetTable === "clients" && fieldName === "image_url") {
         const newImages: { id: string; url: string }[] = [];
 
         for (let i = 0; i < files.length; i++) {
@@ -755,7 +835,7 @@ export function AdminPage() {
           const { error } = await supabase.storage.from("portfolio").upload(filePath, file, {
             cacheControl: "3600",
             upsert: false,
-            contentType: file.type || "image/png",
+            contentType: file.type || "application/octet-stream",
           });
 
           if (error) throw error;
@@ -780,7 +860,7 @@ export function AdminPage() {
           const { error } = await supabase.storage.from("portfolio").upload(filePath, file, {
             cacheControl: "3600",
             upsert: false,
-            contentType: file.type || "image/png",
+            contentType: file.type || "application/octet-stream",
           });
 
           if (error) throw error;
@@ -801,7 +881,7 @@ export function AdminPage() {
         const { error } = await supabase.storage.from("portfolio").upload(filePath, file, {
           cacheControl: "3600",
           upsert: false,
-          contentType: file.type || "image/png",
+          contentType: file.type || "application/octet-stream",
         });
 
         if (error) throw error;
@@ -816,7 +896,7 @@ export function AdminPage() {
 
     } catch (error) {
       console.error(error);
-      alert("Image upload failed: " + (error instanceof Error ? error.message : "Unknown error"));
+      alert("Media upload failed: " + (error instanceof Error ? error.message : "Unknown error"));
     } finally {
       setUploadingField(null);
     }
@@ -842,7 +922,7 @@ export function AdminPage() {
         const { error } = await supabase.storage.from("portfolio").upload(filePath, file, {
           cacheControl: "3600",
           upsert: false,
-          contentType: file.type || "image/png",
+          contentType: file.type || "application/octet-stream",
         });
 
         if (error) throw error;
@@ -1493,7 +1573,7 @@ export function AdminPage() {
         const { error: uploadError } = await supabase.storage.from("portfolio").upload(filePath, file, {
           cacheControl: "3600",
           upsert: false,
-          contentType: file.type || "image/png",
+          contentType: file.type || "application/octet-stream",
         });
 
         if (uploadError) throw uploadError;
@@ -1572,10 +1652,12 @@ export function AdminPage() {
       copywriting.length +
       photoEditing.length +
       testimonials.length;
+    const testimonialMediaCount = testimonials.filter((item) => Boolean(item.avatar_url?.trim())).length;
 
     return {
       uniqueClientCount: uniqueClientNames.size,
       uniqueCarouselClients: uniqueCarouselClients.size,
+      testimonialMediaCount,
       totalEntries,
     };
   }, [clients, carousels, reels, stories, copywriting, photoEditing, testimonials]);
@@ -1631,12 +1713,28 @@ export function AdminPage() {
   const showCarouselForm = formTable === "carousels";
   const showCopywritingForm = formTable === "copywriting";
   const showPhotoEditingForm = formTable === "photo_editing";
-  const fieldsToRender = formTable === "testimonials"
-    ? TABLE_CONFIG[formTable].fields.filter((field) => ["client_name", "quote"].includes(field.name))
-    : TABLE_CONFIG[formTable].fields;
+  const showTestimonialForm = formTable === "testimonials";
+  const fieldsToRender = TABLE_CONFIG[formTable].fields;
   const isEditingTestimonial = formTable === "testimonials" && Boolean(editingTestimonial);
   const isEditingIndustry = formTable === "industries" && Boolean(editingIndustry);
   const isEditingPhotoEditing = formTable === "photo_editing" && Boolean(editingPhotoEditing);
+
+  useEffect(() => {
+    if (!showCreateForm || formTable !== "testimonials" || !editingTestimonial) return;
+
+    const nextPreview: Record<string, string> = {};
+    if (editingTestimonial.avatar_url) {
+      nextPreview.avatar_url = editingTestimonial.avatar_url;
+    }
+
+    setImagePreview(nextPreview);
+
+    requestAnimationFrame(() => {
+      if (inputRefs.current.avatar_url) {
+        inputRefs.current.avatar_url.value = editingTestimonial.avatar_url ?? "";
+      }
+    });
+  }, [editingTestimonial, formTable, showCreateForm]);
 
   useEffect(() => {
     if (!showCreateForm || formTable !== "photo_editing" || !editingPhotoEditing) return;
@@ -2095,7 +2193,7 @@ export function AdminPage() {
                     {
                       key: "testimonials" as TableKey,
                       count: testimonials.length,
-                      helper: `${testimonials.length} quotes`,
+                      helper: `${testimonials.length} entries - ${dashboardStats.testimonialMediaCount} with media`,
                     },
                   ] as const).map((item) => {
                     const Icon = TABLE_CONFIG[item.key].icon;
@@ -2944,6 +3042,14 @@ export function AdminPage() {
                           </div>
                         )}
                         <div className="flex flex-col gap-4">
+                          {testimonials.length === 0 && (
+                            <div className="rounded-3xl border border-dashed border-ink/10 bg-white/80 p-10 text-center">
+                              <p className="text-sm font-semibold text-ink">No testimonials yet</p>
+                              <p className="mt-2 text-sm text-ink/50">
+                                Add a quote, then optionally attach an image or a direct video file.
+                              </p>
+                            </div>
+                          )}
                           {testimonials.map((testimonial, index) => (
                             <div
                               key={testimonial.id}
@@ -2969,8 +3075,36 @@ export function AdminPage() {
                                   </button>
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <h3 className="font-bold text-lg truncate">{testimonial.client_name}</h3>
-                                  <p className="text-sm text-ink/50">{testimonial.quote}</p>
+                                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                    <div className="min-w-0 flex-1">
+                                      <div className="mb-3 flex flex-wrap items-center gap-2">
+                                        <span className="rounded-full bg-ink/5 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-ink/60">
+                                          {getTestimonialMediaKind(testimonial.avatar_url) === "video"
+                                            ? "Video testimonial"
+                                            : getTestimonialMediaKind(testimonial.avatar_url) === "image"
+                                              ? "Image testimonial"
+                                              : "Text only"}
+                                        </span>
+                                        {formatTestimonialAttribution(testimonial.role, testimonial.company) && (
+                                          <span className="rounded-full bg-sand px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-ink/50">
+                                            {formatTestimonialAttribution(testimonial.role, testimonial.company)}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <h3 className="font-bold text-lg truncate">{testimonial.client_name}</h3>
+                                      <p className="mt-3 line-clamp-4 text-sm leading-relaxed text-ink/60">
+                                        {testimonial.quote}
+                                      </p>
+                                    </div>
+
+                                    {testimonial.avatar_url && (
+                                      <TestimonialMediaPreview
+                                        mediaUrl={testimonial.avatar_url}
+                                        clientName={testimonial.client_name}
+                                        className="h-44 w-full shrink-0 lg:w-56"
+                                      />
+                                    )}
+                                  </div>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <button
@@ -3640,6 +3774,182 @@ export function AdminPage() {
                             <span className="text-xs font-bold uppercase tracking-widest">
                               {uploadingField === "image_url" ? "Uploading..." : "Drag & Drop or Click to Upload"}
                             </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                ) : showTestimonialForm ? (
+                  <>
+                    <div className="rounded-[28px] border border-ink/10 bg-gradient-to-br from-white via-sand/50 to-white p-5">
+                      <p className="text-xs font-bold uppercase tracking-[0.24em] text-ink/45">
+                        Flexible Testimonial Format
+                      </p>
+                      <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink/65">
+                        Pair each quote with optional role and company details, then attach one media asset.
+                        Use an image for static proof or upload a direct video file for richer social proof.
+                      </p>
+                    </div>
+
+                    <div className="grid gap-5 md:grid-cols-2">
+                      <div className="space-y-2 md:col-span-2">
+                        <label className="text-xs font-bold uppercase tracking-widest text-ink/50 flex justify-between">
+                          Client Name
+                          <span className="text-terracotta text-[10px]">REQUIRED</span>
+                        </label>
+                        <input
+                          type="text"
+                          name="client_name"
+                          placeholder="e.g. Sarah Chen"
+                          defaultValue={editingTestimonial?.client_name ?? ""}
+                          className="w-full bg-sand/30 border border-ink/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-ink/10 focus:outline-none transition-all"
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold uppercase tracking-widest text-ink/50">
+                          Role
+                        </label>
+                        <input
+                          type="text"
+                          name="role"
+                          placeholder="e.g. Founder"
+                          defaultValue={editingTestimonial?.role ?? ""}
+                          className="w-full bg-sand/30 border border-ink/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-ink/10 focus:outline-none transition-all"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold uppercase tracking-widest text-ink/50">
+                          Company
+                        </label>
+                        <input
+                          type="text"
+                          name="company"
+                          placeholder="e.g. North Studio"
+                          defaultValue={editingTestimonial?.company ?? ""}
+                          className="w-full bg-sand/30 border border-ink/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-ink/10 focus:outline-none transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-widest text-ink/50 flex justify-between">
+                        Quote
+                        <span className="text-terracotta text-[10px]">REQUIRED</span>
+                      </label>
+                      <textarea
+                        name="quote"
+                        placeholder="Share the result, process, or feeling the client wants future buyers to trust."
+                        defaultValue={editingTestimonial?.quote ?? ""}
+                        rows={5}
+                        className="w-full bg-sand/30 border border-ink/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-ink/10 focus:outline-none transition-all resize-none"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-3">
+                      <label className="text-xs font-bold uppercase tracking-widest text-ink/50 flex justify-between">
+                        Media Asset
+                        <span className="text-ink/35 text-[10px]">OPTIONAL</span>
+                      </label>
+
+                      <input
+                        ref={(el) => { inputRefs.current.avatar_url = el; }}
+                        type="text"
+                        name="avatar_url"
+                        placeholder="Upload a file or paste a public image / direct video URL"
+                        defaultValue={editingTestimonial?.avatar_url ?? ""}
+                        onChange={(event) => {
+                          const nextUrl = event.target.value.trim();
+                          setImagePreview((prev) => {
+                            const next = { ...prev };
+                            if (nextUrl) {
+                              next.avatar_url = nextUrl;
+                            } else {
+                              delete next.avatar_url;
+                            }
+                            return next;
+                          });
+                        }}
+                        className="w-full bg-sand/30 border border-ink/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-ink/10 focus:outline-none transition-all"
+                      />
+
+                      <div
+                        className={clsx(
+                          "bg-sand/50 rounded-xl p-4 border border-dashed transition-colors",
+                          dragOverField === "avatar_url" ? "border-ink/50 bg-sand/70" : "border-ink/20 hover:border-ink/40"
+                        )}
+                        onDragOver={(event) => {
+                          event.preventDefault();
+                          setDragOverField("avatar_url");
+                        }}
+                        onDragLeave={() => setDragOverField(null)}
+                        onDrop={(event) => {
+                          event.preventDefault();
+                          setDragOverField(null);
+                          if (event.dataTransfer?.files?.length) {
+                            void handleImageUpload("avatar_url", event.dataTransfer.files);
+                          }
+                        }}
+                        onClick={() => fileInputRefs.current.avatar_url?.click()}
+                      >
+                        <input
+                          ref={(el) => { fileInputRefs.current.avatar_url = el; }}
+                          type="file"
+                          accept="image/*,video/*"
+                          className="hidden"
+                          onChange={(e) => handleImageUpload("avatar_url", e.target.files)}
+                        />
+
+                        {imagePreview.avatar_url ? (
+                          <div className="space-y-4">
+                            <TestimonialMediaPreview
+                              mediaUrl={imagePreview.avatar_url}
+                              clientName={editingTestimonial?.client_name ?? "Testimonial"}
+                              className="h-64 w-full"
+                            />
+                            <div className="flex flex-col gap-3 rounded-2xl bg-white/80 p-4 md:flex-row md:items-center md:justify-between">
+                              <div className="min-w-0">
+                                <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-ink/40">
+                                  Attached Media
+                                </p>
+                                <p className="mt-1 truncate text-sm text-ink/65">
+                                  {imagePreview.avatar_url}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  setImagePreview((prev) => {
+                                    const next = { ...prev };
+                                    delete next.avatar_url;
+                                    return next;
+                                  });
+                                  if (inputRefs.current.avatar_url) {
+                                    inputRefs.current.avatar_url.value = "";
+                                  }
+                                }}
+                                className="inline-flex items-center justify-center rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-100"
+                              >
+                                Remove Media
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-8 text-center text-ink/40 transition-colors hover:text-ink/70">
+                            <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-sm">
+                              {uploadingField === "avatar_url" ? <Loader2 className="animate-spin" size={20} /> : <UploadCloud size={20} />}
+                            </div>
+                            <p className="text-xs font-bold uppercase tracking-widest">
+                              {uploadingField === "avatar_url" ? "Uploading..." : "Drag, Drop, or Click to Upload"}
+                            </p>
+                            <p className="mt-2 text-xs text-ink/45">
+                              Supports JPG, PNG, WEBP, MP4, MOV, and WEBM
+                            </p>
                           </div>
                         )}
                       </div>

@@ -22,7 +22,7 @@ const TABLE_COLUMNS: Record<AllowedTable, string[]> = {
   stories: ["video_url", "sort_order"],
   copywriting: ["image_url", "sort_order"],
   photo_editing: ["before_image_url", "after_image_url"],
-  testimonials: ["client_name", "quote", "sort_order"],
+  testimonials: ["client_name", "role", "company", "quote", "avatar_url", "sort_order"],
 };
 
 const NUMBER_FIELDS = new Set(["position", "sort_order"]);
