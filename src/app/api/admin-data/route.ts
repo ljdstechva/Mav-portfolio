@@ -20,6 +20,8 @@ export async function GET(request: Request) {
     copywriting,
     photoEditing,
     testimonials,
+    aiImages,
+    aiVideos,
   ] = await Promise.all([
     supabase.from("industries").select("*").order("created_at", { ascending: false }),
     supabase
@@ -56,6 +58,16 @@ export async function GET(request: Request) {
       .select("*")
       .order("sort_order", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: false }),
+    supabase
+      .from("ai_images")
+      .select("*")
+      .order("sort_order", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("ai_videos")
+      .select("*")
+      .order("sort_order", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: false }),
   ]);
 
   const error =
@@ -72,6 +84,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ message: error.message }, { status: 500 });
   }
 
+  const aiMediaSetupWarnings = [
+    aiImages.error ? `AI Images table: ${aiImages.error.message}` : null,
+    aiVideos.error ? `AI Videos table: ${aiVideos.error.message}` : null,
+  ].filter((message): message is string => Boolean(message));
+
   const response = NextResponse.json({
     industries: industries.data ?? [],
     clients: clients.data ?? [],
@@ -81,6 +98,9 @@ export async function GET(request: Request) {
     copywriting: copywriting.data ?? [],
     photoEditing: photoEditing.data ?? [],
     testimonials: testimonials.data ?? [],
+    aiImages: aiImages.error ? [] : (aiImages.data ?? []),
+    aiVideos: aiVideos.error ? [] : (aiVideos.data ?? []),
+    aiMediaSetupWarnings,
   });
 
   response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');

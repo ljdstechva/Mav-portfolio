@@ -8,6 +8,7 @@ import {
   Palette,
   Layers,
   Video,
+  Image as ImageIcon,
   FileText,
   Aperture,
   BookOpen
@@ -57,6 +58,20 @@ export const PORTFOLIO_CATEGORIES: PortfolioCategory[] = [
     icon: Video, 
     description: "Motion graphics and video editing.", 
     color: "bg-red-100 text-red-600" 
+  },
+  {
+    id: "ai-images",
+    name: "AI Images",
+    icon: ImageIcon,
+    description: "AI-generated visuals, product concepts, and campaign-ready creative.",
+    color: "bg-fuchsia-100 text-fuchsia-600",
+  },
+  {
+    id: "ai-videos",
+    name: "AI Videos",
+    icon: Video,
+    description: "AI-assisted motion work for launches, ads, and social proof.",
+    color: "bg-cyan-100 text-cyan-700",
   },
   { 
     id: "copywriting", 

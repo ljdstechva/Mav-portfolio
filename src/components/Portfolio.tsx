@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   ArrowRight,
+  Play,
   X
 } from "lucide-react";
 import clsx from "clsx";
@@ -48,6 +49,25 @@ type PhotoEditingItem = {
   after_image_url: string;
 };
 
+type AiImageItem = {
+  id: string;
+  title: string;
+  description?: string | null;
+  image_url: string;
+  thumbnail_url?: string | null;
+  alt_text?: string | null;
+  sort_order?: number | null;
+};
+
+type AiVideoItem = {
+  id: string;
+  title: string;
+  description?: string | null;
+  video_url: string;
+  thumbnail_url?: string | null;
+  sort_order?: number | null;
+};
+
 type GalleryItem = {
   image: string;
   text: string;
@@ -74,6 +94,8 @@ export function Portfolio() {
   const [reels, setReels] = useState<ReelItem[]>([]);
   const [stories, setStories] = useState<ReelItem[]>([]);
   const [photoEditing, setPhotoEditing] = useState<PhotoEditingItem[]>([]);
+  const [aiImages, setAiImages] = useState<AiImageItem[]>([]);
+  const [aiVideos, setAiVideos] = useState<AiVideoItem[]>([]);
   const [copywritingIndustry, setCopywritingIndustry] = useState<PortfolioIndustry | null>(null);
   const [industriesLoading, setIndustriesLoading] = useState(true);
   const [industriesError, setIndustriesError] = useState<string | null>(null);
@@ -150,6 +172,25 @@ export function Portfolio() {
           body?: string;
           image_url?: string;
           created_at?: string;
+        }[];
+        const rawAiImages = (data.aiImages ?? []) as {
+          id: string;
+          title?: string | null;
+          description?: string | null;
+          image_url?: string | null;
+          thumbnail_url?: string | null;
+          alt_text?: string | null;
+          sort_order?: number | null;
+          created_at?: string | null;
+        }[];
+        const rawAiVideos = (data.aiVideos ?? []) as {
+          id: string;
+          title?: string | null;
+          description?: string | null;
+          video_url?: string | null;
+          thumbnail_url?: string | null;
+          sort_order?: number | null;
+          created_at?: string | null;
         }[];
 
         // Process Graphics
@@ -259,12 +300,37 @@ export function Portfolio() {
           projects: copywritingProjects,
         };
 
+        const aiImageData = rawAiImages
+          .filter((item) => Boolean(item.image_url))
+          .map((item, index) => ({
+            id: item.id,
+            title: item.title?.trim() || "AI Image",
+            description: item.description ?? null,
+            image_url: item.image_url as string,
+            thumbnail_url: item.thumbnail_url ?? null,
+            alt_text: item.alt_text ?? null,
+            sort_order: item.sort_order ?? index,
+          }));
+
+        const aiVideoData = rawAiVideos
+          .filter((item) => Boolean(item.video_url))
+          .map((item, index) => ({
+            id: item.id,
+            title: item.title?.trim() || "AI Video",
+            description: item.description ?? null,
+            video_url: item.video_url as string,
+            thumbnail_url: item.thumbnail_url ?? null,
+            sort_order: item.sort_order ?? index,
+          }));
+
         if (active) {
           setIndustries(byIndustry);
           setCarouselClients(carousels);
           setReels(reelsData);
           setStories(storiesData);
           setPhotoEditing(photoEditingData);
+          setAiImages(aiImageData);
+          setAiVideos(aiVideoData);
           setCopywritingIndustry(copyIndustryData);
         }
       } catch (error) {
@@ -341,6 +407,7 @@ export function Portfolio() {
                 >
                   <CategoryGrid
                     onSelect={setSelectedCategory}
+                    categories={PORTFOLIO_CATEGORIES}
                   />
                 </motion.div>
               )}
@@ -390,6 +457,38 @@ export function Portfolio() {
                 >
                   <ReelsList
                     reels={reels}
+                    onBack={goBackToCategories}
+                    loading={industriesLoading}
+                  />
+                </motion.div>
+              )}
+
+              {selectedCategory?.id === 'ai-images' && (
+                <motion.div
+                  className="w-full"
+                  key="ai-images-list"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                >
+                  <AiImagesList
+                    items={aiImages}
+                    onBack={goBackToCategories}
+                    loading={industriesLoading}
+                  />
+                </motion.div>
+              )}
+
+              {selectedCategory?.id === 'ai-videos' && (
+                <motion.div
+                  className="w-full"
+                  key="ai-videos-list"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                >
+                  <AiVideosList
+                    items={aiVideos}
                     onBack={goBackToCategories}
                     loading={industriesLoading}
                   />
@@ -447,7 +546,7 @@ export function Portfolio() {
               )}
 
               {/* Placeholders for other categories */}
-              {selectedCategory && selectedCategory.id !== 'graphics' && selectedCategory.id !== 'carousels' && selectedCategory.id !== 'videos' && selectedCategory.id !== 'stories' && selectedCategory.id !== 'copywriting' && selectedCategory.id !== 'photo-editing' && (
+              {selectedCategory && selectedCategory.id !== 'graphics' && selectedCategory.id !== 'carousels' && selectedCategory.id !== 'videos' && selectedCategory.id !== 'ai-images' && selectedCategory.id !== 'ai-videos' && selectedCategory.id !== 'stories' && selectedCategory.id !== 'copywriting' && selectedCategory.id !== 'photo-editing' && (
                 <motion.div
                   className="w-full"
                   key="placeholder"
@@ -475,6 +574,261 @@ export function Portfolio() {
         </motion.div>
       </div>
     </section>
+  );
+}
+
+function AiImagesList({
+  items,
+  onBack,
+  loading,
+}: {
+  items: AiImageItem[];
+  onBack: () => void;
+  loading: boolean;
+}) {
+  const [selectedItem, setSelectedItem] = useState<AiImageItem | null>(null);
+
+  if (loading) return <div className="text-ink/50">Loading AI images...</div>;
+  if (items.length === 0) {
+    return (
+      <div className="w-full">
+        <button onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
+          <ArrowLeft size={20} /> Back to Categories
+        </button>
+        <div className="rounded-[28px] border border-ink/10 bg-sand/30 p-10 text-center">
+          <p className="mb-3 text-xs font-bold uppercase tracking-[0.28em] text-sienna">AI visual portfolio</p>
+          <h3 className="text-2xl font-bold text-ink">AI Images are ready for new work</h3>
+          <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-ink/55">
+            Published AI image projects from Supabase will appear here automatically after they are uploaded in the admin dashboard.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full">
+      <button onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
+        <ArrowLeft size={20} /> Back to Categories
+      </button>
+
+      <div className="mb-8 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+        <div>
+          <p className="mb-2 text-xs font-bold uppercase tracking-[0.28em] text-sienna">AI visual portfolio</p>
+          <h3 className="text-2xl font-bold text-ink md:text-3xl">Generated visuals built for client campaigns</h3>
+        </div>
+        <span className="rounded-full border border-ink/10 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-ink/50">
+          {items.length} piece{items.length === 1 ? "" : "s"}
+        </span>
+      </div>
+
+      <div className="columns-1 gap-5 sm:columns-2 lg:columns-3 [&>*]:mb-5">
+        {items.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => setSelectedItem(item)}
+            className="group relative w-full break-inside-avoid overflow-hidden rounded-[24px] border border-ink/10 bg-sand/40 text-left shadow-sm transition-all hover:border-ink/20 hover:shadow-xl"
+          >
+            <img
+              src={item.thumbnail_url || item.image_url}
+              alt={item.alt_text || item.title}
+              className="h-auto w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+              loading="lazy"
+              decoding="async"
+            />
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent p-5 text-white opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+              <h4 className="text-lg font-bold">{item.title}</h4>
+              {item.description && (
+                <p className="mt-1 line-clamp-2 text-sm text-white/80">{item.description}</p>
+              )}
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <AnimatePresence>
+        {selectedItem && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedItem(null)}
+          >
+            <motion.div
+              className="relative w-full max-w-5xl overflow-hidden rounded-[28px] bg-white shadow-2xl"
+              initial={{ scale: 0.96, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.96, opacity: 0 }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={() => setSelectedItem(null)}
+                className="absolute right-4 top-4 z-10 rounded-full bg-white/90 p-2 text-ink shadow-lg transition-colors hover:bg-white"
+                aria-label="Close preview"
+              >
+                <X size={18} />
+              </button>
+              <div className="grid max-h-[90vh] grid-cols-1 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_320px]">
+                <div className="flex min-h-[320px] items-center justify-center bg-sand/40 p-4">
+                  <img
+                    src={selectedItem.image_url}
+                    alt={selectedItem.alt_text || selectedItem.title}
+                    className="max-h-[82vh] w-full object-contain"
+                  />
+                </div>
+                <div className="p-6">
+                  <p className="mb-3 text-xs font-bold uppercase tracking-[0.24em] text-sienna">AI Image</p>
+                  <h4 className="text-2xl font-bold text-ink">{selectedItem.title}</h4>
+                  {selectedItem.description && (
+                    <p className="mt-4 text-sm leading-relaxed text-ink/60">{selectedItem.description}</p>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function AiVideosList({
+  items,
+  onBack,
+  loading,
+}: {
+  items: AiVideoItem[];
+  onBack: () => void;
+  loading: boolean;
+}) {
+  const [selectedItem, setSelectedItem] = useState<AiVideoItem | null>(null);
+
+  if (loading) return <div className="text-ink/50">Loading AI videos...</div>;
+  if (items.length === 0) {
+    return (
+      <div className="w-full">
+        <button onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
+          <ArrowLeft size={20} /> Back to Categories
+        </button>
+        <div className="rounded-[28px] border border-ink/10 bg-sand/30 p-10 text-center">
+          <p className="mb-3 text-xs font-bold uppercase tracking-[0.28em] text-sienna">AI motion portfolio</p>
+          <h3 className="text-2xl font-bold text-ink">AI Videos are ready for new work</h3>
+          <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-ink/55">
+            Published AI video projects from Supabase will appear here automatically after they are uploaded in the admin dashboard.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full">
+      <button onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
+        <ArrowLeft size={20} /> Back to Categories
+      </button>
+
+      <div className="mb-8 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+        <div>
+          <p className="mb-2 text-xs font-bold uppercase tracking-[0.28em] text-sienna">AI motion portfolio</p>
+          <h3 className="text-2xl font-bold text-ink md:text-3xl">Motion samples that show concept, pacing, and polish</h3>
+        </div>
+        <span className="rounded-full border border-ink/10 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-ink/50">
+          {items.length} video{items.length === 1 ? "" : "s"}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+        {items.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => setSelectedItem(item)}
+            className="group overflow-hidden rounded-[24px] border border-ink/10 bg-white text-left shadow-sm transition-all hover:border-ink/20 hover:shadow-xl"
+          >
+            <div className="relative aspect-video overflow-hidden bg-black">
+              {item.thumbnail_url ? (
+                <img
+                  src={item.thumbnail_url}
+                  alt={item.title}
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                  loading="lazy"
+                  decoding="async"
+                />
+              ) : (
+                <video
+                  src={item.video_url}
+                  muted
+                  playsInline
+                  preload="metadata"
+                  className="h-full w-full object-cover"
+                />
+              )}
+              <div className="absolute inset-0 flex items-center justify-center bg-black/15 transition-colors group-hover:bg-black/25">
+                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/90 text-ink shadow-lg">
+                  <Play size={22} fill="currentColor" />
+                </span>
+              </div>
+            </div>
+            <div className="p-5">
+              <h4 className="text-lg font-bold text-ink">{item.title}</h4>
+              {item.description && (
+                <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-ink/55">{item.description}</p>
+              )}
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <AnimatePresence>
+        {selectedItem && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedItem(null)}
+          >
+            <motion.div
+              className="relative w-full max-w-5xl overflow-hidden rounded-[28px] bg-white shadow-2xl"
+              initial={{ scale: 0.96, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.96, opacity: 0 }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={() => setSelectedItem(null)}
+                className="absolute right-4 top-4 z-10 rounded-full bg-white/90 p-2 text-ink shadow-lg transition-colors hover:bg-white"
+                aria-label="Close preview"
+              >
+                <X size={18} />
+              </button>
+              <div className="grid max-h-[90vh] grid-cols-1 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_320px]">
+                <div className="flex min-h-[320px] items-center justify-center bg-black p-4">
+                  <video
+                    src={selectedItem.video_url}
+                    controls
+                    playsInline
+                    preload="metadata"
+                    className="max-h-[82vh] w-full rounded-2xl"
+                  />
+                </div>
+                <div className="p-6">
+                  <p className="mb-3 text-xs font-bold uppercase tracking-[0.24em] text-sienna">AI Video</p>
+                  <h4 className="text-2xl font-bold text-ink">{selectedItem.title}</h4>
+                  {selectedItem.description && (
+                    <p className="mt-4 text-sm leading-relaxed text-ink/60">{selectedItem.description}</p>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
@@ -868,7 +1222,13 @@ function useContentHeight() {
 
 // --- Sub-components ---
 
-function CategoryGrid({ onSelect }: { onSelect: (c: PortfolioCategory) => void }) {
+function CategoryGrid({
+  onSelect,
+  categories,
+}: {
+  onSelect: (c: PortfolioCategory) => void;
+  categories: PortfolioCategory[];
+}) {
   const gridRef = useRef<HTMLDivElement>(null);
 
   return (
@@ -879,7 +1239,7 @@ function CategoryGrid({ onSelect }: { onSelect: (c: PortfolioCategory) => void }
         ref={gridRef}
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
       >
-        {PORTFOLIO_CATEGORIES.map((category) => (
+        {categories.map((category) => (
           <StarBorder
             as="button"
             key={category.id}

@@ -1,5 +1,7 @@
 const useFluidCursor = () => {
   const canvas = document.getElementById('fluid');
+  if (!canvas) return;
+
   resizeCanvas();
 
   //try to adjust settings
@@ -39,6 +41,7 @@ const useFluidCursor = () => {
   pointers.push(new pointerPrototype());
 
   const { gl, ext } = getWebGLContext(canvas);
+  if (!gl || !ext) return;
 
   if (!ext.supportLinearFiltering) {
     config.DYE_RESOLUTION = 256;
@@ -63,12 +66,20 @@ const useFluidCursor = () => {
 
     let halfFloat;
     let supportLinearFiltering;
+    if (!gl) {
+      return { gl: null, ext: null };
+    }
+
     if (isWebGL2) {
       gl.getExtension('EXT_color_buffer_float');
       supportLinearFiltering = gl.getExtension('OES_texture_float_linear');
     } else {
       halfFloat = gl.getExtension('OES_texture_half_float');
       supportLinearFiltering = gl.getExtension('OES_texture_half_float_linear');
+    }
+
+    if (!isWebGL2 && !halfFloat) {
+      return { gl: null, ext: null };
     }
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0);

@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Layers,
   Video,
+  Image as ImageIcon,
   FileText,
   Aperture,
   MessageSquareQuote,
@@ -93,6 +94,31 @@ type PhotoEditingItem = {
   created_at?: string | null;
 };
 
+type AiImageItem = {
+  id: string;
+  title: string;
+  description?: string | null;
+  image_url?: string | null;
+  thumbnail_url?: string | null;
+  alt_text?: string | null;
+  sort_order?: number | null;
+  is_published?: boolean | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+type AiVideoItem = {
+  id: string;
+  title: string;
+  description?: string | null;
+  video_url?: string | null;
+  thumbnail_url?: string | null;
+  sort_order?: number | null;
+  is_published?: boolean | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
 type TestimonialItem = {
   id: string;
   client_name: string;
@@ -118,6 +144,9 @@ type AdminListItem = {
   before_image_url?: string | null;
   after_image_url?: string | null;
   video_url?: string | null;
+  thumbnail_url?: string | null;
+  alt_text?: string | null;
+  is_published?: boolean | null;
   category?: string | null;
 };
 
@@ -130,7 +159,9 @@ type TableKey =
   | "stories"
   | "copywriting"
   | "photo_editing"
-  | "testimonials";
+  | "testimonials"
+  | "ai_images"
+  | "ai_videos";
 
 type FieldConfig = {
   name: string;
@@ -201,6 +232,37 @@ const TABLE_CONFIG: Record<
       { name: "video_url", label: "Video URL", type: "url", required: true },
     ],
   },
+  ai_images: {
+    label: "AI Images",
+    singularLabel: "AI Image",
+    icon: ImageIcon,
+    fields: [
+      { name: "title", label: "Title", required: true, placeholder: "e.g. Product Launch Concept" },
+      {
+        name: "description",
+        label: "Description",
+        type: "textarea",
+        placeholder: "Briefly describe the creative direction or client use case.",
+      },
+      { name: "image_url", label: "AI Image File", type: "url", required: true },
+      { name: "alt_text", label: "Alt Text", placeholder: "Describe the image for accessibility." },
+    ],
+  },
+  ai_videos: {
+    label: "AI Videos",
+    singularLabel: "AI Video",
+    icon: Video,
+    fields: [
+      { name: "title", label: "Title", required: true, placeholder: "e.g. Brand Reveal Motion" },
+      {
+        name: "description",
+        label: "Description",
+        type: "textarea",
+        placeholder: "Briefly describe the concept, pacing, or business use case.",
+      },
+      { name: "video_url", label: "AI Video File", type: "url", required: true },
+    ],
+  },
   stories: {
     label: "Stories",
     singularLabel: "Story",
@@ -250,7 +312,20 @@ const IMAGE_FIELDS = new Set([
   "before_image_url",
   "after_image_url",
   "avatar_url",
+  "thumbnail_url",
 ]);
+
+const AI_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"]);
+const AI_VIDEO_MIME_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime", "video/x-m4v", "video/mpeg"]);
+
+function validateAiMediaFile(file: File, kind: "image" | "video") {
+  if (kind === "image" && !AI_IMAGE_MIME_TYPES.has(file.type)) {
+    throw new Error("Upload a JPG, PNG, WEBP, GIF, or AVIF image.");
+  }
+  if (kind === "video" && !AI_VIDEO_MIME_TYPES.has(file.type)) {
+    throw new Error("Upload an MP4, WEBM, MOV, M4V, or MPEG video.");
+  }
+}
 
 type LoginState = "idle" | "loading" | "error";
 type UploadState = "idle" | "loading" | "error" | "success";
@@ -318,6 +393,10 @@ export function AdminPage() {
   const [copywriting, setCopywriting] = useState<CopywritingItem[]>([]);
   const [photoEditing, setPhotoEditing] = useState<PhotoEditingItem[]>([]);
   const [photoEditingOrderDirty, setPhotoEditingOrderDirty] = useState(false);
+  const [aiImages, setAiImages] = useState<AiImageItem[]>([]);
+  const [aiImagesOrderDirty, setAiImagesOrderDirty] = useState(false);
+  const [aiVideos, setAiVideos] = useState<AiVideoItem[]>([]);
+  const [aiVideosOrderDirty, setAiVideosOrderDirty] = useState(false);
   const [testimonials, setTestimonials] = useState<TestimonialItem[]>([]);
   const [testimonialsOrderDirty, setTestimonialsOrderDirty] = useState(false);
   const [deletingStoryId, setDeletingStoryId] = useState<string | null>(null);
@@ -329,6 +408,7 @@ export function AdminPage() {
 
   const [adminLoaded, setAdminLoaded] = useState(false);
   const [adminDataError, setAdminDataError] = useState<string | null>(null);
+  const [aiMediaSetupWarnings, setAiMediaSetupWarnings] = useState<string[]>([]);
 
   // UI State
   const [loginState, setLoginState] = useState<LoginState>("idle");
@@ -380,6 +460,12 @@ export function AdminPage() {
   const [photoEditingDeleteId, setPhotoEditingDeleteId] = useState<string | null>(null);
   const [photoEditingOrderState, setPhotoEditingOrderState] = useState<"idle" | "saving" | "error">("idle");
   const [photoEditingOrderError, setPhotoEditingOrderError] = useState("");
+  const [aiImagesDeleteId, setAiImagesDeleteId] = useState<string | null>(null);
+  const [aiImagesOrderState, setAiImagesOrderState] = useState<"idle" | "saving" | "error">("idle");
+  const [aiImagesOrderError, setAiImagesOrderError] = useState("");
+  const [aiVideosDeleteId, setAiVideosDeleteId] = useState<string | null>(null);
+  const [aiVideosOrderState, setAiVideosOrderState] = useState<"idle" | "saving" | "error">("idle");
+  const [aiVideosOrderError, setAiVideosOrderError] = useState("");
   const [carouselBatchImages, setCarouselBatchImages] = useState<{ id: string; url: string }[]>([]);
   const [carouselUploadState, setCarouselUploadState] = useState<UploadState>("idle");
   const [carouselUploadMessage, setCarouselUploadMessage] = useState("");
@@ -473,9 +559,20 @@ export function AdminPage() {
       setCopywritingOrderMessage("");
       setPhotoEditing(data.photoEditing);
       setPhotoEditingOrderDirty(false);
+      const aiImageData = data.aiImages ?? [];
+      setAiImages(aiImageData);
+      setAiImagesOrderDirty(false);
+      setAiImagesOrderState("idle");
+      setAiImagesOrderError("");
+      const aiVideoData = data.aiVideos ?? [];
+      setAiVideos(aiVideoData);
+      setAiVideosOrderDirty(false);
+      setAiVideosOrderState("idle");
+      setAiVideosOrderError("");
       const testimonialData = data.testimonials ?? [];
       setTestimonials(testimonialData);
       setTestimonialsOrderDirty(false);
+      setAiMediaSetupWarnings(Array.isArray(data.aiMediaSetupWarnings) ? data.aiMediaSetupWarnings : []);
 
       setAdminLoaded(true);
     } catch (error) {
@@ -558,8 +655,13 @@ export function AdminPage() {
     setCopywritingOrderState("idle");
     setCopywritingOrderMessage("");
     setPhotoEditing([]);
+    setAiImages([]);
+    setAiImagesOrderDirty(false);
+    setAiVideos([]);
+    setAiVideosOrderDirty(false);
     setTestimonials([]);
     setIndustries([]);
+    setAiMediaSetupWarnings([]);
     setAdminLoaded(false);
   };
 
@@ -601,6 +703,30 @@ export function AdminPage() {
       if (targetTable === "reels") {
         const maxSortOrder = reels.reduce((max, reel) => Math.max(max, reel.sort_order ?? -1), -1);
         values.sort_order = String(maxSortOrder + 1);
+      }
+
+      if (targetTable === "ai_images") {
+        if (!values.title) {
+          throw new Error("Title is required.");
+        }
+        if (!values.image_url) {
+          throw new Error("Please upload an AI image file.");
+        }
+        const maxSortOrder = aiImages.reduce((max, item) => Math.max(max, item.sort_order ?? -1), -1);
+        values.sort_order = String(maxSortOrder + 1);
+        values.is_published = "true";
+      }
+
+      if (targetTable === "ai_videos") {
+        if (!values.title) {
+          throw new Error("Title is required.");
+        }
+        if (!values.video_url) {
+          throw new Error("Please upload an AI video file.");
+        }
+        const maxSortOrder = aiVideos.reduce((max, item) => Math.max(max, item.sort_order ?? -1), -1);
+        values.sort_order = String(maxSortOrder + 1);
+        values.is_published = "true";
       }
 
       if (targetTable === "carousels") {
@@ -796,8 +922,39 @@ export function AdminPage() {
       }
 
       const targetTable = createTableOverride ?? selectedTable;
+      const isAiImageUpload = targetTable === "ai_images" && fieldName === "image_url";
+      const isAiVideoUpload = targetTable === "ai_videos" && fieldName === "video_url";
 
-      if (targetTable === "testimonials" && fieldName === "avatar_url") {
+      if (isAiImageUpload || isAiVideoUpload) {
+        if (!session?.access_token) {
+          throw new Error("Your admin session expired. Please sign in again.");
+        }
+
+        const file = files[0];
+        validateAiMediaFile(file, isAiImageUpload ? "image" : "video");
+
+        const payload = new FormData();
+        payload.append("table", targetTable);
+        payload.append("field", fieldName);
+        payload.append("file", file);
+
+        const response = await fetch("/api/admin-upload", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: payload,
+        });
+
+        const result = await response.json().catch(() => null);
+
+        if (!response.ok || !result?.publicUrl) {
+          throw new Error(result?.message ?? "Supabase upload failed");
+        }
+
+        if (inputRefs.current[fieldName]) inputRefs.current[fieldName]!.value = result.publicUrl;
+        setImagePreview((prev) => ({ ...prev, [fieldName]: result.publicUrl }));
+      } else if (targetTable === "testimonials" && fieldName === "avatar_url") {
         if (!session?.access_token) {
           throw new Error("Your admin session expired. Please sign in again.");
         }
@@ -1554,6 +1711,81 @@ export function AdminPage() {
     }
   };
 
+  const handleAiMediaOrderSave = async (
+    table: "ai_images" | "ai_videos",
+    orderedItems: Array<AiImageItem | AiVideoItem>
+  ) => {
+    if (!session) return;
+    if (orderedItems.length === 0) return;
+
+    const setOrderState = table === "ai_images" ? setAiImagesOrderState : setAiVideosOrderState;
+    const setOrderError = table === "ai_images" ? setAiImagesOrderError : setAiVideosOrderError;
+    const setOrderDirty = table === "ai_images" ? setAiImagesOrderDirty : setAiVideosOrderDirty;
+
+    setOrderState("saving");
+    setOrderError("");
+
+    try {
+      const response = await fetch("/api/admin-reorder", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          table,
+          items: orderedItems.map((item, index) => ({
+            id: item.id,
+            sort_order: index,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json();
+        throw new Error(payload.message ?? "Failed to save order");
+      }
+
+      setOrderState("idle");
+      setOrderDirty(false);
+      await fetchAdminData();
+    } catch (error) {
+      setOrderState("error");
+      setOrderError(error instanceof Error ? error.message : "Failed to save order");
+    }
+  };
+
+  const handleAiMediaDelete = async (table: "ai_images" | "ai_videos", id: string) => {
+    const label = table === "ai_images" ? "AI image" : "AI video";
+    const confirmed = window.confirm(`Delete this ${label}?`);
+    if (!confirmed) return;
+
+    const setDeleteId = table === "ai_images" ? setAiImagesDeleteId : setAiVideosDeleteId;
+    setDeleteId(id);
+
+    try {
+      const response = await fetch("/api/admin-delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ table, id }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json();
+        throw new Error(payload.message ?? "Delete failed");
+      }
+
+      await fetchAdminData();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Delete failed");
+    } finally {
+      setDeleteId(null);
+    }
+  };
+
   const handleClientPhotosUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     if (!selectedIndustryId || !selectedClientName) return;
@@ -1654,6 +1886,8 @@ export function AdminPage() {
       stories.length +
       copywriting.length +
       photoEditing.length +
+      aiImages.length +
+      aiVideos.length +
       testimonials.length;
     const testimonialMediaCount = testimonials.filter((item) => Boolean(item.avatar_url?.trim())).length;
 
@@ -1663,7 +1897,7 @@ export function AdminPage() {
       testimonialMediaCount,
       totalEntries,
     };
-  }, [clients, carousels, reels, stories, copywriting, photoEditing, testimonials]);
+  }, [clients, carousels, reels, stories, copywriting, photoEditing, aiImages, aiVideos, testimonials]);
 
 
   const closeCreateForm = () => {
@@ -1762,6 +1996,151 @@ export function AdminPage() {
     });
   }, [editingPhotoEditing, formTable, showCreateForm]);
 
+  const renderAiMediaGrid = (table: "ai_images" | "ai_videos") => {
+    const isImageTable = table === "ai_images";
+    const items = isImageTable ? aiImages : aiVideos;
+    const deletingId = isImageTable ? aiImagesDeleteId : aiVideosDeleteId;
+    const mediaLabel = isImageTable ? "AI Image" : "AI Video";
+
+    return (
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+        {items.map((item, index) => {
+          const mediaUrl = isImageTable
+            ? (item as AiImageItem).image_url
+            : (item as AiVideoItem).video_url;
+          const previewImage = isImageTable
+            ? ((item as AiImageItem).thumbnail_url || (item as AiImageItem).image_url)
+            : (item as AiVideoItem).thumbnail_url;
+          const description = item.description?.trim();
+
+          return (
+            <div
+              key={item.id}
+              className="bg-white rounded-3xl p-5 border border-ink/5 hover:border-ink/20 hover:shadow-xl transition-all group"
+            >
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div className="min-w-0 flex-1">
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-ink/5 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-ink/50">
+                      {mediaLabel}
+                    </span>
+                    <span className={clsx(
+                      "rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em]",
+                      item.is_published === false ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"
+                    )}>
+                      {item.is_published === false ? "Draft" : "Published"}
+                    </span>
+                  </div>
+                  <h3 className="truncate text-lg font-bold text-ink">{item.title || mediaLabel}</h3>
+                  {description && (
+                    <p className="mt-1 line-clamp-2 text-sm text-ink/50">{description}</p>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isImageTable) {
+                        moveItemUp(index, aiImages, setAiImages, setAiImagesOrderDirty);
+                      } else {
+                        moveItemUp(index, aiVideos, setAiVideos, setAiVideosOrderDirty);
+                      }
+                    }}
+                    disabled={index === 0}
+                    className="w-8 h-8 rounded-full bg-sand text-ink/70 hover:text-ink hover:bg-ink/10 transition-colors flex items-center justify-center disabled:opacity-30 disabled:hover:bg-sand disabled:hover:text-ink/70"
+                    aria-label={`Move ${mediaLabel.toLowerCase()} up`}
+                  >
+                    <ArrowUp size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isImageTable) {
+                        moveItemDown(index, aiImages, setAiImages, setAiImagesOrderDirty);
+                      } else {
+                        moveItemDown(index, aiVideos, setAiVideos, setAiVideosOrderDirty);
+                      }
+                    }}
+                    disabled={index === items.length - 1}
+                    className="w-8 h-8 rounded-full bg-sand text-ink/70 hover:text-ink hover:bg-ink/10 transition-colors flex items-center justify-center disabled:opacity-30 disabled:hover:bg-sand disabled:hover:text-ink/70"
+                    aria-label={`Move ${mediaLabel.toLowerCase()} down`}
+                  >
+                    <ArrowDown size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAiMediaDelete(table, item.id)}
+                    disabled={deletingId === item.id}
+                    className="w-8 h-8 rounded-full bg-red-50 text-red-500 hover:bg-red-100 transition-colors flex items-center justify-center disabled:opacity-60"
+                    aria-label={`Delete ${mediaLabel.toLowerCase()}`}
+                  >
+                    {deletingId === item.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                  </button>
+                </div>
+              </div>
+
+              {mediaUrl ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPreviewModal(
+                      isImageTable
+                        ? {
+                          type: "single",
+                          title: item.title || mediaLabel,
+                          image: mediaUrl,
+                        }
+                        : {
+                          type: "video",
+                          title: item.title || mediaLabel,
+                          video: mediaUrl,
+                        }
+                    )
+                  }
+                  className="aspect-video w-full overflow-hidden rounded-2xl bg-black"
+                >
+                  {isImageTable ? (
+                    <img
+                      src={previewImage ?? mediaUrl}
+                      alt={(item as AiImageItem).alt_text || item.title || mediaLabel}
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                    />
+                  ) : previewImage ? (
+                    <img
+                      src={previewImage}
+                      alt={item.title || mediaLabel}
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                    />
+                  ) : (
+                    <video
+                      src={mediaUrl}
+                      muted
+                      playsInline
+                      preload="metadata"
+                      className="h-full w-full object-cover"
+                    />
+                  )}
+                </button>
+              ) : (
+                <div className="flex aspect-video items-center justify-center rounded-2xl bg-sand/40 text-xs text-ink/40">
+                  No media file
+                </div>
+              )}
+
+              <div className="mt-4 flex items-center justify-between border-t border-ink/5 pt-4">
+                <span className="text-xs text-ink/30 font-mono uppercase">
+                  {item.created_at ? new Date(item.created_at).toLocaleDateString() : "N/A"}
+                </span>
+                <span className="text-xs font-semibold text-ink/35">#{index + 1}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   if (!mounted) {
     return null;
   }
@@ -1855,6 +2234,8 @@ export function AdminPage() {
       case "stories": return stories;
       case "copywriting": return copywriting;
       case "photo_editing": return photoEditing;
+      case "ai_images": return aiImages;
+      case "ai_videos": return aiVideos;
       case "testimonials": return testimonials;
       default: return [];
     }
@@ -1920,6 +2301,8 @@ export function AdminPage() {
                 "clients",
                 "carousels",
                 "reels",
+                "ai_images",
+                "ai_videos",
                 "stories",
                 "copywriting",
                 "photo_editing",
@@ -2002,7 +2385,7 @@ export function AdminPage() {
               </h2>
               <p className="text-sm text-ink/40">
                 {selectedTable === "dashboard"
-                  ? `${dashboardStats.totalEntries} total items across 7 sections`
+                  ? `${dashboardStats.totalEntries} total items across 9 sections`
                   : selectedTable === "clients" && !selectedIndustryId
                     ? `${industries.length} industries`
                     : `${currentData.length} entries found`}
@@ -2040,6 +2423,28 @@ export function AdminPage() {
                 className="bg-white text-ink px-5 py-3 rounded-xl font-medium text-sm flex items-center gap-2 border border-ink/10 hover:border-ink/30 hover:bg-sand transition-all disabled:opacity-50"
               >
                 {photoEditingOrderState === "saving" && <Loader2 className="animate-spin" size={16} />}
+                Save Changes
+              </button>
+            )}
+            {selectedTable === "ai_images" && aiImagesOrderDirty && (
+              <button
+                type="button"
+                onClick={() => handleAiMediaOrderSave("ai_images", aiImages)}
+                disabled={aiImagesOrderState === "saving"}
+                className="bg-white text-ink px-5 py-3 rounded-xl font-medium text-sm flex items-center gap-2 border border-ink/10 hover:border-ink/30 hover:bg-sand transition-all disabled:opacity-50"
+              >
+                {aiImagesOrderState === "saving" && <Loader2 className="animate-spin" size={16} />}
+                Save Changes
+              </button>
+            )}
+            {selectedTable === "ai_videos" && aiVideosOrderDirty && (
+              <button
+                type="button"
+                onClick={() => handleAiMediaOrderSave("ai_videos", aiVideos)}
+                disabled={aiVideosOrderState === "saving"}
+                className="bg-white text-ink px-5 py-3 rounded-xl font-medium text-sm flex items-center gap-2 border border-ink/10 hover:border-ink/30 hover:bg-sand transition-all disabled:opacity-50"
+              >
+                {aiVideosOrderState === "saving" && <Loader2 className="animate-spin" size={16} />}
                 Save Changes
               </button>
             )}
@@ -2112,6 +2517,12 @@ export function AdminPage() {
                 {copywritingOrderMessage}
               </span>
             )}
+            {selectedTable === "ai_images" && aiImagesOrderState === "error" && aiImagesOrderError && (
+              <span className="text-xs font-semibold text-red-500">{aiImagesOrderError}</span>
+            )}
+            {selectedTable === "ai_videos" && aiVideosOrderState === "error" && aiVideosOrderError && (
+              <span className="text-xs font-semibold text-red-500">{aiVideosOrderError}</span>
+            )}
           </div>
         </header>
 
@@ -2120,6 +2531,20 @@ export function AdminPage() {
 
             <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
               {adminDataError}
+            </div>
+          )}
+
+          {(selectedTable === "ai_images" || selectedTable === "ai_videos") && aiMediaSetupWarnings.length > 0 && (
+            <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
+              <p className="font-semibold">AI media tables need the updated permissions script.</p>
+              <p className="mt-1">
+                Run the latest <span className="font-mono">data/supabase-ai-media.sql</span> in Supabase, then refresh this dashboard.
+              </p>
+              <ul className="mt-2 list-inside list-disc text-xs text-amber-700">
+                {aiMediaSetupWarnings.map((warning) => (
+                  <li key={warning}>{warning}</li>
+                ))}
+              </ul>
             </div>
           )}
 
@@ -2177,6 +2602,16 @@ export function AdminPage() {
                       key: "reels" as TableKey,
                       count: reels.length,
                       helper: `${reels.length} video entries`,
+                    },
+                    {
+                      key: "ai_images" as TableKey,
+                      count: aiImages.length,
+                      helper: `${aiImages.length} generated image${aiImages.length === 1 ? "" : "s"}`,
+                    },
+                    {
+                      key: "ai_videos" as TableKey,
+                      count: aiVideos.length,
+                      helper: `${aiVideos.length} generated video${aiVideos.length === 1 ? "" : "s"}`,
                     },
                     {
                       key: "stories" as TableKey,
@@ -2654,6 +3089,10 @@ export function AdminPage() {
                   )}
                 </div>
 
+              ) : selectedTable === "ai_images" ? (
+                renderAiMediaGrid("ai_images")
+              ) : selectedTable === "ai_videos" ? (
+                renderAiMediaGrid("ai_videos")
               ) : selectedTable === "reels" ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {reels.map((item, index) => (
@@ -4214,6 +4653,72 @@ export function AdminPage() {
                                       </div>
                                       <span className="text-xs font-bold uppercase tracking-widest">
                                         {uploadingField === field.name ? "Uploading..." : "Drag & Drop or Click to Upload"}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {formTable === "ai_videos" && field.name === "video_url" && (
+                                <div
+                                  className={clsx(
+                                    "bg-sand/50 rounded-xl p-4 border border-dashed transition-colors",
+                                    dragOverField === field.name ? "border-ink/50 bg-sand/70" : "border-ink/20 hover:border-ink/40"
+                                  )}
+                                  onDragOver={(event) => {
+                                    event.preventDefault();
+                                    setDragOverField(field.name);
+                                  }}
+                                  onDragLeave={() => setDragOverField(null)}
+                                  onDrop={(event) => {
+                                    event.preventDefault();
+                                    setDragOverField(null);
+                                    if (event.dataTransfer?.files?.length) {
+                                      void handleImageUpload(field.name, event.dataTransfer.files);
+                                    }
+                                  }}
+                                >
+                                  <input
+                                    ref={(el) => { fileInputRefs.current[field.name] = el; }}
+                                    type="file"
+                                    accept="video/mp4,video/webm,video/quicktime,video/x-m4v,video/mpeg"
+                                    className="hidden"
+                                    onChange={(e) => handleImageUpload(field.name, e.target.files)}
+                                  />
+
+                                  {imagePreview[field.name] ? (
+                                    <div className="relative overflow-hidden rounded-lg bg-black group">
+                                      <video
+                                        src={imagePreview[field.name]}
+                                        controls
+                                        playsInline
+                                        preload="metadata"
+                                        className="h-48 w-full object-contain"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setImagePreview(prev => { const n = { ...prev }; delete n[field.name]; return n; });
+                                          if (inputRefs.current[field.name]) inputRefs.current[field.name]!.value = "";
+                                        }}
+                                        className="absolute top-2 right-2 bg-white/90 p-2 rounded-full text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                      >
+                                        <Trash2 size={16} />
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div
+                                      onClick={() => fileInputRefs.current[field.name]?.click()}
+                                      className="flex flex-col items-center justify-center py-6 cursor-pointer text-ink/40 hover:text-ink/70 transition-colors"
+                                    >
+                                      <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mb-2 shadow-sm">
+                                        {uploadingField === field.name ? <Loader2 className="animate-spin" size={20} /> : <UploadCloud size={20} />}
+                                      </div>
+                                      <span className="text-xs font-bold uppercase tracking-widest">
+                                        {uploadingField === field.name ? "Uploading..." : "Drag & Drop or Click to Upload Video"}
+                                      </span>
+                                      <span className="mt-2 text-[10px] uppercase tracking-widest text-ink/35">
+                                        MP4, WEBM, MOV, M4V, or MPEG
                                       </span>
                                     </div>
                                   )}

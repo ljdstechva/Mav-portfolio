@@ -12,7 +12,9 @@ type AllowedTable =
   | "stories"
   | "copywriting"
   | "photo_editing"
-  | "testimonials";
+  | "testimonials"
+  | "ai_images"
+  | "ai_videos";
 
 const TABLE_COLUMNS: Record<AllowedTable, string[]> = {
   industries: ["name"],
@@ -23,13 +25,18 @@ const TABLE_COLUMNS: Record<AllowedTable, string[]> = {
   copywriting: ["image_url", "sort_order"],
   photo_editing: ["before_image_url", "after_image_url"],
   testimonials: ["client_name", "role", "company", "quote", "avatar_url", "sort_order"],
+  ai_images: ["title", "description", "image_url", "thumbnail_url", "alt_text", "sort_order", "is_published"],
+  ai_videos: ["title", "description", "video_url", "thumbnail_url", "sort_order", "is_published"],
 };
 const REQUIRED_COLUMNS: Partial<Record<AllowedTable, string[]>> = {
   industries: ["name"],
   testimonials: ["client_name", "quote"],
+  ai_images: ["title", "image_url"],
+  ai_videos: ["title", "video_url"],
 };
 
 const NUMBER_FIELDS = new Set(["position", "sort_order"]);
+const BOOLEAN_FIELDS = new Set(["is_published"]);
 
 function normalizeValue(key: string, value: unknown) {
   if (value === null || value === undefined) {
@@ -44,7 +51,15 @@ function normalizeValue(key: string, value: unknown) {
       const parsed = Number(trimmed);
       return Number.isNaN(parsed) ? null : parsed;
     }
+    if (BOOLEAN_FIELDS.has(key)) {
+      if (["true", "1", "on", "yes"].includes(trimmed.toLowerCase())) return true;
+      if (["false", "0", "off", "no"].includes(trimmed.toLowerCase())) return false;
+      return null;
+    }
     return trimmed;
+  }
+  if (typeof value === "boolean" && BOOLEAN_FIELDS.has(key)) {
+    return value;
   }
   return value;
 }

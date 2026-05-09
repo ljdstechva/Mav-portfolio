@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 export async function GET() {
   const supabase = createSupabaseServerClient();
 
-  const [industries, clients, carousels, copywriting, reels, photoEditing] = await Promise.all([
+  const [industries, clients, carousels, copywriting, reels, photoEditing, aiImages, aiVideos] = await Promise.all([
     supabase.from("industries").select("id, name").order("created_at", { ascending: true }),
     supabase
       .from("clients")
@@ -29,6 +29,18 @@ export async function GET() {
     supabase
       .from("photo_editing")
       .select("id, client, title, before_image_url, after_image_url, sort_order, created_at")
+      .order("sort_order", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("ai_images")
+      .select("id, title, description, image_url, thumbnail_url, alt_text, sort_order, is_published, created_at")
+      .eq("is_published", true)
+      .order("sort_order", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("ai_videos")
+      .select("id, title, description, video_url, thumbnail_url, sort_order, is_published, created_at")
+      .eq("is_published", true)
       .order("sort_order", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: false }),
   ]);
@@ -60,5 +72,7 @@ export async function GET() {
     reels: reels.data ?? [],
     stories: storiesData,
     photoEditing: photoEditing.data ?? [],
+    aiImages: aiImages.error ? [] : (aiImages.data ?? []),
+    aiVideos: aiVideos.error ? [] : (aiVideos.data ?? []),
   });
 }

@@ -4,7 +4,17 @@ import { ensureSupabaseAuthed } from "@/lib/supabaseAdminAuth";
 
 export const runtime = "nodejs";
 
-type AllowedTable = "industries" | "clients" | "reels" | "carousels" | "stories" | "photo_editing" | "testimonials" | "copywriting";
+type AllowedTable =
+  | "industries"
+  | "clients"
+  | "reels"
+  | "carousels"
+  | "stories"
+  | "photo_editing"
+  | "testimonials"
+  | "copywriting"
+  | "ai_images"
+  | "ai_videos";
 const ID_DELETE_TABLES: ReadonlyArray<Exclude<AllowedTable, "industries" | "clients">> = [
   "reels",
   "carousels",
@@ -12,7 +22,28 @@ const ID_DELETE_TABLES: ReadonlyArray<Exclude<AllowedTable, "industries" | "clie
   "photo_editing",
   "testimonials",
   "copywriting",
+  "ai_images",
+  "ai_videos",
 ];
+
+const STORAGE_BUCKET = "portfolio";
+
+function extractPortfolioStoragePath(publicUrl: string | null | undefined, table: "ai_images" | "ai_videos") {
+  if (!publicUrl) return null;
+
+  try {
+    const url = new URL(publicUrl);
+    const prefix = `/storage/v1/object/public/${STORAGE_BUCKET}/`;
+    const pathIndex = url.pathname.indexOf(prefix);
+    if (pathIndex === -1) return null;
+
+    const path = decodeURIComponent(url.pathname.slice(pathIndex + prefix.length));
+    if (!path.startsWith(`${table}/`)) return null;
+    return path;
+  } catch {
+    return null;
+  }
+}
 
 export async function POST(request: Request) {
   if (!(await ensureSupabaseAuthed(request))) {
@@ -54,6 +85,47 @@ export async function POST(request: Request) {
     if (error) {
       return NextResponse.json({ message: error.message }, { status: 500 });
     }
+    return NextResponse.json({ ok: true }, { status: 200 });
+  }
+
+  if (body.table === "ai_images" || body.table === "ai_videos") {
+    const mediaColumns = body.table === "ai_images"
+      ? "image_url, thumbnail_url"
+      : "video_url, thumbnail_url";
+    const existing = await supabase
+      .from(body.table)
+      .select(mediaColumns)
+      .eq("id", body.id)
+      .maybeSingle();
+
+    if (existing.error) {
+      return NextResponse.json({ message: existing.error.message }, { status: 500 });
+    }
+
+    const { error } = await supabase.from(body.table).delete().eq("id", body.id);
+    if (error) {
+      return NextResponse.json({ message: error.message }, { status: 500 });
+    }
+
+    const row = existing.data as
+      | { image_url?: string | null; video_url?: string | null; thumbnail_url?: string | null }
+      | null;
+    const storagePaths = [
+      extractPortfolioStoragePath(row?.image_url, body.table),
+      extractPortfolioStoragePath(row?.video_url, body.table),
+      extractPortfolioStoragePath(row?.thumbnail_url, body.table),
+    ].filter((path): path is string => Boolean(path));
+
+    if (storagePaths.length > 0) {
+      const storageDelete = await supabase.storage.from(STORAGE_BUCKET).remove(storagePaths);
+      if (storageDelete.error) {
+        return NextResponse.json(
+          { ok: true, warning: storageDelete.error.message },
+          { status: 200 }
+        );
+      }
+    }
+
     return NextResponse.json({ ok: true }, { status: 200 });
   }
 

@@ -4,12 +4,14 @@ import { ensureSupabaseAuthed } from "@/lib/supabaseAdminAuth";
 
 export const runtime = "nodejs";
 
-type AllowedTable = "stories" | "reels" | "photo_editing" | "testimonials";
+type AllowedTable = "stories" | "reels" | "photo_editing" | "testimonials" | "ai_images" | "ai_videos";
 const ORDERABLE_TABLES: ReadonlyArray<AllowedTable> = [
   "stories",
   "reels",
   "photo_editing",
   "testimonials",
+  "ai_images",
+  "ai_videos",
 ];
 
 export async function POST(request: Request) {
@@ -47,12 +49,19 @@ export async function POST(request: Request) {
   // Use targeted updates here instead of partial upserts so tables with
   // required columns do not trip insert-time NOT NULL constraints.
   const results = await Promise.all(
-    payload.map((item) =>
-      supabase
+    payload.map((item) => {
+      const updatePayload: { sort_order: number; updated_at?: string } = {
+        sort_order: item.sort_order,
+      };
+      if (table === "ai_images" || table === "ai_videos") {
+        updatePayload.updated_at = new Date().toISOString();
+      }
+
+      return supabase
         .from(table)
-        .update({ sort_order: item.sort_order })
-        .eq("id", item.id)
-    )
+        .update(updatePayload)
+        .eq("id", item.id);
+    })
   );
 
   const error = results.find((result) => result.error)?.error;

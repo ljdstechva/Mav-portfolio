@@ -4,17 +4,63 @@ import { ensureSupabaseAuthed } from "@/lib/supabaseAdminAuth";
 
 export const runtime = "nodejs";
 
-type AllowedTable = "testimonials";
+type AllowedTable = "testimonials" | "ai_images" | "ai_videos";
 
 const ALLOWED_UPLOADS: Record<AllowedTable, string[]> = {
   testimonials: ["avatar_url"],
+  ai_images: ["image_url", "thumbnail_url"],
+  ai_videos: ["video_url", "thumbnail_url"],
 };
 
 const STORAGE_BUCKET = "portfolio";
+const IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"]);
+const VIDEO_MIME_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime", "video/x-m4v", "video/mpeg"]);
+const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 250 * 1024 * 1024;
 
 function sanitizeExtension(fileName: string) {
   const extension = fileName.split(".").pop()?.toLowerCase() ?? "bin";
   return extension.replace(/[^a-z0-9]/g, "") || "bin";
+}
+
+function getExpectedUploadKind(table: AllowedTable, field: string) {
+  if (table === "ai_videos" && field === "video_url") {
+    return "video";
+  }
+  if (table === "ai_images" || field === "thumbnail_url") {
+    return "image";
+  }
+  return "testimonial";
+}
+
+function validateFileForUpload(file: File, table: AllowedTable, field: string) {
+  const expectedKind = getExpectedUploadKind(table, field);
+
+  if (expectedKind === "image") {
+    if (!IMAGE_MIME_TYPES.has(file.type)) {
+      return "Only JPG, PNG, WEBP, GIF, and AVIF images are supported.";
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      return "Image uploads must be 20MB or smaller.";
+    }
+  }
+
+  if (expectedKind === "video") {
+    if (!VIDEO_MIME_TYPES.has(file.type)) {
+      return "Only MP4, WEBM, MOV, M4V, and MPEG videos are supported.";
+    }
+    if (file.size > MAX_VIDEO_BYTES) {
+      return "Video uploads must be 250MB or smaller.";
+    }
+  }
+
+  if (expectedKind === "testimonial") {
+    if (file.type && !file.type.startsWith("image/") && !file.type.startsWith("video/")) {
+      return "Only image and video uploads are supported for testimonials.";
+    }
+  }
+
+  return null;
 }
 
 export async function POST(request: Request) {
@@ -39,11 +85,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "No file provided." }, { status: 400 });
   }
 
-  if (file.type && !file.type.startsWith("image/") && !file.type.startsWith("video/")) {
-    return NextResponse.json(
-      { message: "Only image and video uploads are supported for testimonials." },
-      { status: 400 }
-    );
+  const validationError = validateFileForUpload(file, table, field);
+  if (validationError) {
+    return NextResponse.json({ message: validationError }, { status: 400 });
   }
 
   const supabase = createSupabaseServerClient();
@@ -58,7 +102,7 @@ export async function POST(request: Request) {
 
   if (!bucket.data.public) {
     return NextResponse.json(
-      { message: `Supabase storage bucket "${STORAGE_BUCKET}" must be public for testimonial media URLs to render.` },
+      { message: `Supabase storage bucket "${STORAGE_BUCKET}" must be public for uploaded media URLs to render.` },
       { status: 500 }
     );
   }
