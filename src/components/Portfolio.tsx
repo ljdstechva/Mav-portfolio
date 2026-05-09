@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   ArrowRight,
-  Play,
   X
 } from "lucide-react";
 import clsx from "clsx";
@@ -586,8 +585,6 @@ function AiImagesList({
   onBack: () => void;
   loading: boolean;
 }) {
-  const [selectedItem, setSelectedItem] = useState<AiImageItem | null>(null);
-
   if (loading) return <div className="text-ink/50">Loading AI images...</div>;
   if (items.length === 0) {
     return (
@@ -615,82 +612,31 @@ function AiImagesList({
       <div className="mb-8 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <div>
           <p className="mb-2 text-xs font-bold uppercase tracking-[0.28em] text-sienna">AI visual portfolio</p>
-          <h3 className="text-2xl font-bold text-ink md:text-3xl">Generated visuals built for client campaigns</h3>
+          <h3 className="text-2xl font-bold text-ink md:text-3xl">Generated visuals, cleanly presented</h3>
         </div>
         <span className="rounded-full border border-ink/10 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-ink/50">
-          {items.length} piece{items.length === 1 ? "" : "s"}
+          {items.length} image{items.length === 1 ? "" : "s"}
         </span>
       </div>
 
-      <div className="columns-1 gap-5 sm:columns-2 lg:columns-3 [&>*]:mb-5">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => (
-          <button
+          <figure
             key={item.id}
-            type="button"
-            onClick={() => setSelectedItem(item)}
-            className="group relative w-full break-inside-avoid overflow-hidden rounded-[24px] border border-ink/10 bg-sand/40 text-left shadow-sm transition-all hover:border-ink/20 hover:shadow-xl"
+            className="group overflow-hidden rounded-3xl border border-ink/10 bg-white shadow-sm transition-all hover:border-ink/20 hover:shadow-xl"
           >
-            <img
-              src={item.thumbnail_url || item.image_url}
-              alt={item.alt_text || item.title}
-              className="h-auto w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-              loading="lazy"
-              decoding="async"
-            />
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent p-5 text-white opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-              <h4 className="text-lg font-bold">{item.title}</h4>
-              {item.description && (
-                <p className="mt-1 line-clamp-2 text-sm text-white/80">{item.description}</p>
-              )}
+            <div className="aspect-[4/5] bg-sand/20">
+              <img
+                src={item.thumbnail_url || item.image_url}
+                alt={item.alt_text || "AI portfolio image"}
+                className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-[1.02]"
+                loading="lazy"
+                decoding="async"
+              />
             </div>
-          </button>
+          </figure>
         ))}
       </div>
-
-      <AnimatePresence>
-        {selectedItem && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setSelectedItem(null)}
-          >
-            <motion.div
-              className="relative w-full max-w-5xl overflow-hidden rounded-[28px] bg-white shadow-2xl"
-              initial={{ scale: 0.96, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.96, opacity: 0 }}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <button
-                type="button"
-                onClick={() => setSelectedItem(null)}
-                className="absolute right-4 top-4 z-10 rounded-full bg-white/90 p-2 text-ink shadow-lg transition-colors hover:bg-white"
-                aria-label="Close preview"
-              >
-                <X size={18} />
-              </button>
-              <div className="grid max-h-[90vh] grid-cols-1 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_320px]">
-                <div className="flex min-h-[320px] items-center justify-center bg-sand/40 p-4">
-                  <img
-                    src={selectedItem.image_url}
-                    alt={selectedItem.alt_text || selectedItem.title}
-                    className="max-h-[82vh] w-full object-contain"
-                  />
-                </div>
-                <div className="p-6">
-                  <p className="mb-3 text-xs font-bold uppercase tracking-[0.24em] text-sienna">AI Image</p>
-                  <h4 className="text-2xl font-bold text-ink">{selectedItem.title}</h4>
-                  {selectedItem.description && (
-                    <p className="mt-4 text-sm leading-relaxed text-ink/60">{selectedItem.description}</p>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
@@ -704,8 +650,6 @@ function AiVideosList({
   onBack: () => void;
   loading: boolean;
 }) {
-  const [selectedItem, setSelectedItem] = useState<AiVideoItem | null>(null);
-
   if (loading) return <div className="text-ink/50">Loading AI videos...</div>;
   if (items.length === 0) {
     return (
@@ -742,92 +686,24 @@ function AiVideosList({
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
         {items.map((item) => (
-          <button
+          <div
             key={item.id}
-            type="button"
-            onClick={() => setSelectedItem(item)}
             className="group overflow-hidden rounded-[24px] border border-ink/10 bg-white text-left shadow-sm transition-all hover:border-ink/20 hover:shadow-xl"
           >
             <div className="relative aspect-video overflow-hidden bg-black">
-              {item.thumbnail_url ? (
-                <img
-                  src={item.thumbnail_url}
-                  alt={item.title}
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                  loading="lazy"
-                  decoding="async"
-                />
-              ) : (
-                <video
-                  src={item.video_url}
-                  muted
-                  playsInline
-                  preload="metadata"
-                  className="h-full w-full object-cover"
-                />
-              )}
-              <div className="absolute inset-0 flex items-center justify-center bg-black/15 transition-colors group-hover:bg-black/25">
-                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/90 text-ink shadow-lg">
-                  <Play size={22} fill="currentColor" />
-                </span>
-              </div>
+              <video
+                src={item.video_url}
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="metadata"
+                className="h-full w-full object-cover"
+              />
             </div>
-            <div className="p-5">
-              <h4 className="text-lg font-bold text-ink">{item.title}</h4>
-              {item.description && (
-                <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-ink/55">{item.description}</p>
-              )}
-            </div>
-          </button>
+          </div>
         ))}
       </div>
-
-      <AnimatePresence>
-        {selectedItem && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setSelectedItem(null)}
-          >
-            <motion.div
-              className="relative w-full max-w-5xl overflow-hidden rounded-[28px] bg-white shadow-2xl"
-              initial={{ scale: 0.96, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.96, opacity: 0 }}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <button
-                type="button"
-                onClick={() => setSelectedItem(null)}
-                className="absolute right-4 top-4 z-10 rounded-full bg-white/90 p-2 text-ink shadow-lg transition-colors hover:bg-white"
-                aria-label="Close preview"
-              >
-                <X size={18} />
-              </button>
-              <div className="grid max-h-[90vh] grid-cols-1 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_320px]">
-                <div className="flex min-h-[320px] items-center justify-center bg-black p-4">
-                  <video
-                    src={selectedItem.video_url}
-                    controls
-                    playsInline
-                    preload="metadata"
-                    className="max-h-[82vh] w-full rounded-2xl"
-                  />
-                </div>
-                <div className="p-6">
-                  <p className="mb-3 text-xs font-bold uppercase tracking-[0.24em] text-sienna">AI Video</p>
-                  <h4 className="text-2xl font-bold text-ink">{selectedItem.title}</h4>
-                  {selectedItem.description && (
-                    <p className="mt-4 text-sm leading-relaxed text-ink/60">{selectedItem.description}</p>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

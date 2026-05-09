@@ -237,15 +237,13 @@ const TABLE_CONFIG: Record<
     singularLabel: "AI Image",
     icon: ImageIcon,
     fields: [
-      { name: "title", label: "Title", required: true, placeholder: "e.g. Product Launch Concept" },
       {
-        name: "description",
-        label: "Description",
-        type: "textarea",
-        placeholder: "Briefly describe the creative direction or client use case.",
+        name: "image_url",
+        label: "AI Image File",
+        type: "url",
+        required: true,
+        helper: "Upload one finished AI image. It will appear directly in the public AI Images category.",
       },
-      { name: "image_url", label: "AI Image File", type: "url", required: true },
-      { name: "alt_text", label: "Alt Text", placeholder: "Describe the image for accessibility." },
     ],
   },
   ai_videos: {
@@ -253,14 +251,13 @@ const TABLE_CONFIG: Record<
     singularLabel: "AI Video",
     icon: Video,
     fields: [
-      { name: "title", label: "Title", required: true, placeholder: "e.g. Brand Reveal Motion" },
       {
-        name: "description",
-        label: "Description",
-        type: "textarea",
-        placeholder: "Briefly describe the concept, pacing, or business use case.",
+        name: "video_url",
+        label: "AI Video File",
+        type: "url",
+        required: true,
+        helper: "Upload one MP4, WEBM, MOV, M4V, MPEG, or OGG video. It will autoplay muted in the public AI Videos category.",
       },
-      { name: "video_url", label: "AI Video File", type: "url", required: true },
     ],
   },
   stories: {
@@ -316,15 +313,45 @@ const IMAGE_FIELDS = new Set([
 ]);
 
 const AI_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"]);
-const AI_VIDEO_MIME_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime", "video/x-m4v", "video/mpeg"]);
+const AI_VIDEO_MIME_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime", "video/x-m4v", "video/mpeg", "video/ogg"]);
+const AI_MEDIA_EXTENSION_TYPES: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  gif: "image/gif",
+  avif: "image/avif",
+  mp4: "video/mp4",
+  webm: "video/webm",
+  mov: "video/quicktime",
+  m4v: "video/x-m4v",
+  mpeg: "video/mpeg",
+  mpg: "video/mpeg",
+  ogv: "video/ogg",
+  ogg: "video/ogg",
+};
+
+function inferAiMediaContentType(file: File) {
+  const declaredType = file.type.split(";")[0]?.trim().toLowerCase() ?? "";
+  if (AI_IMAGE_MIME_TYPES.has(declaredType) || AI_VIDEO_MIME_TYPES.has(declaredType)) {
+    return declaredType;
+  }
+
+  const extension = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") ?? "";
+  return AI_MEDIA_EXTENSION_TYPES[extension] ?? declaredType;
+}
 
 function validateAiMediaFile(file: File, kind: "image" | "video") {
-  if (kind === "image" && !AI_IMAGE_MIME_TYPES.has(file.type)) {
+  const contentType = inferAiMediaContentType(file);
+
+  if (kind === "image" && !AI_IMAGE_MIME_TYPES.has(contentType)) {
     throw new Error("Upload a JPG, PNG, WEBP, GIF, or AVIF image.");
   }
-  if (kind === "video" && !AI_VIDEO_MIME_TYPES.has(file.type)) {
-    throw new Error("Upload an MP4, WEBM, MOV, M4V, or MPEG video.");
+  if (kind === "video" && !AI_VIDEO_MIME_TYPES.has(contentType)) {
+    throw new Error("Upload an MP4, WEBM, MOV, M4V, MPEG, or OGG video.");
   }
+
+  return contentType;
 }
 
 type LoginState = "idle" | "loading" | "error";
@@ -706,25 +733,21 @@ export function AdminPage() {
       }
 
       if (targetTable === "ai_images") {
-        if (!values.title) {
-          throw new Error("Title is required.");
-        }
         if (!values.image_url) {
           throw new Error("Please upload an AI image file.");
         }
         const maxSortOrder = aiImages.reduce((max, item) => Math.max(max, item.sort_order ?? -1), -1);
+        values.title = `AI Image ${maxSortOrder + 2}`;
         values.sort_order = String(maxSortOrder + 1);
         values.is_published = "true";
       }
 
       if (targetTable === "ai_videos") {
-        if (!values.title) {
-          throw new Error("Title is required.");
-        }
         if (!values.video_url) {
           throw new Error("Please upload an AI video file.");
         }
         const maxSortOrder = aiVideos.reduce((max, item) => Math.max(max, item.sort_order ?? -1), -1);
+        values.title = `AI Video ${maxSortOrder + 2}`;
         values.sort_order = String(maxSortOrder + 1);
         values.is_published = "true";
       }
@@ -931,29 +954,42 @@ export function AdminPage() {
         }
 
         const file = files[0];
-        validateAiMediaFile(file, isAiImageUpload ? "image" : "video");
+        const contentType = validateAiMediaFile(file, isAiImageUpload ? "image" : "video");
 
-        const payload = new FormData();
-        payload.append("table", targetTable);
-        payload.append("field", fieldName);
-        payload.append("file", file);
-
-        const response = await fetch("/api/admin-upload", {
+        const signedUploadResponse = await fetch("/api/admin-upload", {
           method: "POST",
           headers: {
             Authorization: `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
           },
-          body: payload,
+          body: JSON.stringify({
+            table: targetTable,
+            field: fieldName,
+            fileName: file.name,
+            contentType,
+            size: file.size,
+          }),
         });
 
-        const result = await response.json().catch(() => null);
+        const signedUpload = await signedUploadResponse.json().catch(() => null);
 
-        if (!response.ok || !result?.publicUrl) {
-          throw new Error(result?.message ?? "Supabase upload failed");
+        if (!signedUploadResponse.ok || !signedUpload?.token || !signedUpload?.path || !signedUpload?.publicUrl) {
+          throw new Error(signedUpload?.message ?? "Could not prepare the Supabase upload.");
         }
 
-        if (inputRefs.current[fieldName]) inputRefs.current[fieldName]!.value = result.publicUrl;
-        setImagePreview((prev) => ({ ...prev, [fieldName]: result.publicUrl }));
+        const upload = await supabase.storage
+          .from("portfolio")
+          .uploadToSignedUrl(signedUpload.path, signedUpload.token, file, {
+            cacheControl: "3600",
+            contentType,
+          });
+
+        if (upload.error) {
+          throw new Error(`Supabase upload failed: ${upload.error.message}`);
+        }
+
+        if (inputRefs.current[fieldName]) inputRefs.current[fieldName]!.value = signedUpload.publicUrl;
+        setImagePreview((prev) => ({ ...prev, [fieldName]: signedUpload.publicUrl }));
       } else if (targetTable === "testimonials" && fieldName === "avatar_url") {
         if (!session?.access_token) {
           throw new Error("Your admin session expired. Please sign in again.");
@@ -1053,7 +1089,10 @@ export function AdminPage() {
 
     } catch (error) {
       console.error(error);
-      alert("Media upload failed: " + (error instanceof Error ? error.message : "Unknown error"));
+      const message = error instanceof Error ? error.message : "Unknown error";
+      setUploadState("error");
+      setUploadMessage(`Media upload failed: ${message}`);
+      alert(`Media upload failed: ${message}`);
     } finally {
       if (fileInputRefs.current[fieldName]) {
         fileInputRefs.current[fieldName]!.value = "";
@@ -2011,7 +2050,6 @@ export function AdminPage() {
           const previewImage = isImageTable
             ? ((item as AiImageItem).thumbnail_url || (item as AiImageItem).image_url)
             : (item as AiVideoItem).thumbnail_url;
-          const description = item.description?.trim();
 
           return (
             <div
@@ -2031,10 +2069,6 @@ export function AdminPage() {
                       {item.is_published === false ? "Draft" : "Published"}
                     </span>
                   </div>
-                  <h3 className="truncate text-lg font-bold text-ink">{item.title || mediaLabel}</h3>
-                  {description && (
-                    <p className="mt-1 line-clamp-2 text-sm text-ink/50">{description}</p>
-                  )}
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -2081,49 +2115,32 @@ export function AdminPage() {
               </div>
 
               {mediaUrl ? (
-                <button
-                  type="button"
-                  onClick={() =>
-                    setPreviewModal(
-                      isImageTable
-                        ? {
-                          type: "single",
-                          title: item.title || mediaLabel,
-                          image: mediaUrl,
-                        }
-                        : {
-                          type: "video",
-                          title: item.title || mediaLabel,
-                          video: mediaUrl,
-                        }
-                    )
-                  }
-                  className="aspect-video w-full overflow-hidden rounded-2xl bg-black"
-                >
+                <div className={clsx(
+                  "w-full overflow-hidden rounded-2xl border border-ink/5",
+                  isImageTable ? "aspect-[4/5] bg-white" : "aspect-video bg-black"
+                )}>
                   {isImageTable ? (
                     <img
                       src={previewImage ?? mediaUrl}
-                      alt={(item as AiImageItem).alt_text || item.title || mediaLabel}
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                    />
-                  ) : previewImage ? (
-                    <img
-                      src={previewImage}
-                      alt={item.title || mediaLabel}
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                      alt={(item as AiImageItem).alt_text || mediaLabel}
+                      className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-[1.02]"
                     />
                   ) : (
                     <video
                       src={mediaUrl}
                       muted
                       playsInline
+                      controls
                       preload="metadata"
                       className="h-full w-full object-cover"
                     />
                   )}
-                </button>
+                </div>
               ) : (
-                <div className="flex aspect-video items-center justify-center rounded-2xl bg-sand/40 text-xs text-ink/40">
+                <div className={clsx(
+                  "flex items-center justify-center rounded-2xl bg-sand/40 text-xs text-ink/40",
+                  isImageTable ? "aspect-[4/5]" : "aspect-video"
+                )}>
                   No media file
                 </div>
               )}
@@ -4518,6 +4535,106 @@ export function AdminPage() {
                             </div>
                           </div>
                         )
+                      }
+
+                      const isAiImageFile = formTable === "ai_images" && field.name === "image_url";
+                      const isAiVideoFile = formTable === "ai_videos" && field.name === "video_url";
+                      if (isAiImageFile || isAiVideoFile) {
+                        return (
+                          <div key={field.name} className="space-y-3">
+                            <label className="text-xs font-bold uppercase tracking-widest text-ink/50 flex justify-between">
+                              {field.label}
+                              {field.required && <span className="text-terracotta text-[10px]">REQUIRED</span>}
+                            </label>
+                            <input
+                              ref={(el) => { inputRefs.current[field.name] = el; }}
+                              type="hidden"
+                              name={field.name}
+                            />
+                            <div
+                              className={clsx(
+                                "bg-sand/50 rounded-2xl p-4 border border-dashed transition-colors",
+                                dragOverField === field.name ? "border-ink/50 bg-sand/70" : "border-ink/20 hover:border-ink/40"
+                              )}
+                              onDragOver={(event) => {
+                                event.preventDefault();
+                                setDragOverField(field.name);
+                              }}
+                              onDragLeave={() => setDragOverField(null)}
+                              onDrop={(event) => {
+                                event.preventDefault();
+                                setDragOverField(null);
+                                if (event.dataTransfer?.files?.length) {
+                                  void handleImageUpload(field.name, event.dataTransfer.files);
+                                }
+                              }}
+                            >
+                              <input
+                                ref={(el) => { fileInputRefs.current[field.name] = el; }}
+                                type="file"
+                                accept={isAiImageFile ? "image/jpeg,image/png,image/webp,image/gif,image/avif" : "video/mp4,video/webm,video/quicktime,video/x-m4v,video/mpeg,video/ogg"}
+                                className="hidden"
+                                onChange={(e) => handleImageUpload(field.name, e.target.files)}
+                              />
+
+                              {imagePreview[field.name] ? (
+                                <div className={clsx(
+                                  "relative overflow-hidden rounded-2xl border border-ink/10 group",
+                                  isAiImageFile ? "aspect-[4/5] bg-white" : "aspect-video bg-black"
+                                )}>
+                                  {isAiImageFile ? (
+                                    <img src={imagePreview[field.name]} alt="AI upload preview" className="h-full w-full object-contain" />
+                                  ) : (
+                                    <video
+                                      src={imagePreview[field.name]}
+                                      controls
+                                      muted
+                                      playsInline
+                                      preload="metadata"
+                                      className="h-full w-full object-cover"
+                                    />
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setImagePreview(prev => {
+                                        const next = { ...prev };
+                                        delete next[field.name];
+                                        return next;
+                                      });
+                                      if (inputRefs.current[field.name]) inputRefs.current[field.name]!.value = "";
+                                    }}
+                                    className="absolute top-3 right-3 bg-white/90 p-2 rounded-full text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    aria-label="Remove uploaded media"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => fileInputRefs.current[field.name]?.click()}
+                                  className="flex w-full flex-col items-center justify-center py-10 cursor-pointer text-ink/40 hover:text-ink/70 transition-colors"
+                                >
+                                  <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-3 shadow-sm">
+                                    {uploadingField === field.name ? <Loader2 className="animate-spin" size={22} /> : <UploadCloud size={22} />}
+                                  </div>
+                                  <span className="text-xs font-bold uppercase tracking-widest">
+                                    {uploadingField === field.name
+                                      ? "Uploading..."
+                                      : isAiImageFile
+                                        ? "Drag & Drop or Click to Upload Image"
+                                        : "Drag & Drop or Click to Upload Video"}
+                                  </span>
+                                  <span className="mt-2 text-[10px] uppercase tracking-widest text-ink/35">
+                                    {isAiImageFile ? "JPG, PNG, WEBP, GIF, or AVIF" : "MP4, WEBM, MOV, M4V, MPEG, or OGG"}
+                                  </span>
+                                </button>
+                              )}
+                            </div>
+                            {field.helper && <p className="text-xs text-ink/40">{field.helper}</p>}
+                          </div>
+                        );
                       }
 
                       const isClientImage = formTable === "clients" && field.name === "image_url";
