@@ -3,8 +3,8 @@
 import { useEffect } from "react";
 
 const CACHE_PREFIX = "portfolio-assets-";
-const CURRENT_CACHE = "portfolio-assets-v2";
-const LEGACY_CACHE = "portfolio-assets-v1";
+const CURRENT_CACHE = "portfolio-assets-v3";
+const LEGACY_CACHE = "portfolio-assets-v2";
 
 export default function ServiceWorker() {
   useEffect(() => {

@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "portfolio-assets-";
-const CACHE_NAME = "portfolio-assets-v2";
+const CACHE_NAME = "portfolio-assets-v3";
 
 self.addEventListener("install", () => {
   self.skipWaiting();
@@ -24,7 +24,7 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
 
   const destination = request.destination;
-  if (destination !== "image" && destination !== "video") return;
+  if (destination !== "image") return;
 
   event.respondWith(
     (async () => {

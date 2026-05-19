@@ -94,6 +94,15 @@ const getCanvaEmbedUrl = (rawUrl: string) => {
   }
 };
 
+const isKnownBrokenPortfolioVideoUrl = (rawUrl: string) => {
+  try {
+    const url = new URL(rawUrl);
+    return url.hostname.endsWith("my.canva.site") && url.pathname.includes("/_assets/video/");
+  } catch {
+    return false;
+  }
+};
+
 export function Portfolio() {
   const [selectedCategory, setSelectedCategory] = useState<PortfolioCategory | null>(null);
   const [selectedIndustry, setSelectedIndustry] = useState<PortfolioIndustry | null>(null);
@@ -284,11 +293,13 @@ export function Portfolio() {
         })).sort((a, b) => a.clientName.localeCompare(b.clientName)); // Sort clients alphabetically
 
         // Process Reels
-        const reelsData = rawReels.map(r => ({
-          id: r.id,
-          video_url: r.video_url,
-          sort_order: r.sort_order ?? null,
-        }));
+        const reelsData = rawReels
+          .filter((r) => r.video_url && !isKnownBrokenPortfolioVideoUrl(r.video_url))
+          .map(r => ({
+            id: r.id,
+            video_url: r.video_url,
+            sort_order: r.sort_order ?? null,
+          }));
 
         const storiesData = rawStories.map((story, index) => {
           const id = typeof story.id === "string" ? story.id : `story-${index}`;
@@ -308,7 +319,7 @@ export function Portfolio() {
             title,
             video_url: videoUrl,
           };
-        });
+        }).filter((story) => story.video_url && !isKnownBrokenPortfolioVideoUrl(story.video_url));
 
         // Process Photo Editing
         const photoEditingData = rawPhotoEditing.map(p => ({
@@ -732,7 +743,6 @@ function AiVideosList({
 function AiVideoCard({ item, index }: { item: AiVideoItem; index: number }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const retryTimerRef = useRef<number | null>(null);
-  const retryCountRef = useRef(0);
   const [errorUrl, setErrorUrl] = useState<string | null>(null);
   const [loadVersion, setLoadVersion] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -775,11 +785,6 @@ function AiVideoCard({ item, index }: { item: AiVideoItem; index: number }) {
 
       if (video) {
         video.muted = nextMuted;
-        if (!nextMuted && video.paused) {
-          video.play()
-            .then(() => setIsPlaying(true))
-            .catch(() => setIsPlaying(false));
-        }
       }
 
       return nextMuted;
@@ -787,31 +792,19 @@ function AiVideoCard({ item, index }: { item: AiVideoItem; index: number }) {
   };
 
   useEffect(() => {
-    const startVideo = () => {
-      const video = videoRef.current;
-      if (!video) return;
+    const video = videoRef.current;
+    if (!video) return;
 
+    video.load();
+
+    const playTimer = window.setTimeout(() => {
       video.play()
         .then(() => setIsPlaying(true))
         .catch(() => setIsPlaying(false));
-    };
-
-    const playTimer = window.setTimeout(() => {
-      const video = videoRef.current;
-      if (video) video.load();
-      startVideo();
-    }, 250 + index * 450);
-
-    const revealTimer = window.setTimeout(() => {
-      const video = videoRef.current;
-      if (!video?.error && video && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-        startVideo();
-      }
-    }, 3500 + index * 450);
+    }, 150 + index * 200);
 
     return () => {
       window.clearTimeout(playTimer);
-      window.clearTimeout(revealTimer);
       if (retryTimerRef.current !== null) {
         window.clearTimeout(retryTimerRef.current);
         retryTimerRef.current = null;
@@ -820,9 +813,7 @@ function AiVideoCard({ item, index }: { item: AiVideoItem; index: number }) {
   }, [videoUrl, index]);
 
   const handleReady = () => {
-    retryCountRef.current = 0;
     setErrorUrl(null);
-    playVideo();
   };
 
   const retryVideo = () => {
@@ -834,13 +825,13 @@ function AiVideoCard({ item, index }: { item: AiVideoItem; index: number }) {
     setErrorUrl(videoUrl);
     setIsPlaying(false);
 
-    if (retryCountRef.current >= 2) return;
-
-    retryCountRef.current += 1;
-    retryTimerRef.current = window.setTimeout(() => {
-      retryTimerRef.current = null;
-      retryVideo();
-    }, 1200 + index * 400);
+    if (loadVersion === 0 && retryTimerRef.current === null) {
+      retryTimerRef.current = window.setTimeout(() => {
+        retryTimerRef.current = null;
+        setErrorUrl(null);
+        setLoadVersion((version) => version + 1);
+      }, 900 + index * 250);
+    }
   };
 
   return (
@@ -850,10 +841,11 @@ function AiVideoCard({ item, index }: { item: AiVideoItem; index: number }) {
           ref={videoRef}
           src={videoUrl}
           poster={item.thumbnail_url || undefined}
+          autoPlay
           muted={isMuted}
           loop
           playsInline
-          preload="metadata"
+          preload="auto"
           onLoadedData={handleReady}
           onCanPlay={handleReady}
           onPlaying={() => {
