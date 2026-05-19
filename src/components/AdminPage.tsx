@@ -4,6 +4,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { getSupabaseClient, getSupabaseConfigError } from "@/lib/supabaseClient";
 import { formatTestimonialAttribution, getTestimonialMediaKind } from "@/lib/testimonialMedia";
+import {
+  applyPortfolioCategoryOrder,
+  PORTFOLIO_CATEGORIES,
+  type PortfolioCategory,
+  type PortfolioCategoryOrderRow,
+} from "@/data/portfolioData";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
 import {
   LayoutDashboard,
@@ -128,6 +134,10 @@ type TestimonialItem = {
   avatar_url?: string | null;
   sort_order?: number | null;
   created_at?: string | null;
+};
+
+type PortfolioCategoryAdminItem = PortfolioCategory & {
+  sort_order: number;
 };
 
 type AdminListItem = {
@@ -304,6 +314,13 @@ const TABLE_CONFIG: Record<
   },
 };
 
+function getPortfolioCategoryAdminOrder(orderRows: PortfolioCategoryOrderRow[] | null | undefined): PortfolioCategoryAdminItem[] {
+  return applyPortfolioCategoryOrder(PORTFOLIO_CATEGORIES, orderRows).map((category, index) => ({
+    ...category,
+    sort_order: index,
+  }));
+}
+
 const IMAGE_FIELDS = new Set([
   "image_url",
   "before_image_url",
@@ -426,6 +443,12 @@ export function AdminPage() {
   const [aiVideosOrderDirty, setAiVideosOrderDirty] = useState(false);
   const [testimonials, setTestimonials] = useState<TestimonialItem[]>([]);
   const [testimonialsOrderDirty, setTestimonialsOrderDirty] = useState(false);
+  const [portfolioCategoryOrder, setPortfolioCategoryOrder] = useState<PortfolioCategoryAdminItem[]>(() =>
+    getPortfolioCategoryAdminOrder(null)
+  );
+  const [portfolioCategoryOrderDirty, setPortfolioCategoryOrderDirty] = useState(false);
+  const [portfolioCategoryOrderState, setPortfolioCategoryOrderState] = useState<"idle" | "saving" | "error" | "success">("idle");
+  const [portfolioCategoryOrderMessage, setPortfolioCategoryOrderMessage] = useState("");
   const [deletingStoryId, setDeletingStoryId] = useState<string | null>(null);
   const [storyOrderSaving, setStoryOrderSaving] = useState(false);
   const [storyOrderError, setStoryOrderError] = useState("");
@@ -436,6 +459,7 @@ export function AdminPage() {
   const [adminLoaded, setAdminLoaded] = useState(false);
   const [adminDataError, setAdminDataError] = useState<string | null>(null);
   const [aiMediaSetupWarnings, setAiMediaSetupWarnings] = useState<string[]>([]);
+  const [categoryOrderWarnings, setCategoryOrderWarnings] = useState<string[]>([]);
 
   // UI State
   const [loginState, setLoginState] = useState<LoginState>("idle");
@@ -599,7 +623,12 @@ export function AdminPage() {
       const testimonialData = data.testimonials ?? [];
       setTestimonials(testimonialData);
       setTestimonialsOrderDirty(false);
+      setPortfolioCategoryOrder(getPortfolioCategoryAdminOrder(data.portfolioCategoryOrder ?? []));
+      setPortfolioCategoryOrderDirty(false);
+      setPortfolioCategoryOrderState("idle");
+      setPortfolioCategoryOrderMessage("");
       setAiMediaSetupWarnings(Array.isArray(data.aiMediaSetupWarnings) ? data.aiMediaSetupWarnings : []);
+      setCategoryOrderWarnings(Array.isArray(data.categoryOrderWarnings) ? data.categoryOrderWarnings : []);
 
       setAdminLoaded(true);
     } catch (error) {
@@ -688,7 +717,12 @@ export function AdminPage() {
     setAiVideosOrderDirty(false);
     setTestimonials([]);
     setIndustries([]);
+    setPortfolioCategoryOrder(getPortfolioCategoryAdminOrder(null));
+    setPortfolioCategoryOrderDirty(false);
+    setPortfolioCategoryOrderState("idle");
+    setPortfolioCategoryOrderMessage("");
     setAiMediaSetupWarnings([]);
+    setCategoryOrderWarnings([]);
     setAdminLoaded(false);
   };
 
@@ -1825,6 +1859,45 @@ export function AdminPage() {
     }
   };
 
+  const handlePortfolioCategoryOrderSave = async () => {
+    if (!session) return;
+
+    setPortfolioCategoryOrderState("saving");
+    setPortfolioCategoryOrderMessage("");
+
+    try {
+      const response = await fetch("/api/admin-category-order", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          items: portfolioCategoryOrder.map((category, index) => ({
+            category_id: category.id,
+            sort_order: index,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.message ?? "Failed to save category order");
+      }
+
+      setPortfolioCategoryOrder((current) =>
+        current.map((category, index) => ({ ...category, sort_order: index }))
+      );
+      setPortfolioCategoryOrderDirty(false);
+      setPortfolioCategoryOrderState("success");
+      setPortfolioCategoryOrderMessage("Portfolio category order saved.");
+      await fetchAdminData();
+    } catch (error) {
+      setPortfolioCategoryOrderState("error");
+      setPortfolioCategoryOrderMessage(error instanceof Error ? error.message : "Failed to save category order");
+    }
+  };
+
   const handleClientPhotosUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     if (!selectedIndustryId || !selectedClientName) return;
@@ -2410,6 +2483,17 @@ export function AdminPage() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            {selectedTable === "dashboard" && portfolioCategoryOrderDirty && (
+              <button
+                type="button"
+                onClick={handlePortfolioCategoryOrderSave}
+                disabled={portfolioCategoryOrderState === "saving"}
+                className="bg-white text-ink px-5 py-3 rounded-xl font-medium text-sm flex items-center gap-2 border border-ink/10 hover:border-ink/30 hover:bg-sand transition-all disabled:opacity-50"
+              >
+                {portfolioCategoryOrderState === "saving" && <Loader2 className="animate-spin" size={16} />}
+                Save Category Order
+              </button>
+            )}
             {selectedTable === "reels" && reelsOrderDirty && (
               <button
                 type="button"
@@ -2565,6 +2649,20 @@ export function AdminPage() {
             </div>
           )}
 
+          {selectedTable === "dashboard" && categoryOrderWarnings.length > 0 && (
+            <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
+              <p className="font-semibold">Portfolio category sorting needs the database setup.</p>
+              <p className="mt-1">
+                Run <span className="font-mono">data/supabase-portfolio-category-order.sql</span>, then refresh this dashboard.
+              </p>
+              <ul className="mt-2 list-inside list-disc text-xs text-amber-700">
+                {categoryOrderWarnings.map((warning) => (
+                  <li key={warning}>{warning}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {selectedTable === "dashboard" ? (
             <div className="space-y-8">
               <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -2594,6 +2692,84 @@ export function AdminPage() {
                     <p className="mt-2 text-sm text-ink/40">{item.helper}</p>
                   </div>
                 ))}
+              </section>
+
+              <section className="bg-white rounded-3xl border border-ink/5 p-5 sm:p-6 shadow-sm">
+                <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.24em] text-ink/40">Portfolio Sorting</p>
+                    <h3 className="mt-2 text-xl font-bold text-ink">Public Category Order</h3>
+                    <p className="mt-1 text-sm text-ink/50">
+                      Use the arrows to control how categories appear in the public Portfolio section.
+                    </p>
+                  </div>
+                  {portfolioCategoryOrderMessage && (
+                    <span
+                      className={clsx(
+                        "text-xs font-semibold",
+                        portfolioCategoryOrderState === "error" ? "text-red-500" : "text-emerald-600"
+                      )}
+                    >
+                      {portfolioCategoryOrderMessage}
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  {portfolioCategoryOrder.map((category, index) => {
+                    const Icon = category.icon;
+                    return (
+                      <div
+                        key={category.id}
+                        className="flex items-center gap-3 rounded-2xl border border-ink/5 bg-sand/40 p-3"
+                      >
+                        <div className={clsx("flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl", category.color)}>
+                          <Icon size={20} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-bold text-ink">{category.name}</p>
+                          <p className="text-xs uppercase tracking-[0.18em] text-ink/35">
+                            Position {index + 1}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              moveItemUp(
+                                index,
+                                portfolioCategoryOrder,
+                                setPortfolioCategoryOrder,
+                                setPortfolioCategoryOrderDirty
+                              )
+                            }
+                            disabled={index === 0}
+                            className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-ink/60 transition-colors hover:bg-ink hover:text-white disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-ink/60"
+                            aria-label={`Move ${category.name} up`}
+                          >
+                            <ArrowUp size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              moveItemDown(
+                                index,
+                                portfolioCategoryOrder,
+                                setPortfolioCategoryOrder,
+                                setPortfolioCategoryOrderDirty
+                              )
+                            }
+                            disabled={index === portfolioCategoryOrder.length - 1}
+                            className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-ink/60 transition-colors hover:bg-ink hover:text-white disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-ink/60"
+                            aria-label={`Move ${category.name} down`}
+                          >
+                            <ArrowDown size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </section>
 
               <section>

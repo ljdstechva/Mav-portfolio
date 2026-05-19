@@ -13,7 +13,12 @@ import GalleryCarousel from "./GalleryCarousel";
 import Carousel, { CarouselItemData } from "./Carousel";
 import StarBorder from "./StarBorder";
 import { GlobalSpotlight, MagicStyles } from "./MagicBento";
-import { PORTFOLIO_CATEGORIES, PortfolioCategory } from "@/data/portfolioData";
+import {
+  applyPortfolioCategoryOrder,
+  PORTFOLIO_CATEGORIES,
+  type PortfolioCategory,
+  type PortfolioCategoryOrderRow,
+} from "@/data/portfolioData";
 
 type PortfolioProject = {
   id: string;
@@ -95,6 +100,7 @@ export function Portfolio() {
   const [photoEditing, setPhotoEditing] = useState<PhotoEditingItem[]>([]);
   const [aiImages, setAiImages] = useState<AiImageItem[]>([]);
   const [aiVideos, setAiVideos] = useState<AiVideoItem[]>([]);
+  const [portfolioCategories, setPortfolioCategories] = useState<PortfolioCategory[]>(PORTFOLIO_CATEGORIES);
   const [copywritingIndustry, setCopywritingIndustry] = useState<PortfolioIndustry | null>(null);
   const [industriesLoading, setIndustriesLoading] = useState(true);
   const [industriesError, setIndustriesError] = useState<string | null>(null);
@@ -191,6 +197,7 @@ export function Portfolio() {
           sort_order?: number | null;
           created_at?: string | null;
         }[];
+        const rawPortfolioCategoryOrder = (data.portfolioCategoryOrder ?? []) as PortfolioCategoryOrderRow[];
 
         // Process Graphics
         const byIndustry = rawIndustries.map((industry) => {
@@ -330,6 +337,7 @@ export function Portfolio() {
           setPhotoEditing(photoEditingData);
           setAiImages(aiImageData);
           setAiVideos(aiVideoData);
+          setPortfolioCategories(applyPortfolioCategoryOrder(PORTFOLIO_CATEGORIES, rawPortfolioCategoryOrder));
           setCopywritingIndustry(copyIndustryData);
         }
       } catch (error) {
@@ -406,7 +414,7 @@ export function Portfolio() {
                 >
                   <CategoryGrid
                     onSelect={setSelectedCategory}
-                    categories={PORTFOLIO_CATEGORIES}
+                    categories={portfolioCategories}
                   />
                 </motion.div>
               )}
@@ -690,15 +698,16 @@ function AiVideosList({
             key={item.id}
             className="group overflow-hidden rounded-[24px] border border-ink/10 bg-white text-left shadow-sm transition-all hover:border-ink/20 hover:shadow-xl"
           >
-            <div className="relative aspect-video overflow-hidden bg-black">
+            <div className="relative aspect-[9/16] overflow-hidden bg-black">
               <video
                 src={item.video_url}
+                poster={item.thumbnail_url || undefined}
                 autoPlay
                 muted
                 loop
                 playsInline
-                preload="metadata"
-                className="h-full w-full object-cover"
+                preload="auto"
+                className="h-full w-full object-contain"
               />
             </div>
           </div>

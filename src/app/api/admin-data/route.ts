@@ -22,6 +22,7 @@ export async function GET(request: Request) {
     testimonials,
     aiImages,
     aiVideos,
+    portfolioCategoryOrder,
   ] = await Promise.all([
     supabase.from("industries").select("*").order("created_at", { ascending: false }),
     supabase
@@ -68,6 +69,11 @@ export async function GET(request: Request) {
       .select("*")
       .order("sort_order", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: false }),
+    supabase
+      .from("portfolio_category_order")
+      .select("id, category_id, sort_order, created_at, updated_at")
+      .order("sort_order", { ascending: true })
+      .order("category_id", { ascending: true }),
   ]);
 
   const error =
@@ -89,6 +95,10 @@ export async function GET(request: Request) {
     aiVideos.error ? `AI Videos table: ${aiVideos.error.message}` : null,
   ].filter((message): message is string => Boolean(message));
 
+  const categoryOrderWarnings = [
+    portfolioCategoryOrder.error ? `Portfolio category order table: ${portfolioCategoryOrder.error.message}` : null,
+  ].filter((message): message is string => Boolean(message));
+
   const response = NextResponse.json({
     industries: industries.data ?? [],
     clients: clients.data ?? [],
@@ -100,7 +110,9 @@ export async function GET(request: Request) {
     testimonials: testimonials.data ?? [],
     aiImages: aiImages.error ? [] : (aiImages.data ?? []),
     aiVideos: aiVideos.error ? [] : (aiVideos.data ?? []),
+    portfolioCategoryOrder: portfolioCategoryOrder.error ? [] : (portfolioCategoryOrder.data ?? []),
     aiMediaSetupWarnings,
+    categoryOrderWarnings,
   });
 
   response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');

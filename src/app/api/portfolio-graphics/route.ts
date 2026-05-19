@@ -6,7 +6,17 @@ export const runtime = "nodejs";
 export async function GET() {
   const supabase = createSupabaseServerClient();
 
-  const [industries, clients, carousels, copywriting, reels, photoEditing, aiImages, aiVideos] = await Promise.all([
+  const [
+    industries,
+    clients,
+    carousels,
+    copywriting,
+    reels,
+    photoEditing,
+    aiImages,
+    aiVideos,
+    portfolioCategoryOrder,
+  ] = await Promise.all([
     supabase.from("industries").select("id, name").order("created_at", { ascending: true }),
     supabase
       .from("clients")
@@ -43,6 +53,11 @@ export async function GET() {
       .eq("is_published", true)
       .order("sort_order", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: false }),
+    supabase
+      .from("portfolio_category_order")
+      .select("category_id, sort_order")
+      .order("sort_order", { ascending: true })
+      .order("category_id", { ascending: true }),
   ]);
 
   let storiesData: unknown[] = [];
@@ -74,5 +89,6 @@ export async function GET() {
     photoEditing: photoEditing.data ?? [],
     aiImages: aiImages.error ? [] : (aiImages.data ?? []),
     aiVideos: aiVideos.error ? [] : (aiVideos.data ?? []),
+    portfolioCategoryOrder: portfolioCategoryOrder.error ? [] : (portfolioCategoryOrder.data ?? []),
   });
 }

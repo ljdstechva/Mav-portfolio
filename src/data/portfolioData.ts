@@ -22,6 +22,11 @@ export type PortfolioCategory = {
   color: string;
 };
 
+export type PortfolioCategoryOrderRow = {
+  category_id: string;
+  sort_order: number | null;
+};
+
 export type Project = {
   id: string;
   title: string;
@@ -95,6 +100,27 @@ export const PORTFOLIO_CATEGORIES: PortfolioCategory[] = [
     color: "bg-yellow-100 text-yellow-600" 
   },
 ];
+
+export const DEFAULT_PORTFOLIO_CATEGORY_IDS = PORTFOLIO_CATEGORIES.map((category) => category.id);
+
+export function applyPortfolioCategoryOrder(
+  categories: PortfolioCategory[],
+  orderRows: PortfolioCategoryOrderRow[] | null | undefined
+) {
+  const defaultPosition = new Map(categories.map((category, index) => [category.id, index]));
+  const orderPosition = new Map(
+    (orderRows ?? [])
+      .filter((row) => defaultPosition.has(row.category_id))
+      .map((row) => [row.category_id, row.sort_order ?? defaultPosition.get(row.category_id) ?? 0])
+  );
+
+  return [...categories].sort((a, b) => {
+    const orderA = orderPosition.get(a.id) ?? defaultPosition.get(a.id) ?? 0;
+    const orderB = orderPosition.get(b.id) ?? defaultPosition.get(b.id) ?? 0;
+    if (orderA !== orderB) return orderA - orderB;
+    return (defaultPosition.get(a.id) ?? 0) - (defaultPosition.get(b.id) ?? 0);
+  });
+}
 
 export const INDUSTRIES: Industry[] = [
   {
