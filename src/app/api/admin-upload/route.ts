@@ -4,10 +4,11 @@ import { ensureSupabaseAuthed } from "@/lib/supabaseAdminAuth";
 
 export const runtime = "nodejs";
 
-type AllowedTable = "testimonials" | "ai_images" | "ai_videos";
+type AllowedTable = "testimonials" | "reels" | "ai_images" | "ai_videos";
 
 const ALLOWED_UPLOADS: Record<AllowedTable, string[]> = {
   testimonials: ["avatar_url"],
+  reels: ["video_url"],
   ai_images: ["image_url", "thumbnail_url"],
   ai_videos: ["video_url", "thumbnail_url"],
 };
@@ -91,7 +92,7 @@ function validateUploadDescriptor({
 }
 
 function getExpectedUploadKind(table: AllowedTable, field: string) {
-  if (table === "ai_videos" && field === "video_url") {
+  if ((table === "ai_videos" || table === "reels") && field === "video_url") {
     return "video";
   }
   if (table === "ai_images" || field === "thumbnail_url") {

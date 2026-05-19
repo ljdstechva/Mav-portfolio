@@ -479,6 +479,8 @@ export function AdminPage() {
   const [dragOverField, setDragOverField] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<Record<string, string>>({});
   const [batchImages, setBatchImages] = useState<{ id: string; url: string }[]>([]);
+  const [reelVideoSource, setReelVideoSource] = useState<"url" | "upload" | null>(null);
+  const [reelVideoUrlDraft, setReelVideoUrlDraft] = useState("");
   const [previewModal, setPreviewModal] = useState<
     | null
     | {
@@ -662,6 +664,8 @@ export function AdminPage() {
     if (showCreateForm) {
       setBatchImages([]);
       setImagePreview({});
+      setReelVideoSource(null);
+      setReelVideoUrlDraft("");
       setDragOverField(null);
       setUploadState("idle");
       setUploadMessage("");
@@ -950,6 +954,8 @@ export function AdminPage() {
       formElement?.reset();
       setImagePreview({});
       setBatchImages([]);
+      setReelVideoSource(null);
+      setReelVideoUrlDraft("");
       setEditingTestimonial(null);
       setEditingIndustry(null);
       setEditingPhotoEditing(null);
@@ -981,8 +987,9 @@ export function AdminPage() {
       const targetTable = createTableOverride ?? selectedTable;
       const isAiImageUpload = targetTable === "ai_images" && fieldName === "image_url";
       const isAiVideoUpload = targetTable === "ai_videos" && fieldName === "video_url";
+      const isReelVideoUpload = targetTable === "reels" && fieldName === "video_url";
 
-      if (isAiImageUpload || isAiVideoUpload) {
+      if (isAiImageUpload || isAiVideoUpload || isReelVideoUpload) {
         if (!session?.access_token) {
           throw new Error("Your admin session expired. Please sign in again.");
         }
@@ -1024,6 +1031,10 @@ export function AdminPage() {
 
         if (inputRefs.current[fieldName]) inputRefs.current[fieldName]!.value = signedUpload.publicUrl;
         setImagePreview((prev) => ({ ...prev, [fieldName]: signedUpload.publicUrl }));
+        if (isReelVideoUpload) {
+          setReelVideoUrlDraft(signedUpload.publicUrl);
+          setReelVideoSource("upload");
+        }
       } else if (targetTable === "testimonials" && fieldName === "avatar_url") {
         if (!session?.access_token) {
           throw new Error("Your admin session expired. Please sign in again.");
@@ -2018,6 +2029,8 @@ export function AdminPage() {
     setEditingTestimonial(null);
     setEditingIndustry(null);
     setEditingPhotoEditing(null);
+    setReelVideoSource(null);
+    setReelVideoUrlDraft("");
   };
 
   const formTable = createTableOverride ?? selectedTable;
@@ -2188,27 +2201,43 @@ export function AdminPage() {
               </div>
 
               {mediaUrl ? (
-                <div className={clsx(
-                  "w-full overflow-hidden rounded-2xl border border-ink/5",
-                  isImageTable ? "aspect-[4/5] bg-white" : "aspect-video bg-black"
-                )}>
-                  {isImageTable ? (
+                isImageTable ? (
+                  <div className="aspect-[4/5] w-full overflow-hidden rounded-2xl border border-ink/5 bg-white">
                     <img
                       src={previewImage ?? mediaUrl}
                       alt={(item as AiImageItem).alt_text || mediaLabel}
                       className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-[1.02]"
                     />
-                  ) : (
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPreviewModal({
+                        type: "video",
+                        title: mediaLabel,
+                        video: mediaUrl,
+                      })
+                    }
+                    className="group/video relative aspect-video w-full overflow-hidden rounded-2xl border border-ink/5 bg-sand/30 transition-opacity hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/20"
+                    aria-label={`Preview ${mediaLabel.toLowerCase()}`}
+                  >
                     <video
                       src={mediaUrl}
                       muted
+                      autoPlay
+                      loop
                       playsInline
-                      controls
                       preload="metadata"
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-contain pointer-events-none"
                     />
-                  )}
-                </div>
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-opacity group-hover/video:bg-black/20 group-hover/video:opacity-100">
+                      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 text-white shadow-sm backdrop-blur-sm">
+                        <Video size={24} />
+                      </span>
+                    </div>
+                  </button>
+                )
               ) : (
                 <div className={clsx(
                   "flex items-center justify-center rounded-2xl bg-sand/40 text-xs text-ink/40",
@@ -4823,6 +4852,130 @@ export function AdminPage() {
                         : isEditingIndustry && field.name === "name"
                           ? (editingIndustry?.name ?? "")
                           : undefined;
+                      const isReelVideoUrl = formTable === "reels" && field.name === "video_url";
+
+                      if (isReelVideoUrl) {
+                        const uploadDisabled = reelVideoSource === "url";
+                        const urlDisabled = reelVideoSource === "upload";
+                        const hasUploadedVideo = urlDisabled && Boolean(imagePreview[field.name]);
+
+                        return (
+                          <div key={field.name} className="space-y-3">
+                            <label
+                              htmlFor="reel-video-url"
+                              className="text-xs font-bold uppercase tracking-widest text-ink/50 flex justify-between"
+                            >
+                              {field.label}
+                              {field.required && <span className="text-terracotta text-[10px]">REQUIRED</span>}
+                            </label>
+
+                            <input
+                              ref={(el) => { inputRefs.current[field.name] = el; }}
+                              id="reel-video-url"
+                              type="text"
+                              name={urlDisabled ? undefined : field.name}
+                              value={reelVideoUrlDraft}
+                              onChange={(event) => {
+                                const nextValue = event.target.value;
+                                setReelVideoUrlDraft(nextValue);
+                                setReelVideoSource(nextValue.trim() ? "url" : null);
+                              }}
+                              disabled={urlDisabled}
+                              placeholder="https://example.com/reel.mp4"
+                              className="w-full bg-sand/30 border border-ink/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-ink/10 focus:outline-none transition-all disabled:cursor-not-allowed disabled:bg-ink/5 disabled:text-ink/40"
+                              required={!urlDisabled && field.required}
+                            />
+                            {urlDisabled && (
+                              <input type="hidden" name={field.name} value={reelVideoUrlDraft} readOnly />
+                            )}
+
+                            <div
+                              className={clsx(
+                                "bg-sand/50 rounded-xl p-4 border border-dashed transition-colors",
+                                uploadDisabled
+                                  ? "cursor-not-allowed border-ink/10 opacity-55"
+                                  : dragOverField === field.name
+                                    ? "border-ink/50 bg-sand/70"
+                                    : "border-ink/20 hover:border-ink/40"
+                              )}
+                              onDragOver={(event) => {
+                                event.preventDefault();
+                                if (uploadDisabled) return;
+                                setDragOverField(field.name);
+                              }}
+                              onDragLeave={() => setDragOverField(null)}
+                              onDrop={(event) => {
+                                event.preventDefault();
+                                if (uploadDisabled) return;
+                                setDragOverField(null);
+                                if (event.dataTransfer?.files?.length) {
+                                  void handleImageUpload(field.name, event.dataTransfer.files);
+                                }
+                              }}
+                            >
+                              <input
+                                ref={(el) => { fileInputRefs.current[field.name] = el; }}
+                                type="file"
+                                accept="video/mp4,video/webm,video/quicktime,video/x-m4v,video/mpeg,video/ogg"
+                                className="hidden"
+                                disabled={uploadDisabled}
+                                onChange={(e) => handleImageUpload(field.name, e.target.files)}
+                              />
+
+                              {hasUploadedVideo ? (
+                                <div className="relative overflow-hidden rounded-lg bg-black group">
+                                  <video
+                                    src={imagePreview[field.name]}
+                                    controls
+                                    playsInline
+                                    preload="metadata"
+                                    className="h-48 w-full object-contain"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setImagePreview(prev => { const n = { ...prev }; delete n[field.name]; return n; });
+                                      setReelVideoSource(null);
+                                      setReelVideoUrlDraft("");
+                                      if (inputRefs.current[field.name]) inputRefs.current[field.name]!.value = "";
+                                    }}
+                                    className="absolute top-2 right-2 bg-white/90 p-2 rounded-full text-red-500 opacity-0 group-hover:opacity-100 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300"
+                                    aria-label="Remove uploaded reel video"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (!uploadDisabled) fileInputRefs.current[field.name]?.click();
+                                  }}
+                                  disabled={uploadDisabled}
+                                  className="flex w-full flex-col items-center justify-center py-6 text-ink/40 transition-colors hover:text-ink/70 disabled:cursor-not-allowed disabled:hover:text-ink/40"
+                                >
+                                  <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mb-2 shadow-sm">
+                                    {uploadingField === field.name ? <Loader2 className="animate-spin" size={20} /> : <UploadCloud size={20} />}
+                                  </div>
+                                  <span className="text-xs font-bold uppercase tracking-widest">
+                                    {uploadingField === field.name
+                                      ? "Uploading…"
+                                      : uploadDisabled
+                                        ? "Clear URL to Upload Video"
+                                        : "Drag & Drop or Click to Upload Video"}
+                                  </span>
+                                  <span className="mt-2 text-[10px] uppercase tracking-widest text-ink/35">
+                                    MP4, WEBM, MOV, M4V, MPEG, or OGG
+                                  </span>
+                                </button>
+                              )}
+                            </div>
+                            <p className="text-xs text-ink/40">
+                              Paste a hosted video URL or upload a video file. Only one source can be active at a time.
+                            </p>
+                          </div>
+                        );
+                      }
 
                       return (
                         <div key={field.name} className="space-y-2">

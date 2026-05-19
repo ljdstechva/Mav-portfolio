@@ -28,7 +28,7 @@ const ID_DELETE_TABLES: ReadonlyArray<Exclude<AllowedTable, "industries" | "clie
 
 const STORAGE_BUCKET = "portfolio";
 
-function extractPortfolioStoragePath(publicUrl: string | null | undefined, table: "ai_images" | "ai_videos") {
+function extractPortfolioStoragePath(publicUrl: string | null | undefined, table: "ai_images" | "ai_videos" | "reels") {
   if (!publicUrl) return null;
 
   try {
@@ -88,10 +88,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true }, { status: 200 });
   }
 
-  if (body.table === "ai_images" || body.table === "ai_videos") {
+  if (body.table === "ai_images" || body.table === "ai_videos" || body.table === "reels") {
     const mediaColumns = body.table === "ai_images"
       ? "image_url, thumbnail_url"
-      : "video_url, thumbnail_url";
+      : body.table === "ai_videos"
+        ? "video_url, thumbnail_url"
+        : "video_url";
     const existing = await supabase
       .from(body.table)
       .select(mediaColumns)

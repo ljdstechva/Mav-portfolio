@@ -5,6 +5,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   ArrowRight,
+  Pause,
+  Play,
+  Volume2,
+  VolumeX,
   X
 } from "lucide-react";
 import clsx from "clsx";
@@ -105,10 +109,34 @@ export function Portfolio() {
   const [industriesLoading, setIndustriesLoading] = useState(true);
   const [industriesError, setIndustriesError] = useState<string | null>(null);
 
+  const scrollPortfolioIntoView = useCallback(() => {
+    const scrollToPortfolio = () => {
+      document.getElementById("portfolio")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    };
+
+    window.requestAnimationFrame(scrollToPortfolio);
+    window.setTimeout(scrollToPortfolio, 80);
+  }, []);
+
+  const selectCategory = (category: PortfolioCategory) => {
+    setSelectedCategory(category);
+    setSelectedIndustry(null);
+  };
+
   const goBackToCategories = () => {
     setSelectedCategory(null);
     setSelectedIndustry(null);
+    scrollPortfolioIntoView();
   };
+
+  useEffect(() => {
+    if (selectedCategory) {
+      scrollPortfolioIntoView();
+    }
+  }, [selectedCategory, scrollPortfolioIntoView]);
 
   const toggleIndustry = (industry: PortfolioIndustry) => {
     if (selectedIndustry?.id === industry.id) {
@@ -366,7 +394,7 @@ export function Portfolio() {
       id="portfolio"
     >
       <div className="container mx-auto">
-        <div className="mb-12">
+        <div className={clsx("mb-12", selectedCategory && "pt-10 md:pt-0")}>
           {/* Breadcrumbs / Header */}
           <motion.div layout className="flex items-center gap-2 mb-4 text-sm text-ink/50">
             <span className={clsx("cursor-pointer hover:text-ink", !selectedCategory && "font-bold text-ink")} onClick={goBackToCategories}>Portfolio</span>
@@ -413,7 +441,7 @@ export function Portfolio() {
                   exit={{ opacity: 0, y: -20 }}
                 >
                   <CategoryGrid
-                    onSelect={setSelectedCategory}
+                    onSelect={selectCategory}
                     categories={portfolioCategories}
                   />
                 </motion.div>
@@ -692,26 +720,186 @@ function AiVideosList({
         </span>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {items.map((item) => (
-          <div
-            key={item.id}
-            className="group overflow-hidden rounded-[24px] border border-ink/10 bg-white text-left shadow-sm transition-all hover:border-ink/20 hover:shadow-xl"
-          >
-            <div className="relative aspect-[9/16] overflow-hidden bg-black">
-              <video
-                src={item.video_url}
-                poster={item.thumbnail_url || undefined}
-                autoPlay
-                muted
-                loop
-                playsInline
-                preload="auto"
-                className="h-full w-full object-contain"
-              />
-            </div>
-          </div>
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {items.map((item, index) => (
+          <AiVideoCard key={item.id} item={item} index={index} />
         ))}
+      </div>
+    </div>
+  );
+}
+
+function AiVideoCard({ item, index }: { item: AiVideoItem; index: number }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const retryTimerRef = useRef<number | null>(null);
+  const retryCountRef = useRef(0);
+  const [errorUrl, setErrorUrl] = useState<string | null>(null);
+  const [loadVersion, setLoadVersion] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+
+  const videoUrl = useMemo(() => {
+    if (loadVersion === 0) return item.video_url;
+    const separator = item.video_url.includes("?") ? "&" : "?";
+    return `${item.video_url}${separator}retry=${loadVersion}`;
+  }, [item.video_url, loadVersion]);
+  const hasError = errorUrl === videoUrl;
+
+  const playVideo = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    video.muted = isMuted;
+    video.play()
+      .then(() => setIsPlaying(true))
+      .catch(() => setIsPlaying(false));
+  }, [isMuted]);
+
+  const togglePlay = () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (video.paused) {
+      playVideo();
+      return;
+    }
+
+    video.pause();
+    setIsPlaying(false);
+  };
+
+  const toggleMuted = () => {
+    setIsMuted((current) => {
+      const nextMuted = !current;
+      const video = videoRef.current;
+
+      if (video) {
+        video.muted = nextMuted;
+        if (!nextMuted && video.paused) {
+          video.play()
+            .then(() => setIsPlaying(true))
+            .catch(() => setIsPlaying(false));
+        }
+      }
+
+      return nextMuted;
+    });
+  };
+
+  useEffect(() => {
+    const startVideo = () => {
+      const video = videoRef.current;
+      if (!video) return;
+
+      video.play()
+        .then(() => setIsPlaying(true))
+        .catch(() => setIsPlaying(false));
+    };
+
+    const playTimer = window.setTimeout(() => {
+      const video = videoRef.current;
+      if (video) video.load();
+      startVideo();
+    }, 250 + index * 450);
+
+    const revealTimer = window.setTimeout(() => {
+      const video = videoRef.current;
+      if (!video?.error && video && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+        startVideo();
+      }
+    }, 3500 + index * 450);
+
+    return () => {
+      window.clearTimeout(playTimer);
+      window.clearTimeout(revealTimer);
+      if (retryTimerRef.current !== null) {
+        window.clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+    };
+  }, [videoUrl, index]);
+
+  const handleReady = () => {
+    retryCountRef.current = 0;
+    setErrorUrl(null);
+    playVideo();
+  };
+
+  const retryVideo = () => {
+    setErrorUrl(null);
+    setLoadVersion((version) => version + 1);
+  };
+
+  const handleError = () => {
+    setErrorUrl(videoUrl);
+    setIsPlaying(false);
+
+    if (retryCountRef.current >= 2) return;
+
+    retryCountRef.current += 1;
+    retryTimerRef.current = window.setTimeout(() => {
+      retryTimerRef.current = null;
+      retryVideo();
+    }, 1200 + index * 400);
+  };
+
+  return (
+    <div className="group overflow-hidden rounded-3xl bg-black text-left shadow-lg transition-all hover:shadow-xl">
+      <div className="relative aspect-[9/16] overflow-hidden bg-black">
+        <video
+          ref={videoRef}
+          src={videoUrl}
+          poster={item.thumbnail_url || undefined}
+          muted={isMuted}
+          loop
+          playsInline
+          preload="metadata"
+          onLoadedData={handleReady}
+          onCanPlay={handleReady}
+          onPlaying={() => {
+            setErrorUrl(null);
+            setIsPlaying(true);
+          }}
+          onPause={() => setIsPlaying(false)}
+          onPlay={() => setIsPlaying(true)}
+          onError={handleError}
+          className={clsx(
+            "h-full w-full bg-black object-cover transition-opacity duration-300",
+            hasError ? "opacity-0" : "opacity-100"
+          )}
+        />
+
+        {hasError && (
+          <button
+            type="button"
+            onClick={retryVideo}
+            className="absolute inset-0 flex items-center justify-center bg-black/70 text-white/80 transition-colors hover:bg-black/80 hover:text-white"
+            aria-label={`Retry ${item.title || "AI video"}`}
+          >
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 shadow-sm">
+              <Play size={20} fill="currentColor" />
+            </span>
+          </button>
+        )}
+
+        <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/25 bg-ink/70 px-2 py-2 text-white shadow-lg backdrop-blur-md">
+          <button
+            type="button"
+            onClick={togglePlay}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+            aria-label={isPlaying ? `Pause ${item.title || "AI video"}` : `Play ${item.title || "AI video"}`}
+          >
+            {isPlaying ? <Pause size={17} /> : <Play size={17} fill="currentColor" />}
+          </button>
+          <button
+            type="button"
+            onClick={toggleMuted}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+            aria-label={isMuted ? `Turn sound on for ${item.title || "AI video"}` : `Mute ${item.title || "AI video"}`}
+          >
+            {isMuted ? <VolumeX size={17} /> : <Volume2 size={17} />}
+          </button>
+        </div>
       </div>
     </div>
   );
