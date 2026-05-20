@@ -1,0 +1,108 @@
+.card {
+  --edge-proximity: 0;
+  --cursor-angle: 45deg;
+  --glow-x: 50%;
+  --glow-y: 50%;
+  --edge-opacity: 0%;
+  --edge-opacity-strong: 0%;
+  --edge-opacity-soft: 0%;
+  --edge-opacity-faint: 0%;
+  --edge-opacity-halo: 0%;
+  --edge-sensitivity: 30;
+  --border-radius: 28px;
+  --glow-padding: 34px;
+  --border-glow-size: 2px;
+
+  position: relative;
+  display: grid;
+  isolation: isolate;
+  overflow: visible;
+  border: var(--border-glow-size) solid transparent;
+  border-radius: var(--border-radius);
+  background-image:
+    linear-gradient(var(--card-bg, #f6efe7), var(--card-bg, #f6efe7)),
+    radial-gradient(
+      180px circle at var(--glow-x) var(--glow-y),
+      rgb(255 52 166 / var(--edge-opacity)) 0%,
+      rgb(255 107 193 / var(--edge-opacity-strong)) 34%,
+      rgb(255 177 220 / var(--edge-opacity-soft)) 52%,
+      rgb(255 52 166 / 0%) 74%
+    ),
+    linear-gradient(rgb(31 26 21 / 9%), rgb(31 26 21 / 9%));
+  background-origin: padding-box, border-box, border-box;
+  background-clip: padding-box, border-box, border-box;
+  transform: translate3d(0, 0, 0.01px);
+  box-shadow: 0 1px 2px rgb(31 26 21 / 6%), 0 10px 28px rgb(31 26 21 / 5%);
+  transition: border-color 0.2s ease-out, box-shadow 0.2s ease-out;
+}
+
+.card::before,
+.card::after,
+.card > .edgeLight {
+  content: "";
+  position: absolute;
+  border-radius: inherit;
+  pointer-events: none;
+  transition: opacity 0.25s ease-out;
+}
+
+.card:not(:hover):not(.sweepActive)::before,
+.card:not(:hover):not(.sweepActive)::after,
+.card:not(:hover):not(.sweepActive) > .edgeLight {
+  opacity: 0;
+  transition: opacity 0.75s ease-in-out;
+}
+
+.card::before {
+  inset: calc(var(--border-glow-size) * -1);
+  z-index: 4;
+  border: 2px solid rgb(255 52 166 / var(--edge-opacity));
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / var(--edge-opacity-faint)),
+    0 0 18px rgb(255 52 166 / var(--edge-opacity-halo));
+  opacity: 1;
+}
+
+.card::after {
+  display: none;
+}
+
+.edgeLight {
+  inset: 0;
+  z-index: 5;
+  box-shadow:
+    inset 0 0 0 1px rgb(255 52 166 / var(--edge-opacity-strong)),
+    inset 0 0 14px rgb(255 107 193 / var(--edge-opacity-faint));
+  opacity: 1;
+}
+
+.edgeLight::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 0 1px rgb(255 52 166 / 70%),
+    inset 0 0 10px 0 rgb(255 107 193 / 24%),
+    0 0 16px 0 rgb(255 52 166 / 28%);
+}
+
+.inner {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  min-height: inherit;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .card::before,
+  .card::after,
+  .edgeLight,
+  .edgeLight::before {
+    transition-duration: 0.01ms !important;
+  }
+}

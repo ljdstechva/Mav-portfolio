@@ -1,5 +1,6 @@
 import { Hero } from "@/components/Hero";
 import { Portfolio } from "@/components/Portfolio";
+import { Process } from "@/components/Process";
 import { About } from "@/components/About";
 import { Testimonials } from "@/components/Testimonials";
 import NavigationDock from "@/components/NavigationDock";
@@ -14,6 +15,7 @@ export default function Home() {
       <Hero />
       <About />
       <Portfolio />
+      <Process />
       <Testimonials />
       <Footer />
       
