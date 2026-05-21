@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "portfolio-assets-";
-const CACHE_NAME = "portfolio-assets-v3";
+const CACHE_NAME = "portfolio-assets-v4";
 
 self.addEventListener("install", () => {
   self.skipWaiting();
@@ -22,6 +22,7 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
+  if (request.headers.has("range")) return;
 
   const destination = request.destination;
   if (destination !== "image") return;
@@ -37,7 +38,11 @@ self.addEventListener("fetch", (event) => {
       try {
         const response = await fetch(request);
         if (response && (response.ok || response.type === "opaque")) {
-          cache.put(request, response.clone());
+          try {
+            await cache.put(request, response.clone());
+          } catch {
+            // Some browser-managed or optimized image responses cannot be cached.
+          }
         }
         return response;
       } catch (error) {

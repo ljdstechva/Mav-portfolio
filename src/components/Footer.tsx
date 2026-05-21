@@ -42,7 +42,8 @@ export function Footer() {
                 Ready to elevate your brand? I&apos;m currently available for new projects and collaborations.
               </motion.p>
               
-              <motion.button 
+              <motion.button
+                type="button"
                 onClick={() => setIsModalOpen(true)}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -116,8 +117,8 @@ export function Footer() {
           <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-sand/40">
             <p>&copy; {currentYear} MAV STUDIO. All rights reserved.</p>
             <div className="flex gap-6">
-              <a href="#" className="hover:text-sand transition-colors">Privacy Policy</a>
-              <a href="#" className="hover:text-sand transition-colors">Terms of Service</a>
+              <span aria-disabled="true">Privacy Policy</span>
+              <span aria-disabled="true">Terms of Service</span>
             </div>
           </div>
         </div>

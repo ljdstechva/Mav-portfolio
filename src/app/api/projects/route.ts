@@ -1,37 +1,26 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
+import { ensureSupabaseAuthed } from "@/lib/supabaseAdminAuth";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
 export const runtime = "nodejs";
 
 type ProjectInsert = {
-  title: string;
+  title?: string;
   category?: string | null;
   image_url?: string | null;
   link?: string | null;
   description?: string | null;
 };
 
-async function ensureAuthed(request: Request) {
-  const authHeader = request.headers.get("authorization") ?? "";
-  const token = authHeader.startsWith("Bearer ")
-    ? authHeader.replace("Bearer ", "")
-    : "";
+type SupabaseLikeError = {
+  code?: string;
+  message?: string;
+};
 
-  if (!token) {
-    return false;
-  }
-
-  try {
-    const supabase = createSupabaseServerClient();
-    const { data, error } = await supabase.auth.getUser(token);
-    if (error || !data.user) {
-      return false;
-    }
-    return true;
-  } catch {
-    return false;
-  }
+function isMissingProjectsTable(error: SupabaseLikeError) {
+  const message = error.message?.toLowerCase() ?? "";
+  return error.code === "PGRST205" || message.includes("could not find the table") || message.includes("schema cache");
 }
 
 export async function GET() {
@@ -42,18 +31,32 @@ export async function GET() {
     .order("created_at", { ascending: false });
 
   if (error) {
-    return NextResponse.json({ message: error.message }, { status: 500 });
+    if (isMissingProjectsTable(error)) {
+      return NextResponse.json([], {
+        headers: {
+          "X-MAV-Data-Warning": "Supabase projects table is not configured.",
+        },
+      });
+    }
+
+    return NextResponse.json({ message: "Unable to load projects." }, { status: 500 });
   }
 
   return NextResponse.json(data ?? []);
 }
 
 export async function POST(request: Request) {
-  if (!(await ensureAuthed(request))) {
+  if (!(await ensureSupabaseAuthed(request))) {
     return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
   }
 
-  const body = (await request.json()) as ProjectInsert;
+  let body: ProjectInsert;
+  try {
+    body = (await request.json()) as ProjectInsert;
+  } catch {
+    return NextResponse.json({ message: "Invalid JSON payload." }, { status: 400 });
+  }
+
   const title = body.title?.trim();
 
   if (!title) {
@@ -78,7 +81,14 @@ export async function POST(request: Request) {
     .single();
 
   if (error) {
-    return NextResponse.json({ message: error.message }, { status: 500 });
+    if (isMissingProjectsTable(error)) {
+      return NextResponse.json(
+        { message: "Projects storage is not configured. Apply data/supabase-projects.sql before using this endpoint." },
+        { status: 503 }
+      );
+    }
+
+    return NextResponse.json({ message: "Unable to save project." }, { status: 500 });
   }
 
   return NextResponse.json(data, { status: 201 });

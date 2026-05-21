@@ -1,0 +1,110 @@
+- generic [ref=e1]:
+  - main [ref=e2]:
+    - button "Scroll to top" [ref=e3] [cursor=pointer]:
+      - generic [ref=e4]: MAVSTUDIO
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - generic [ref=e12]: Available for Hire
+          - heading "Hi, I'm Mav" [level=1] [ref=e13]
+          - generic [ref=e15]: Soci
+          - paragraph [ref=e17]: I help brands show up consistently with scroll-stopping visuals, strategic content, and social media management that turns attention into action.
+          - generic [ref=e18]
+          - generic [ref=e26]
+        - generic [ref=e30]:
+          - img "Hero Portrait" [ref=e38]
+          - generic [ref=e39]
+          - generic [ref=e46]
+      - generic [ref=e54]:
+        - generic [ref=e56]:
+          - generic [ref=e57]
+          - generic [ref=e97]
+        - generic [ref=e138]:
+          - generic [ref=e139]
+          - generic [ref=e179]
+    - generic [ref=e221]:
+      - figure "Mav Studio - Creative Director" [ref=e224]:
+        - generic [ref=e225]:
+          - img "Portrait of Mav" [ref=e226]
+          - generic
+        - generic: Mav Studio - Creative Director
+      - generic [ref=e227]:
+        - generic [ref=e228]:
+          - text: About Me
+          - heading "Strategy-First Social That Looks Good." [level=2] [ref=e229]
+        - paragraph [ref=e230]: Hi, I'm Mav, a Social Media Manager and Graphic Design Content Creator who helps brands show up consistently with clear strategy and scroll-stopping visuals. I turn your message into content that feels cohesive, on-brand, and built for engagement.
+        - paragraph [ref=e231]: From content planning to design and publishing, I focus on audience-first storytelling, strong visual systems, and measurable growth. Whether you need a full content refresh or ongoing management, I create posts that look beautiful and perform.
+        - generic [ref=e232]:
+          - generic [ref=e233]
+          - generic [ref=e238]
+          - generic [ref=e243]
+          - generic [ref=e248]
+        - button "More About Me" [ref=e255] [cursor=pointer]
+    - generic [ref=e257]:
+      - generic [ref=e258]:
+        - generic [ref=e259]:
+          - button "Portfolio" [ref=e260] [cursor=pointer]
+          - generic [ref=e261]: /
+          - button "Reels" [disabled] [ref=e262]
+        - heading "Reels" [level=2] [ref=e263]
+        - paragraph [ref=e264]: Motion graphics and video editing.
+      - generic [ref=e268]:
+        - button "Back to Categories" [ref=e269] [cursor=pointer]:
+          - img [ref=e270]
+          - text: Back to Categories
+        - button "Show More" [active] [ref=e286] [cursor=pointer]
+    - region "A clear workflow from insight to engagement-ready posts." [ref=e287]:
+      - generic [ref=e288]:
+        - generic [ref=e289]:
+          - generic [ref=e290]
+          - generic [ref=e293]
+        - list [ref=e298]:
+          - listitem [ref=e299]
+          - listitem [ref=e313]
+          - listitem [ref=e326]
+          - listitem [ref=e339]
+    - generic [ref=e354]:
+      - generic [ref=e356]:
+        - generic [ref=e357]:
+          - img [ref=e359]
+          - generic [ref=e361]: Client Stories
+        - heading "Proof In Words And Media" [level=2] [ref=e362]
+        - paragraph [ref=e363]: A blend of written feedback, campaign snapshots, and video-backed reactions from client work.
+      - generic [ref=e364]:
+        - article [ref=e366]:
+          - generic [ref=e367]
+        - generic [ref=e402]:
+          - article [ref=e403]
+          - article [ref=e431]
+          - article [ref=e458]
+      - generic [ref=e486]:
+        - generic [ref=e487]: Ready for the next one
+        - button "Join the Happy Clients" [ref=e488] [cursor=pointer]:
+          - img [ref=e489]
+          - generic [ref=e491]: Join the Happy Clients
+    - generic [ref=e496]:
+      - generic [ref=e497]:
+        - generic [ref=e498]:
+          - heading "Let's create something amazing" [level=2] [ref=e499]
+          - paragraph [ref=e500]: Ready to elevate your brand? I'm currently available for new projects and collaborations.
+          - button "Book a Discovery Call" [ref=e501] [cursor=pointer]
+        - generic [ref=e505]:
+          - generic [ref=e507]
+          - generic [ref=e538]
+      - generic [ref=e541]:
+        - paragraph [ref=e542]: © 2026 MAV STUDIO. All rights reserved.
+        - generic [ref=e543]:
+          - generic [ref=e544]: Privacy Policy
+          - generic [ref=e545]: Terms of Service
+    - toolbar "Application dock" [ref=e546]:
+      - button "Home" [ref=e549] [cursor=pointer]:
+        - img [ref=e551]
+      - button "About" [ref=e554] [cursor=pointer]:
+        - img [ref=e556]
+      - button "Work" [ref=e559] [cursor=pointer]:
+        - img [ref=e561]
+      - button "Contact" [ref=e564] [cursor=pointer]:
+        - img [ref=e566]
+  - button "Open Next.js Dev Tools" [ref=e574] [cursor=pointer]:
+    - img [ref=e575]
+  - alert [ref=e578]

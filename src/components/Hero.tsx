@@ -6,6 +6,7 @@ import Image from "next/image";
 import { ArrowRight, Star, MousePointer2 } from "lucide-react";
 import Magnet from "./Magnet";
 import { CalendlyModal } from "./CalendlyModal";
+import { scrollToTarget } from "@/lib/smoothScroll";
 
 const TITLES = [
   "Social Media Management",
@@ -93,6 +94,7 @@ const LogoCard = memo(function LogoCard({ tool }: { tool: ToolItem }) {
           width={100}
           height={100}
           sizes="96px"
+          loading={tool.id === "clickup" ? "eager" : "lazy"}
           className="object-contain w-full h-full transition-all duration-300"
         />
       ) : (
@@ -137,6 +139,11 @@ export function Hero() {
   const [typedText, setTypedText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const scrollToPortfolio = () => {
+    scrollToTarget("#portfolio");
+    window.history.replaceState(null, "", "#portfolio");
+  };
 
   useEffect(() => {
     const currentTitle = TITLES[titleIndex];
@@ -206,6 +213,7 @@ export function Hero() {
           <div className="flex flex-col sm:flex-row gap-4 pt-4">
             <Magnet padding={50} magnetStrength={5}>
               <button
+                type="button"
                 onClick={() => setIsModalOpen(true)}
                 className="group relative px-8 py-4 bg-ink text-sand rounded-full font-medium transition-all hover:bg-ink/90 overflow-hidden cursor-pointer"
               >
@@ -216,23 +224,25 @@ export function Hero() {
             </Magnet>
 
             <Magnet padding={50} magnetStrength={5}>
-              <a
-                href="#portfolio"
+              <button
+                type="button"
+                aria-controls="portfolio"
+                onClick={scrollToPortfolio}
                 className="px-8 py-4 bg-transparent border border-ink/20 text-ink rounded-full font-medium hover:bg-ink/5 transition-colors cursor-pointer inline-flex items-center justify-center"
               >
                 View Portfolio
-              </a>
+              </button>
             </Magnet>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 pt-8 border-t border-ink/5">
-            <span className="px-4 py-2 rounded-full bg-white/80 border border-ink/10 text-sm font-medium text-ink">
+          <div className="flex flex-nowrap items-center gap-3 overflow-x-auto pt-8 pb-2 border-t border-ink/5 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden">
+            <span className="shrink-0 px-4 py-2 rounded-full bg-white/80 border border-ink/10 text-sm font-medium text-ink">
               Consistent posting
             </span>
-            <span className="px-4 py-2 rounded-full bg-white/80 border border-ink/10 text-sm font-medium text-ink">
+            <span className="shrink-0 px-4 py-2 rounded-full bg-white/80 border border-ink/10 text-sm font-medium text-ink">
               Scroll-stopping design
             </span>
-            <span className="px-4 py-2 rounded-full bg-white/80 border border-ink/10 text-sm font-medium text-ink">
+            <span className="shrink-0 px-4 py-2 rounded-full bg-white/80 border border-ink/10 text-sm font-medium text-ink">
               Strategy + execution
             </span>
           </div>

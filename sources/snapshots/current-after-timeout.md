@@ -1,0 +1,30 @@
+- generic [active] [ref=e1] [box=0,-1909,1425,6485]:
+  - main [ref=e2] [box=0,-1909,1425,6485]:
+    - button "Scroll to top" [ref=e3] [cursor=pointer] [box=568,24,288,57]:
+      - generic [ref=e4] [box=601,33,223,40]: MAVSTUDIO
+    - generic [ref=e5] [box=0,-1909,1425,1041]:
+      - generic [ref=e6] [box=72,-1813,1280,600]
+      - generic [ref=e54] [box=0,-1124,1425,216]
+    - generic [ref=e221] [box=96,-717,1232,645]:
+      - figure "Mav Studio - Creative Director" [ref=e224] [box=163,-676,450,563]
+      - generic [ref=e227] [box=744,-717,584,645]
+    - generic [ref=e257] [box=72,104,1280,1010]:
+      - generic [ref=e258] [box=72,104,1280,128]
+      - generic [ref=e267] [box=72,280,1280,834]
+    - region "A clear workflow from insight to engagement-ready posts." [ref=e395] [box=0,1258,1425,869]:
+      - generic [ref=e396] [box=72,1354,1280,677]
+    - generic [ref=e462] [box=72,2222,1280,1395]:
+      - generic [ref=e464] [box=328,2242,768,208]
+      - generic [ref=e472] [box=72,2494,1280,978]
+      - generic [ref=e594] [box=456,3552,513,65]
+    - generic [ref=e604] [box=72,3794,1280,575]:
+      - generic [ref=e605] [box=96,3794,1232,442]
+      - generic [ref=e649] [box=96,4316,1232,53]
+    - toolbar "Application dock" [ref=e654] [box=580,922,264,62]:
+      - button "Home" [ref=e657] [cursor=pointer] [box=596,930,46,46]
+      - button "About" [ref=e662] [cursor=pointer] [box=658,930,46,46]
+      - button "Work" [ref=e667] [cursor=pointer] [box=720,930,46,46]
+      - button "Contact" [ref=e672] [cursor=pointer] [box=782,930,46,46]
+  - button "Open Next.js Dev Tools" [ref=e682] [cursor=pointer] [box=22,946,32,32]:
+    - img [ref=e683] [box=22,942,40,40]
+  - alert [ref=e686] [box=-1,4575,1,1]

@@ -1,0 +1,69 @@
+- generic [active] [ref=e1] [box=0,0,1692,6430]:
+  - main [ref=e21] [box=0,0,1692,6430]:
+    - button "Scroll to top" [ref=e22] [cursor=pointer] [box=718,24,256,57]:
+      - generic [ref=e23] [box=735,33,223,40]: MAVSTUDIO
+    - generic [ref=e24] [box=0,0,1692,1041]:
+      - generic [ref=e25] [box=78,96,1536,600]:
+        - generic [ref=e26] [box=110,118,712,556]
+        - generic [ref=e49] [box=870,96,712,600]
+      - generic [ref=e73] [box=0,785,1692,216]:
+        - generic [ref=e75] [box=-1708,785,5664,96]
+        - generic [ref=e157] [box=-1124,905,5664,96]
+    - generic [ref=e240] [box=102,1191,1488,590]:
+      - figure "Mav Studio - Creative Director" [ref=e243] [box=183,1205,450,563]:
+        - generic [ref=e244] [box=183,1205,450,563]
+        - generic [box=183,1205,155,24]: Mav Studio - Creative Director
+      - generic [ref=e246] [box=928,1191,712,590]:
+        - generic [ref=e247] [box=928,1191,712,144]
+        - paragraph [ref=e249] [box=928,1367,712,88]: Hi, I'm Mav, a Social Media Manager and Graphic Design Content Creator who helps brands show up consistently with clear strategy and scroll-stopping visuals. I turn your message into content that feels cohesive, on-brand, and built for engagement.
+        - paragraph [ref=e250] [box=928,1487,712,78]: From content planning to design and publishing, I focus on audience-first storytelling, strong visual systems, and measurable growth. Whether you need a full content refresh or ongoing management, I create posts that look beautiful and perform.
+        - generic [ref=e251] [box=928,1597,712,80]
+        - button "More About Me" [ref=e274] [cursor=pointer] [box=928,1733,180,48]
+    - generic [ref=e276] [box=78,1957,1536,1010]:
+      - generic [ref=e277] [box=78,1957,1536,128]:
+        - button "Portfolio" [ref=e279] [cursor=pointer] [box=78,1957,59,20]
+        - heading "Portfolio" [level=2] [ref=e280] [box=78,1993,1536,48]
+        - paragraph [ref=e281] [box=78,2057,672,28]: Explore my creative work across different disciplines.
+      - generic [ref=e286] [box=78,2133,1536,834]:
+        - button "Graphic Designs Brand identity, logos, and marketing materials." [ref=e287] [cursor=pointer] [box=78,2133,496,206]
+        - button "Carousels Engaging scrollable social media content." [ref=e305] [cursor=pointer] [box=598,2133,496,206]
+        - button "Reels Motion graphics and video editing." [ref=e321] [cursor=pointer] [box=1118,2133,496,206]
+        - button "AI Images AI-generated visuals, product concepts, and campaign-ready creative." [ref=e336] [cursor=pointer] [box=78,2435,496,230]
+        - button "AI Videos AI-assisted motion work for launches, ads, and social proof." [ref=e352] [cursor=pointer] [box=598,2435,496,230]
+        - button "Copywriting Compelling copy for brands and campaigns." [ref=e367] [cursor=pointer] [box=1118,2435,496,230]
+        - button "Photo Editing Professional retouching and color grading." [ref=e382] [cursor=pointer] [box=78,2761,496,206]
+        - button "Stories Captivating narratives and storytelling." [ref=e400] [cursor=pointer] [box=598,2761,496,206]
+    - region "A clear workflow from insight to engagement-ready posts." [ref=e414] [box=0,3111,1692,869]:
+      - generic [ref=e415] [box=206,3207,1280,677]:
+        - generic [ref=e416] [box=206,3207,1280,242]
+        - list [ref=e425] [box=206,3489,1280,395]
+    - generic [ref=e481] [box=206,4076,1280,1395]:
+      - generic [ref=e483] [box=462,4096,768,208]:
+        - generic [ref=e484] [box=732,4096,228,49]
+        - heading "Proof In Words And Media" [level=2] [ref=e489] [box=462,4161,768,60]
+        - paragraph [ref=e490] [box=510,4245,672,59]: A blend of written feedback, campaign snapshots, and video-backed reactions from client work.
+      - generic [ref=e491] [box=206,4348,1280,978]:
+        - article [ref=e624] [box=206,4388,1280,537]
+        - generic [ref=e660] [box=206,4908,1280,417]
+      - generic [ref=e531] [box=589,5446,513,65]:
+        - generic [ref=e532] [box=598,5462,250,32]: Ready for the next one
+        - button "Join the Happy Clients" [ref=e533] [cursor=pointer] [box=860,5454,235,48]
+    - generic [ref=e541] [box=78,5647,1536,575]:
+      - generic [ref=e542] [box=102,5647,1488,442]:
+        - generic [ref=e543] [box=102,5647,704,442]
+        - generic [ref=e550] [box=886,5647,704,442]
+      - generic [ref=e586] [box=102,6169,1488,53]:
+        - paragraph [ref=e587] [box=102,6202,253,20]: © 2026 MAV STUDIO. All rights reserved.
+        - generic [ref=e588] [box=1384,6202,206,20]
+    - toolbar "Application dock" [ref=e591] [box=714,854,264,62]:
+      - button "Home" [ref=e594] [cursor=pointer] [box=730,862,46,46]:
+        - img [ref=e596] [box=743,875,20,20]
+      - button "About" [ref=e599] [cursor=pointer] [box=792,862,46,46]:
+        - img [ref=e601] [box=805,875,20,20]
+      - button "Work" [ref=e604] [cursor=pointer] [box=854,862,46,46]:
+        - img [ref=e606] [box=867,875,20,20]
+      - button "Contact" [ref=e609] [cursor=pointer] [box=916,862,46,46]:
+        - img [ref=e611] [box=929,875,20,20]
+  - button "Open Next.js Dev Tools" [ref=e619] [cursor=pointer] [box=22,878,32,32]:
+    - img [ref=e620] [box=22,874,40,40]
+  - alert [ref=e743] [box=-1,6429,1,1]

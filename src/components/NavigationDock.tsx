@@ -2,20 +2,18 @@
 
 import { Home, User, Briefcase, Mail } from "lucide-react";
 import Dock from "./Dock";
+import { scrollToTarget } from "@/lib/smoothScroll";
 
 export default function NavigationDock() {
   const scrollToSection = (id: string) => {
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth" });
-    }
+    scrollToTarget(`#${id}`);
   };
 
   const items = [
     {
       icon: <Home size={20} />,
       label: 'Home',
-      onClick: () => window.scrollTo({ top: 0, behavior: 'smooth' })
+      onClick: () => scrollToTarget("top")
     },
     {
       icon: <User size={20} />,
@@ -37,10 +35,10 @@ export default function NavigationDock() {
   return (
     <Dock
       items={items}
-      panelHeight={68}
-      baseItemSize={50}
-      magnification={70}
-      dockHeight={80}
+      panelHeight={62}
+      baseItemSize={46}
+      magnification={60}
+      dockHeight={70}
     />
   );
 }

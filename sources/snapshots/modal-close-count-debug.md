@@ -1,0 +1,60 @@
+- generic [active] [ref=e1] [box=0,-1909,1425,6082]:
+  - main [ref=e2] [box=0,-1909,1425,6082]:
+    - button "Scroll to top" [ref=e3] [cursor=pointer] [box=568,24,288,57]:
+      - generic [ref=e4] [box=601,33,223,40]: MAVSTUDIO
+    - generic [ref=e5] [box=0,-1909,1425,1041]:
+      - generic [ref=e6] [box=72,-1813,1280,600]:
+        - generic [ref=e7] [box=104,-1791,584,556]
+        - generic [ref=e30] [box=736,-1813,584,600]
+      - generic [ref=e54] [box=0,-1124,1425,216]:
+        - generic [ref=e56] [box=-1992,-1124,5664,96]
+        - generic [ref=e138] [box=-840,-1004,5664,96]
+    - generic [ref=e221] [box=96,-717,1232,645]:
+      - figure "Mav Studio - Creative Director" [ref=e224] [box=113,-676,450,563]:
+        - generic [ref=e225] [box=113,-676,450,563]
+        - generic [box=113,-676,155,24]: Mav Studio - Creative Director
+      - generic [ref=e227] [box=794,-717,584,645]:
+        - generic [ref=e228] [box=794,-717,584,144]
+        - paragraph [ref=e230] [box=794,-541,584,117]: Hi, I'm Mav, a Social Media Manager and Graphic Design Content Creator who helps brands show up consistently with clear strategy and scroll-stopping visuals. I turn your message into content that feels cohesive, on-brand, and built for engagement.
+        - paragraph [ref=e231] [box=794,-392,584,104]: From content planning to design and publishing, I focus on audience-first storytelling, strong visual systems, and measurable growth. Whether you need a full content refresh or ongoing management, I create posts that look beautiful and perform.
+        - generic [ref=e232] [box=794,-256,584,80]
+        - button "More About Me" [ref=e255] [cursor=pointer] [box=794,-120,180,48]
+    - generic [ref=e257] [box=72,104,1280,607]:
+      - generic [ref=e258] [box=72,104,1280,128]:
+        - generic [ref=e259] [box=72,104,1280,20]
+        - heading "Copywriting" [level=2] [ref=e263] [box=72,140,1280,48]
+        - paragraph [ref=e264] [box=72,204,672,28]: Compelling copy for brands and campaigns.
+      - generic [ref=e269] [box=72,280,1280,431]:
+        - button "Back to Categories" [ref=e270] [cursor=pointer] [box=72,280,159,24]
+        - generic [ref=e273] [box=72,336,1280,375]
+    - region "A clear workflow from insight to engagement-ready posts." [ref=e296] [box=0,855,1425,869]:
+      - generic [ref=e297] [box=72,951,1280,677]:
+        - generic [ref=e298] [box=72,951,1280,242]
+        - list [ref=e307] [box=72,1233,1280,395]
+    - generic [ref=e363] [box=72,1820,1280,1395]:
+      - generic [ref=e365] [box=328,1840,768,208]:
+        - generic [ref=e366] [box=598,1840,228,49]
+        - heading "Proof In Words And Media" [level=2] [ref=e371] [box=328,1905,768,60]
+        - paragraph [ref=e372] [box=376,1989,672,59]: A blend of written feedback, campaign snapshots, and video-backed reactions from client work.
+      - generic [ref=e373] [box=72,2092,1280,978]:
+        - article [ref=e375] [box=72,2132,1280,537]
+        - generic [ref=e411] [box=72,2653,1280,417]
+      - generic [ref=e495] [box=456,3190,513,65]:
+        - generic [ref=e496] [box=464,3206,250,32]: Ready for the next one
+        - button "Join the Happy Clients" [ref=e497] [cursor=pointer] [box=726,3198,235,48]
+    - generic [ref=e505] [box=72,3391,1280,575]:
+      - generic [ref=e506] [box=96,3391,1232,442]:
+        - generic [ref=e507] [box=96,3391,576,442]
+        - generic [ref=e514] [box=752,3391,576,442]
+      - generic [ref=e550] [box=96,3913,1232,53]:
+        - paragraph [ref=e551] [box=96,3946,253,20]: © 2026 MAV STUDIO. All rights reserved.
+        - generic [ref=e552] [box=1122,3946,206,20]
+    - generic [box=8,922,1409,62]:
+      - toolbar "Application dock" [box=580,922,264,62]:
+        - button "Home" [ref=e555] [cursor=pointer] [box=596,930,46,46]
+        - button "About" [ref=e560] [cursor=pointer] [box=658,930,46,46]
+        - button "Work" [ref=e565] [cursor=pointer] [box=720,930,46,46]
+        - button "Contact" [ref=e570] [cursor=pointer] [box=782,930,46,46]
+  - button "Open Next.js Dev Tools" [ref=e580] [cursor=pointer] [box=22,946,32,32]:
+    - img [ref=e581] [box=22,942,40,40]
+  - alert [ref=e584] [box=-1,4173,1,1]

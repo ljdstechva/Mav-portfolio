@@ -1,10 +1,25 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 import Lenis from "lenis";
+import { setSmoothScrollInstance } from "@/lib/smoothScroll";
 
 export default function SmoothScrolling() {
+  const pathname = usePathname();
+
   useEffect(() => {
+    if (pathname !== "/") {
+      setSmoothScrollInstance(null);
+      return;
+    }
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reducedMotion) {
+      setSmoothScrollInstance(null);
+      return;
+    }
+
     const isScrollableTarget = (node: EventTarget | null) => {
       let element = node instanceof HTMLElement ? node : null;
 
@@ -26,27 +41,24 @@ export default function SmoothScrolling() {
     };
 
     const lenis = new Lenis({
-      duration: 1.2,
+      autoRaf: true,
+      duration: 1.15,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      orientation: 'vertical',
-      gestureOrientation: 'vertical',
+      gestureOrientation: "vertical",
+      orientation: "vertical",
       smoothWheel: true,
+      touchMultiplier: 1.6,
       wheelMultiplier: 1,
-      touchMultiplier: 2,
       prevent: (node) => isScrollableTarget(node),
     });
 
-    function raf(time: number) {
-      lenis.raf(time);
-      requestAnimationFrame(raf);
-    }
-
-    requestAnimationFrame(raf);
+    setSmoothScrollInstance(lenis);
 
     return () => {
+      setSmoothScrollInstance(null);
       lenis.destroy();
     };
-  }, []);
+  }, [pathname]);
 
   return null;
 }

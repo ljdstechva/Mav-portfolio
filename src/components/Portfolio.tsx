@@ -7,6 +7,7 @@ import {
   ArrowRight,
   Pause,
   Play,
+  Video,
   Volume2,
   VolumeX,
   X
@@ -17,6 +18,7 @@ import GalleryCarousel from "./GalleryCarousel";
 import Carousel, { CarouselItemData } from "./Carousel";
 import StarBorder from "./StarBorder";
 import { GlobalSpotlight, MagicStyles } from "./MagicBento";
+import { scrollToTarget, startSmoothScroll, stopSmoothScroll } from "@/lib/smoothScroll";
 import {
   applyPortfolioCategoryOrder,
   PORTFOLIO_CATEGORIES,
@@ -46,6 +48,7 @@ type CarouselClient = {
 
 type ReelItem = {
   id: string;
+  title?: string;
   video_url: string;
   sort_order?: number | null;
 };
@@ -120,10 +123,7 @@ export function Portfolio() {
 
   const scrollPortfolioIntoView = useCallback(() => {
     const scrollToPortfolio = () => {
-      document.getElementById("portfolio")?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
+      scrollToTarget("#portfolio");
     };
 
     window.requestAnimationFrame(scrollToPortfolio);
@@ -297,6 +297,7 @@ export function Portfolio() {
           .filter((r) => r.video_url && !isKnownBrokenPortfolioVideoUrl(r.video_url))
           .map(r => ({
             id: r.id,
+            title: r.client || "Reel",
             video_url: r.video_url,
             sort_order: r.sort_order ?? null,
           }));
@@ -318,8 +319,9 @@ export function Portfolio() {
             id,
             title,
             video_url: videoUrl,
+            sort_order: typeof story.sort_order === "number" ? story.sort_order : index,
           };
-        }).filter((story) => story.video_url && !isKnownBrokenPortfolioVideoUrl(story.video_url));
+        }).filter((story) => story.video_url);
 
         // Process Photo Editing
         const photoEditingData = rawPhotoEditing.map(p => ({
@@ -401,24 +403,32 @@ export function Portfolio() {
 
   return (
     <section
-      className="py-20 px-4 md:px-8 bg-white"
+      className="scroll-mt-24 bg-white px-4 py-16 pb-32 md:px-8"
       id="portfolio"
     >
       <div className="container mx-auto">
-        <div className={clsx("mb-12", selectedCategory && "pt-10 md:pt-0")}>
+        <div className={clsx("mb-8", selectedCategory && "pt-8 md:pt-0")}>
           {/* Breadcrumbs / Header */}
           <motion.div layout className="flex items-center gap-2 mb-4 text-sm text-ink/50">
-            <span className={clsx("cursor-pointer hover:text-ink", !selectedCategory && "font-bold text-ink")} onClick={goBackToCategories}>Portfolio</span>
+            <button
+              type="button"
+              className={clsx("no-scale hover:text-ink", !selectedCategory && "font-bold text-ink")}
+              onClick={goBackToCategories}
+            >
+              Portfolio
+            </button>
 
             {selectedCategory && (
               <>
                 <span>/</span>
-                <span
-                  className={clsx("cursor-pointer hover:text-ink", "font-bold text-ink")}
+                <button
+                  type="button"
+                  className={clsx("no-scale hover:text-ink", "font-bold text-ink")}
                   onClick={selectedCategory.id === 'graphics' ? () => setSelectedIndustry(null) : undefined}
+                  disabled={selectedCategory.id !== 'graphics'}
                 >
                   {selectedCategory.name}
-                </span>
+                </button>
               </>
             )}
           </motion.div>
@@ -554,6 +564,8 @@ export function Portfolio() {
                     onBack={goBackToCategories}
                     loading={industriesLoading}
                     autoplay
+                    emptyLabel="No stories available yet."
+                    itemLabel="story"
                   />
                 </motion.div>
               )}
@@ -600,7 +612,7 @@ export function Portfolio() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
                 >
-                  <button onClick={goBackToCategories} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
+                  <button type="button" onClick={goBackToCategories} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
                     <ArrowLeft size={20} /> Back to Categories
                   </button>
 
@@ -636,7 +648,7 @@ function AiImagesList({
   if (items.length === 0) {
     return (
       <div className="w-full">
-        <button onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
+        <button type="button" onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
           <ArrowLeft size={20} /> Back to Categories
         </button>
         <div className="rounded-[28px] border border-ink/10 bg-sand/30 p-10 text-center">
@@ -652,7 +664,7 @@ function AiImagesList({
 
   return (
     <div className="w-full">
-      <button onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
+      <button type="button" onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
         <ArrowLeft size={20} /> Back to Categories
       </button>
 
@@ -667,7 +679,7 @@ function AiImagesList({
       </div>
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {items.map((item) => (
+        {items.map((item, index) => (
           <figure
             key={item.id}
             className="group overflow-hidden rounded-3xl border border-ink/10 bg-white shadow-sm transition-all hover:border-ink/20 hover:shadow-xl"
@@ -677,7 +689,7 @@ function AiImagesList({
                 src={item.thumbnail_url || item.image_url}
                 alt={item.alt_text || "AI portfolio image"}
                 className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-[1.02]"
-                loading="lazy"
+                loading={index < 3 ? "eager" : "lazy"}
                 decoding="async"
               />
             </div>
@@ -701,7 +713,7 @@ function AiVideosList({
   if (items.length === 0) {
     return (
       <div className="w-full">
-        <button onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
+        <button type="button" onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
           <ArrowLeft size={20} /> Back to Categories
         </button>
         <div className="rounded-[28px] border border-ink/10 bg-sand/30 p-10 text-center">
@@ -717,7 +729,7 @@ function AiVideosList({
 
   return (
     <div className="w-full">
-      <button onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
+      <button type="button" onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
         <ArrowLeft size={20} /> Back to Categories
       </button>
 
@@ -845,7 +857,7 @@ function AiVideoCard({ item, index }: { item: AiVideoItem; index: number }) {
           muted={isMuted}
           loop
           playsInline
-          preload="auto"
+          preload="metadata"
           onLoadedData={handleReady}
           onCanPlay={handleReady}
           onPlaying={() => {
@@ -908,11 +920,17 @@ function PhotoEditingList({
 }) {
   const [selectedItem, setSelectedItem] = useState<PhotoEditingItem | null>(null);
 
+  useEffect(() => {
+    if (!selectedItem) return;
+    stopSmoothScroll();
+    return () => startSmoothScroll();
+  }, [selectedItem]);
+
   if (loading) return <div className="text-ink/50">Loading photo edits...</div>;
 
   return (
     <div className="w-full">
-      <button onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
+      <button type="button" onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
         <ArrowLeft size={20} /> Back to Categories
       </button>
 
@@ -926,8 +944,9 @@ function PhotoEditingList({
               className="bg-white rounded-3xl p-6 shadow-sm border border-ink/5 hover:shadow-lg transition-all"
             >
               {item.title && <h3 className="text-xl font-bold text-ink mb-4">{item.title}</h3>}
-              <div
-                className="flex gap-4 h-64 md:h-80 cursor-pointer"
+              <button
+                type="button"
+                className="flex w-full gap-4 h-64 md:h-80 cursor-pointer text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-pink-400"
                 onClick={() => setSelectedItem(item)}
               >
                 <div className="flex-1 flex flex-col gap-2">
@@ -950,7 +969,7 @@ function PhotoEditingList({
                     />
                   </div>
                 </div>
-              </div>
+              </button>
             </div>
           ))}
         </div>
@@ -975,7 +994,9 @@ function PhotoEditingList({
               <div className="w-full flex items-center justify-between mb-6 text-white">
                 {selectedItem.title && <h3 className="text-2xl font-bold">{selectedItem.title}</h3>}
                 <button
+                  type="button"
                   onClick={() => setSelectedItem(null)}
+                  aria-label="Close photo editing preview"
                   className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors ml-auto"
                 >
                   <X size={24} />
@@ -1024,12 +1045,16 @@ function ReelsList({
   reels,
   onBack,
   loading,
-  autoplay = false
+  autoplay = false,
+  emptyLabel = "No reels available yet.",
+  itemLabel = "video",
 }: {
   reels: ReelItem[];
   onBack: () => void;
   loading: boolean;
   autoplay?: boolean;
+  emptyLabel?: string;
+  itemLabel?: "video" | "story";
 }) {
   const [visibleCount, setVisibleCount] = useState(3);
   const prevCountRef = useRef(3);
@@ -1037,22 +1062,9 @@ function ReelsList({
   useEffect(() => {
     const prevCount = prevCountRef.current;
 
-    if (visibleCount > prevCount) {
-      // Show More was clicked
-      const timer = setTimeout(() => {
-        const card = document.querySelector(".reel-card") as HTMLElement | null;
-        if (card) {
-          const step = card.offsetHeight + 24; // Height + gap
-          window.scrollBy({ top: step, behavior: "smooth" });
-        }
-      }, 500);
-      return () => clearTimeout(timer);
-    } else if (visibleCount < prevCount) {
+    if (visibleCount < prevCount) {
       // Show Less was clicked
-      const portfolioSection = document.getElementById("portfolio");
-      if (portfolioSection) {
-        portfolioSection.scrollIntoView({ behavior: "smooth" });
-      }
+      scrollToTarget("#portfolio");
     }
 
     prevCountRef.current = visibleCount;
@@ -1069,53 +1081,29 @@ function ReelsList({
 
   return (
     <div className="w-full">
-      <button onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
+      <button type="button" onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
         <ArrowLeft size={20} /> Back to Categories
       </button>
 
       {reels.length === 0 ? (
-        <div className="p-8 text-center text-ink/50 bg-sand/20 rounded-3xl">No reels available yet.</div>
+        <div className="p-8 text-center text-ink/50 bg-sand/20 rounded-3xl">{emptyLabel}</div>
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {visibleReels.map((reel) => {
-              const canvaEmbedUrl = getCanvaEmbedUrl(reel.video_url);
-              return (
-                <motion.div
-                  key={reel.id}
-                  className="reel-card bg-black rounded-3xl overflow-hidden aspect-[9/16] relative shadow-lg"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  {canvaEmbedUrl ? (
-                    <iframe
-                      src={canvaEmbedUrl}
-                      title="Canva video"
-                      className="w-full h-full"
-                      allow="autoplay; fullscreen; picture-in-picture"
-                      allowFullScreen
-                      loading="lazy"
-                    />
-                  ) : (
-                    <video
-                      src={reel.video_url}
-                      controls
-                      className="w-full h-full object-cover"
-                      playsInline
-                      autoPlay={autoplay}
-                      muted={autoplay}
-                      loop={autoplay}
-                    />
-                  )}
-                </motion.div>
-              );
-            })}
+            {visibleReels.map((reel) => (
+              <PortfolioVideoCard
+                key={reel.id}
+                item={reel}
+                autoplay={autoplay}
+                itemLabel={itemLabel}
+              />
+            ))}
           </div>
 
           <div className="mt-12 flex justify-center">
             {hasMore ? (
               <button
+                type="button"
                 onClick={showMore}
                 className="px-8 py-3 bg-ink text-white rounded-full font-medium hover:bg-ink/90 transition-colors"
               >
@@ -1123,6 +1111,7 @@ function ReelsList({
               </button>
             ) : showLessButton ? (
               <button
+                type="button"
                 onClick={showLess}
                 className="px-8 py-3 bg-sand text-ink rounded-full font-medium hover:bg-sand/80 transition-colors"
               >
@@ -1133,6 +1122,67 @@ function ReelsList({
         </>
       )}
     </div>
+  );
+}
+
+function PortfolioVideoCard({
+  item,
+  autoplay,
+  itemLabel,
+}: {
+  item: ReelItem;
+  autoplay: boolean;
+  itemLabel: "video" | "story";
+}) {
+  const canvaEmbedUrl = getCanvaEmbedUrl(item.video_url);
+  const startsUnavailable = isKnownBrokenPortfolioVideoUrl(item.video_url);
+  const [hasError, setHasError] = useState(startsUnavailable);
+
+  const unavailableMessage =
+    itemLabel === "story"
+      ? "This story is saved, but its Canva asset link is unavailable. Please check the media source."
+      : "This video link is unavailable.";
+
+  return (
+    <motion.div
+      className="reel-card bg-black rounded-3xl overflow-hidden aspect-[9/16] relative shadow-lg"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      {canvaEmbedUrl ? (
+        <iframe
+          src={canvaEmbedUrl}
+          title={item.title || "Canva video"}
+          className="w-full h-full"
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowFullScreen
+          loading="lazy"
+        />
+      ) : (
+        <video
+          src={item.video_url}
+          controls
+          className={clsx("w-full h-full object-cover", hasError && "opacity-20")}
+          playsInline
+          autoPlay={autoplay && !hasError}
+          muted={autoplay}
+          loop={autoplay}
+          preload="metadata"
+          onError={() => setHasError(true)}
+        />
+      )}
+
+      {hasError && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-ink/85 p-6 text-center text-white">
+          <Video size={28} className="text-white/80" />
+          <p className="text-sm font-semibold">
+            {itemLabel === "story" ? "Story Video Unavailable" : "Video Unavailable"}
+          </p>
+          <p className="max-w-xs text-xs leading-relaxed text-white/70">{unavailableMessage}</p>
+        </div>
+      )}
+    </motion.div>
   );
 }
 
@@ -1147,6 +1197,12 @@ function CarouselList({
 }) {
   const [selectedClient, setSelectedClient] = useState<CarouselClient | null>(null);
   const [carouselWidth, setCarouselWidth] = useState(300);
+
+  useEffect(() => {
+    if (!selectedClient) return;
+    stopSmoothScroll();
+    return () => startSmoothScroll();
+  }, [selectedClient]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -1177,7 +1233,7 @@ function CarouselList({
 
   return (
     <div className="w-full">
-      <button onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
+      <button type="button" onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
         <ArrowLeft size={20} /> Back to Categories
       </button>
 
@@ -1186,10 +1242,11 @@ function CarouselList({
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {clients.map((client) => (
-            <motion.div
+            <motion.button
+              type="button"
               key={client.clientName}
               onClick={() => setSelectedClient(client)}
-              className="group relative cursor-pointer bg-white rounded-3xl border border-ink/10 overflow-hidden hover:shadow-xl transition-all"
+              className="group relative cursor-pointer bg-white rounded-3xl border border-ink/10 overflow-hidden hover:shadow-xl transition-all text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-pink-400"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               whileHover={{ y: -5 }}
@@ -1214,7 +1271,7 @@ function CarouselList({
                 <h3 className="text-xl font-bold text-ink">{client.clientName}</h3>
                 <p className="text-sm text-ink/50 mt-1">{client.items.length} Slides</p>
               </div>
-            </motion.div>
+            </motion.button>
           ))}
         </div>
       )}
@@ -1250,6 +1307,7 @@ function CarouselList({
               </div>
 
               <button
+                type="button"
                 onClick={() => setSelectedClient(null)}
                 className="mt-4 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-full text-sm font-medium transition-colors"
               >
@@ -1302,7 +1360,7 @@ function CategoryGrid({
       <GlobalSpotlight gridRef={gridRef} />
       <div
         ref={gridRef}
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+        className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-x-6 lg:gap-y-8"
       >
         {categories.map((category) => (
           <StarBorder
@@ -1310,18 +1368,18 @@ function CategoryGrid({
             key={category.id}
             onClick={() => onSelect(category)}
             className="w-full h-full"
-            innerClassName="group relative p-8 bg-sand/30 hover:bg-white text-left transition-all hover:shadow-xl overflow-hidden cursor-pointer w-full h-full flex flex-col items-start justify-start"
+            innerClassName="group relative min-h-[190px] p-6 sm:p-7 bg-sand/30 hover:bg-white text-left transition-all hover:shadow-xl overflow-hidden cursor-pointer w-full h-full flex flex-col items-start justify-start"
             color="rgb(255, 0, 128)" // Pink
             speed="5s"
           >
-            <div className={clsx("relative z-10 w-14 h-14 rounded-2xl flex items-center justify-center mb-6 text-2xl transition-colors", category.color)}>
-              <category.icon size={28} />
+            <div className={clsx("relative z-10 w-12 h-12 rounded-2xl flex items-center justify-center mb-5 text-2xl transition-colors", category.color)}>
+              <category.icon size={25} />
             </div>
 
-            <h3 className="relative z-10 text-2xl font-bold text-ink mb-2">{category.name}</h3>
-            <p className="relative z-10 text-ink/60 mb-6">{category.description}</p>
+            <h3 className="relative z-10 text-xl md:text-2xl font-bold text-ink mb-2">{category.name}</h3>
+            <p className="relative z-10 text-sm leading-relaxed text-ink/60">{category.description}</p>
 
-            <div className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-100 transform translate-x-4 group-hover:translate-x-0 transition-all z-10">
+            <div className="absolute bottom-5 right-5 opacity-0 group-hover:opacity-100 transform translate-x-4 group-hover:translate-x-0 transition-all z-10">
               <div className="w-10 h-10 rounded-full bg-ink text-white flex items-center justify-center">
                 <ArrowLeft className="rotate-180" size={20} />
               </div>
@@ -1363,7 +1421,7 @@ function IndustryList({
 
   return (
     <div className="w-full">
-      <button onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
+      <button type="button" onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
         <ArrowLeft size={20} /> Back to Categories
       </button>
 
@@ -1420,9 +1478,15 @@ function IndustryList({
 function CopywritingGallery({ industry, onBack }: { industry: PortfolioIndustry, onBack: () => void }) {
   const [selectedImage, setSelectedImage] = useState<{ image: string } | null>(null);
 
+  useEffect(() => {
+    if (!selectedImage) return;
+    stopSmoothScroll();
+    return () => startSmoothScroll();
+  }, [selectedImage]);
+
   return (
     <div className="w-full">
-      <button onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
+      <button type="button" onClick={onBack} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink transition-colors cursor-pointer">
         <ArrowLeft size={20} /> Back to Categories
       </button>
 
@@ -1433,8 +1497,16 @@ function CopywritingGallery({ industry, onBack }: { industry: PortfolioIndustry,
           {industry.projects.map((project) => (
             <div
               key={project.id}
-              className="break-inside-avoid relative group rounded-2xl overflow-hidden cursor-pointer"
+              role="button"
+              tabIndex={0}
+              className="break-inside-avoid relative group rounded-2xl overflow-hidden cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-pink-400"
               onClick={() => setSelectedImage({ image: project.image })}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  setSelectedImage({ image: project.image });
+                }
+              }}
             >
               <img
                 src={project.image}
@@ -1471,7 +1543,9 @@ function CopywritingGallery({ industry, onBack }: { industry: PortfolioIndustry,
                 />
               </div>
               <button
+                type="button"
                 onClick={() => setSelectedImage(null)}
+                aria-label="Close copywriting preview"
                 className="absolute top-4 right-4 bg-white/50 hover:bg-white text-ink p-2 rounded-full transition-colors z-10"
               >
                 <ArrowLeft className="rotate-180" size={24} />
@@ -1539,13 +1613,17 @@ function IndustryGallery({ industry }: { industry: PortfolioIndustry }) {
 
   useEffect(() => {
     if (!selectedMedia) return;
+    stopSmoothScroll();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "ArrowRight") showNext(1);
       if (event.key === "ArrowLeft") showNext(-1);
       if (event.key === "Escape") setSelectedMedia(null);
     };
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      startSmoothScroll();
+    };
   }, [selectedMedia, showNext]);
 
   return (
@@ -1626,18 +1704,28 @@ function IndustryGallery({ industry }: { industry: PortfolioIndustry }) {
               onPointerUp={(event) => event.stopPropagation()}
             >
               <button
-                className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/80 p-3 text-ink opacity-0 shadow-lg transition-all duration-200 group-hover:opacity-100 hover:scale-110 cursor-pointer"
+                type="button"
+                className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/80 p-3 text-ink opacity-0 shadow-lg transition-all duration-200 group-hover:opacity-100 focus-visible:opacity-100 hover:scale-110 cursor-pointer"
                 onClick={() => showNext(-1)}
                 aria-label="Previous image"
               >
                 <ArrowLeft size={18} />
               </button>
               <button
-                className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/80 p-3 text-ink opacity-0 shadow-lg transition-all duration-200 group-hover:opacity-100 hover:scale-110 cursor-pointer"
+                type="button"
+                className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/80 p-3 text-ink opacity-0 shadow-lg transition-all duration-200 group-hover:opacity-100 focus-visible:opacity-100 hover:scale-110 cursor-pointer"
                 onClick={() => showNext(1)}
                 aria-label="Next image"
               >
                 <ArrowLeft size={18} className="rotate-180" />
+              </button>
+              <button
+                type="button"
+                className="absolute right-3 top-3 z-10 rounded-full bg-white/90 p-3 text-ink shadow-lg transition-all duration-200 hover:bg-white hover:scale-105 cursor-pointer"
+                onClick={() => setSelectedMedia(null)}
+                aria-label="Close image preview"
+              >
+                <X size={18} />
               </button>
               <div
                 className="relative w-full bg-sand"

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import clsx from "clsx";
+import { scrollToTarget } from "@/lib/smoothScroll";
 
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -31,10 +32,12 @@ export default function Header() {
       animate={{ y: 0 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
     >
-      <div
-        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+      <button
+        type="button"
+        aria-label="Scroll to top"
+        onClick={() => scrollToTarget("top")}
         className={clsx(
-          "transition-all duration-500 ease-in-out pointer-events-auto cursor-pointer",
+          "appearance-none border transition-all duration-500 ease-in-out pointer-events-auto cursor-pointer no-scale",
           isScrolled
             ? "px-8 py-2 bg-sand/90 backdrop-blur-md shadow-sm rounded-full border border-ink/5"
             : "px-4 py-2 bg-transparent border-transparent"
@@ -43,7 +46,7 @@ export default function Header() {
         <div className="font-bold text-3xl md:text-4xl tracking-wider text-ink">
           MAV<span className="font-normal opacity-60">STUDIO</span>
         </div>
-      </div>
+      </button>
     </motion.header>
   );
 }

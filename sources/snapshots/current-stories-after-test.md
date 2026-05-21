@@ -1,0 +1,60 @@
+- generic [active] [ref=e1] [box=0,-1909,1425,5795]:
+  - main [ref=e2] [box=0,-1909,1425,5795]:
+    - button "Scroll to top" [ref=e3] [cursor=pointer] [box=568,24,288,57]:
+      - generic [ref=e4] [box=601,33,223,40]: MAVSTUDIO
+    - generic [ref=e5] [box=0,-1909,1425,1041]:
+      - generic [ref=e6] [box=72,-1813,1280,600]:
+        - generic [ref=e7] [box=104,-1791,584,556]
+        - generic [ref=e30] [box=736,-1813,584,600]
+      - generic [ref=e54] [box=0,-1124,1425,216]:
+        - generic [ref=e56] [box=-2180,-1124,5664,96]
+        - generic [ref=e138] [box=-652,-1004,5664,96]
+    - generic [ref=e221] [box=96,-717,1232,645]:
+      - figure "Mav Studio - Creative Director" [ref=e224] [box=113,-676,450,563]:
+        - generic [ref=e225] [box=113,-676,450,563]
+        - generic [box=113,-676,155,24]: Mav Studio - Creative Director
+      - generic [ref=e227] [box=794,-717,584,645]:
+        - generic [ref=e228] [box=794,-717,584,144]
+        - paragraph [ref=e230] [box=794,-541,584,117]: Hi, I'm Mav, a Social Media Manager and Graphic Design Content Creator who helps brands show up consistently with clear strategy and scroll-stopping visuals. I turn your message into content that feels cohesive, on-brand, and built for engagement.
+        - paragraph [ref=e231] [box=794,-392,584,104]: From content planning to design and publishing, I focus on audience-first storytelling, strong visual systems, and measurable growth. Whether you need a full content refresh or ongoing management, I create posts that look beautiful and perform.
+        - generic [ref=e232] [box=794,-256,584,80]
+        - button "More About Me" [ref=e255] [cursor=pointer] [box=794,-120,180,48]
+    - generic [ref=e257] [box=72,104,1280,320]:
+      - generic [ref=e258] [box=72,104,1280,128]:
+        - generic [ref=e259] [box=72,104,1280,20]
+        - heading "Stories" [level=2] [ref=e263] [box=72,140,1280,48]
+        - paragraph [ref=e264] [box=72,204,672,28]: Captivating narratives and storytelling.
+      - generic [ref=e268] [box=72,280,1280,144]:
+        - button "Back to Categories" [ref=e269] [cursor=pointer] [box=72,280,159,24]
+        - generic [ref=e272] [box=72,336,1280,88]: No reels available yet.
+    - region "A clear workflow from insight to engagement-ready posts." [ref=e273] [box=0,568,1425,869]:
+      - generic [ref=e274] [box=72,664,1280,677]:
+        - generic [ref=e275] [box=72,664,1280,242]
+        - list [ref=e284] [box=72,946,1280,395]
+    - generic [ref=e340] [box=72,1532,1280,1395]:
+      - generic [ref=e342] [box=328,1552,768,208]:
+        - generic [ref=e343] [box=598,1552,228,49]
+        - heading "Proof In Words And Media" [level=2] [ref=e348] [box=328,1618,768,60]
+        - paragraph [ref=e349] [box=376,1702,672,59]: A blend of written feedback, campaign snapshots, and video-backed reactions from client work.
+      - generic [ref=e350] [box=72,1804,1280,978]:
+        - article [ref=e352] [box=72,1844,1280,537]
+        - generic [ref=e388] [box=72,2365,1280,417]
+      - generic [ref=e472] [box=456,2902,513,65]:
+        - generic [ref=e473] [box=464,2919,250,32]: Ready for the next one
+        - button "Join the Happy Clients" [ref=e474] [cursor=pointer] [box=726,2911,235,48]
+    - generic [ref=e482] [box=72,3104,1280,575]:
+      - generic [ref=e483] [box=96,3104,1232,442]:
+        - generic [ref=e484] [box=96,3104,576,442]
+        - generic [ref=e491] [box=752,3104,576,442]
+      - generic [ref=e527] [box=96,3626,1232,53]:
+        - paragraph [ref=e528] [box=96,3658,253,20]: © 2026 MAV STUDIO. All rights reserved.
+        - generic [ref=e529] [box=1122,3658,206,20]
+    - generic [box=8,922,1409,62]:
+      - toolbar "Application dock" [box=580,922,264,62]:
+        - button "Home" [ref=e532] [cursor=pointer] [box=596,930,46,46]
+        - button "About" [ref=e537] [cursor=pointer] [box=658,930,46,46]
+        - button "Work" [ref=e542] [cursor=pointer] [box=720,930,46,46]
+        - button "Contact" [ref=e547] [cursor=pointer] [box=782,930,46,46]
+  - button "Open Next.js Dev Tools" [ref=e557] [cursor=pointer] [box=22,946,32,32]:
+    - img [ref=e558] [box=22,942,40,40]
+  - alert [ref=e561] [box=-1,3885,1,1]

@@ -30,6 +30,7 @@ export type DockProps = {
 };
 
 type DockItemProps = {
+  ariaLabel: string;
   className?: string;
   children: React.ReactNode;
   onClick?: () => void;
@@ -41,6 +42,7 @@ type DockItemProps = {
 };
 
 function DockItem({
+  ariaLabel,
   children,
   className = '',
   onClick,
@@ -50,7 +52,7 @@ function DockItem({
   magnification,
   baseItemSize
 }: DockItemProps) {
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLButtonElement>(null);
   const isHovered = useMotionValue(0);
 
   const mouseDistance = useTransform(mouseX, val => {
@@ -65,8 +67,9 @@ function DockItem({
   const size = useSpring(targetSize, spring);
 
   return (
-    <motion.div
+    <motion.button
       ref={ref}
+      type="button"
       style={{
         width: size,
         height: size
@@ -76,17 +79,15 @@ function DockItem({
       onFocus={() => isHovered.set(1)}
       onBlur={() => isHovered.set(0)}
       onClick={onClick}
-      className={`relative inline-flex items-center justify-center rounded-full bg-white border border-ink/10 shadow-lg cursor-pointer z-20 no-scale ${className}`}
-      tabIndex={0}
-      role="button"
-      aria-haspopup="true"
+      className={`pointer-events-auto relative inline-flex items-center justify-center rounded-full bg-white border border-ink/10 shadow-lg cursor-pointer z-20 no-scale ${className}`}
+      aria-label={ariaLabel}
     >
       {Children.map(children, child =>
         React.isValidElement(child)
           ? cloneElement(child as React.ReactElement<{ isHovered?: MotionValue<number> }>, { isHovered })
           : child
       )}
-    </motion.div>
+    </motion.button>
   );
 }
 
@@ -148,7 +149,7 @@ export default function Dock({
   const isHovered = useMotionValue(0);
 
   return (
-    <motion.div className="fixed bottom-4 left-0 right-0 z-[100] mx-2 flex justify-center pointer-events-none">
+    <motion.div className="fixed bottom-3 left-0 right-0 z-40 mx-2 flex justify-center pointer-events-none sm:bottom-4">
       <motion.div
         onMouseMove={({ clientX }) => {
           isHovered.set(1);
@@ -158,13 +159,13 @@ export default function Dock({
           isHovered.set(0);
           mouseX.set(Infinity);
         }}
-        className={`${className} pointer-events-auto relative flex items-end w-fit gap-4 rounded-2xl pb-2 px-4`}
+        className={`${className} pointer-events-none relative flex items-end w-fit gap-4 rounded-2xl pb-2 px-4`}
         style={{ height: panelHeight }}
         role="toolbar"
         aria-label="Application dock"
       >
         {/* Pulsing Pink Glow (Behind everything) */}
-        <div className="absolute -inset-4 bg-pink-500/30 rounded-3xl blur-2xl animate-pulse z-0" />
+        <div className="absolute -inset-3 bg-pink-500/20 rounded-3xl blur-xl animate-pulse z-0" />
         
         {/* Dock Background (The Box) */}
         <div className="absolute inset-0 rounded-2xl border border-ink/10 bg-[#FDF8F5]/90 backdrop-blur-md shadow-xl z-10" />
@@ -172,6 +173,7 @@ export default function Dock({
         {items.map((item, index) => (
           <DockItem
             key={index}
+            ariaLabel={typeof item.label === 'string' ? item.label : `Dock item ${index + 1}`}
             onClick={item.onClick}
             className={item.className}
             mouseX={mouseX}

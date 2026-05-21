@@ -987,9 +987,9 @@ export function AdminPage() {
       const targetTable = createTableOverride ?? selectedTable;
       const isAiImageUpload = targetTable === "ai_images" && fieldName === "image_url";
       const isAiVideoUpload = targetTable === "ai_videos" && fieldName === "video_url";
-      const isReelVideoUpload = targetTable === "reels" && fieldName === "video_url";
+      const isManagedVideoUpload = (targetTable === "reels" || targetTable === "stories") && fieldName === "video_url";
 
-      if (isAiImageUpload || isAiVideoUpload || isReelVideoUpload) {
+      if (isAiImageUpload || isAiVideoUpload || isManagedVideoUpload) {
         if (!session?.access_token) {
           throw new Error("Your admin session expired. Please sign in again.");
         }
@@ -1031,7 +1031,7 @@ export function AdminPage() {
 
         if (inputRefs.current[fieldName]) inputRefs.current[fieldName]!.value = signedUpload.publicUrl;
         setImagePreview((prev) => ({ ...prev, [fieldName]: signedUpload.publicUrl }));
-        if (isReelVideoUpload) {
+        if (isManagedVideoUpload) {
           setReelVideoUrlDraft(signedUpload.publicUrl);
           setReelVideoSource("upload");
         }
@@ -2304,18 +2304,28 @@ export function AdminPage() {
 
           <form className="space-y-4" onSubmit={handleLogin}>
             <div>
+              <label htmlFor="admin-email" className="sr-only">
+                Admin email address
+              </label>
               <input
+                id="admin-email"
                 type="email"
                 name="username"
+                autoComplete="email"
                 placeholder="Email Address"
                 className="w-full bg-sand/50 border border-ink/10 rounded-2xl px-5 py-4 text-ink placeholder:text-ink/30 focus:outline-none focus:ring-2 focus:ring-ink/20 transition-all"
                 required
               />
             </div>
             <div>
+              <label htmlFor="admin-password" className="sr-only">
+                Admin password
+              </label>
               <input
+                id="admin-password"
                 type="password"
                 name="password"
+                autoComplete="current-password"
                 placeholder="Password"
                 className="w-full bg-sand/50 border border-ink/10 rounded-2xl px-5 py-4 text-ink placeholder:text-ink/30 focus:outline-none focus:ring-2 focus:ring-ink/20 transition-all"
                 required
@@ -4852,17 +4862,18 @@ export function AdminPage() {
                         : isEditingIndustry && field.name === "name"
                           ? (editingIndustry?.name ?? "")
                           : undefined;
-                      const isReelVideoUrl = formTable === "reels" && field.name === "video_url";
+                      const isReelVideoUrl = (formTable === "reels" || formTable === "stories") && field.name === "video_url";
 
                       if (isReelVideoUrl) {
                         const uploadDisabled = reelVideoSource === "url";
                         const urlDisabled = reelVideoSource === "upload";
                         const hasUploadedVideo = urlDisabled && Boolean(imagePreview[field.name]);
+                        const videoInputId = `${formTable}-video-url`;
 
                         return (
                           <div key={field.name} className="space-y-3">
                             <label
-                              htmlFor="reel-video-url"
+                              htmlFor={videoInputId}
                               className="text-xs font-bold uppercase tracking-widest text-ink/50 flex justify-between"
                             >
                               {field.label}
@@ -4871,7 +4882,7 @@ export function AdminPage() {
 
                             <input
                               ref={(el) => { inputRefs.current[field.name] = el; }}
-                              id="reel-video-url"
+                              id={videoInputId}
                               type="text"
                               name={urlDisabled ? undefined : field.name}
                               value={reelVideoUrlDraft}
@@ -4881,7 +4892,7 @@ export function AdminPage() {
                                 setReelVideoSource(nextValue.trim() ? "url" : null);
                               }}
                               disabled={urlDisabled}
-                              placeholder="https://example.com/reel.mp4"
+                              placeholder={formTable === "stories" ? "https://example.com/story.mp4" : "https://example.com/reel.mp4"}
                               className="w-full bg-sand/30 border border-ink/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-ink/10 focus:outline-none transition-all disabled:cursor-not-allowed disabled:bg-ink/5 disabled:text-ink/40"
                               required={!urlDisabled && field.required}
                             />
@@ -4940,7 +4951,7 @@ export function AdminPage() {
                                       if (inputRefs.current[field.name]) inputRefs.current[field.name]!.value = "";
                                     }}
                                     className="absolute top-2 right-2 bg-white/90 p-2 rounded-full text-red-500 opacity-0 group-hover:opacity-100 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300"
-                                    aria-label="Remove uploaded reel video"
+                                    aria-label={`Remove uploaded ${formTable === "stories" ? "story" : "reel"} video`}
                                   >
                                     <Trash2 size={16} />
                                   </button>
