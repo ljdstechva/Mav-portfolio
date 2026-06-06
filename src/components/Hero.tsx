@@ -141,7 +141,7 @@ export function Hero() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const scrollToPortfolio = () => {
-    scrollToTarget("#portfolio");
+    scrollToTarget("#portfolio", -72);
     window.history.replaceState(null, "", "#portfolio");
   };
 
@@ -182,7 +182,7 @@ export function Hero() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className="flex flex-col space-y-8 z-10 lg:pr-10"
+          className="flex flex-col space-y-8 z-10 pb-24 md:pb-28 lg:pr-10 xl:pb-24"
         >
           <div className="flex items-center gap-2">
             <span className="relative flex h-3 w-3">

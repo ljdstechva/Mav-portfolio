@@ -16,7 +16,7 @@ const FluidCursor = () => {
     const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
     if (reducedMotion || coarsePointer) return;
 
-    fluidCursor();
+    return fluidCursor();
   }, [isLandingRoute]);
 
   if (!isLandingRoute) {

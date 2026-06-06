@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState, useEffect, useRef, useCallback } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback, type MouseEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   ArrowRight,
+  ImageOff,
   Pause,
   Play,
   Video,
@@ -13,9 +14,10 @@ import {
   X
 } from "lucide-react";
 import clsx from "clsx";
-import { MenuItem } from "./FlowingMenu";
+import { gsap } from "gsap";
 import GalleryCarousel from "./GalleryCarousel";
 import Carousel, { CarouselItemData } from "./Carousel";
+import { MediaImage } from "./MediaImage";
 import StarBorder from "./StarBorder";
 import { GlobalSpotlight, MagicStyles } from "./MagicBento";
 import { scrollToTarget, startSmoothScroll, stopSmoothScroll } from "@/lib/smoothScroll";
@@ -106,6 +108,11 @@ const isKnownBrokenPortfolioVideoUrl = (rawUrl: string) => {
   }
 };
 
+const normalizeDbLabel = (value: string | null | undefined, fallback: string) => {
+  const normalized = value?.replace(/\s+/g, " ").trim();
+  return normalized || fallback;
+};
+
 export function Portfolio() {
   const [selectedCategory, setSelectedCategory] = useState<PortfolioCategory | null>(null);
   const [selectedIndustry, setSelectedIndustry] = useState<PortfolioIndustry | null>(null);
@@ -123,7 +130,7 @@ export function Portfolio() {
 
   const scrollPortfolioIntoView = useCallback(() => {
     const scrollToPortfolio = () => {
-      scrollToTarget("#portfolio");
+      scrollToTarget("#portfolio", -72);
     };
 
     window.requestAnimationFrame(scrollToPortfolio);
@@ -147,13 +154,13 @@ export function Portfolio() {
     }
   }, [selectedCategory, scrollPortfolioIntoView]);
 
-  const toggleIndustry = (industry: PortfolioIndustry) => {
-    if (selectedIndustry?.id === industry.id) {
-      setSelectedIndustry(null);
-    } else {
-      setSelectedIndustry(industry);
-    }
-  };
+  const openIndustryModal = useCallback((industry: PortfolioIndustry) => {
+    setSelectedIndustry(industry);
+  }, []);
+
+  const closeIndustryModal = useCallback(() => {
+    setSelectedIndustry(null);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -241,6 +248,9 @@ export function Portfolio() {
           const clientsForIndustry = rawClients
             .filter((client) => client.industry_id === industry.id && client.image_url)
             .sort((a, b) => {
+              const orderA = typeof a.sort_order === "number" ? a.sort_order : Number.MAX_SAFE_INTEGER;
+              const orderB = typeof b.sort_order === "number" ? b.sort_order : Number.MAX_SAFE_INTEGER;
+              if (orderA !== orderB) return orderA - orderB;
               const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
               const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
               return dateA - dateB;
@@ -248,18 +258,18 @@ export function Portfolio() {
 
           const clientOrderMap = new Map<string, number>();
           clientsForIndustry.forEach((client) => {
-            const key = client.name || "Untitled";
+            const key = normalizeDbLabel(client.name, "Untitled");
             if (!clientOrderMap.has(key)) {
               clientOrderMap.set(key, clientOrderMap.size);
             }
           });
 
           const projects = clientsForIndustry.map((client, index) => {
-            const clientName = client.name || "Untitled";
+            const clientName = normalizeDbLabel(client.name, "Untitled");
             return {
               id: client.id || `${industry.id}-${index}`,
               image: client.image_url as string,
-              title: client.name || "",
+              title: clientName,
               clientName,
               clientOrder: clientOrderMap.get(clientName) ?? 0,
             };
@@ -383,6 +393,7 @@ export function Portfolio() {
         }
       } catch (error) {
         if (active) {
+          setIndustries([]);
           setIndustriesError(error instanceof Error ? error.message : "Failed to load portfolio");
         }
       } finally {
@@ -478,7 +489,8 @@ export function Portfolio() {
                 >
                   <IndustryList
                     selectedIndustry={selectedIndustry}
-                    onSelect={toggleIndustry}
+                    onSelect={openIndustryModal}
+                    onCloseModal={closeIndustryModal}
                     onBack={goBackToCategories}
                     industries={industries}
                     loading={industriesLoading}
@@ -685,7 +697,7 @@ function AiImagesList({
             className="group overflow-hidden rounded-3xl border border-ink/10 bg-white shadow-sm transition-all hover:border-ink/20 hover:shadow-xl"
           >
             <div className="aspect-[4/5] bg-sand/20">
-              <img
+              <MediaImage
                 src={item.thumbnail_url || item.image_url}
                 alt={item.alt_text || "AI portfolio image"}
                 className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-[1.02]"
@@ -952,7 +964,7 @@ function PhotoEditingList({
                 <div className="flex-1 flex flex-col gap-2">
                   <span className="text-xs font-bold uppercase tracking-widest text-ink/40">Before</span>
                   <div className="relative flex-1 rounded-xl overflow-hidden bg-sand/20 group">
-                    <img
+                    <MediaImage
                       src={item.before_image_url}
                       alt="Before"
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -962,7 +974,7 @@ function PhotoEditingList({
                 <div className="flex-1 flex flex-col gap-2">
                   <span className="text-xs font-bold uppercase tracking-widest text-ink/40">After</span>
                   <div className="relative flex-1 rounded-xl overflow-hidden bg-sand/20 group">
-                    <img
+                    <MediaImage
                       src={item.after_image_url}
                       alt="After"
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -1007,7 +1019,7 @@ function PhotoEditingList({
                 <div className="flex-1 flex flex-col gap-2 relative">
                   <span className="absolute top-4 left-4 z-10 bg-black/50 text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest backdrop-blur-md">Before</span>
                   <div className="w-full h-full rounded-2xl overflow-hidden bg-black/50">
-                    <img
+                    <MediaImage
                       src={selectedItem.before_image_url}
                       alt="Before"
                       className="w-full h-full object-contain"
@@ -1025,7 +1037,7 @@ function PhotoEditingList({
                 <div className="flex-1 flex flex-col gap-2 relative">
                   <span className="absolute top-4 left-4 z-10 bg-black/50 text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest backdrop-blur-md">After</span>
                   <div className="w-full h-full rounded-2xl overflow-hidden bg-black/50">
-                    <img
+                    <MediaImage
                       src={selectedItem.after_image_url}
                       alt="After"
                       className="w-full h-full object-contain"
@@ -1063,8 +1075,7 @@ function ReelsList({
     const prevCount = prevCountRef.current;
 
     if (visibleCount < prevCount) {
-      // Show Less was clicked
-      scrollToTarget("#portfolio");
+      scrollToTarget("#portfolio", -72);
     }
 
     prevCountRef.current = visibleCount;
@@ -1253,7 +1264,7 @@ function CarouselList({
             >
               <div className="aspect-[4/5] bg-sand/20 relative overflow-hidden">
                 {client.items[0]?.image ? (
-                  <img
+                  <MediaImage
                     src={client.items[0].image}
                     alt={client.clientName}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -1360,7 +1371,7 @@ function CategoryGrid({
       <GlobalSpotlight gridRef={gridRef} />
       <div
         ref={gridRef}
-        className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-x-6 lg:gap-y-8"
+        className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-x-6 lg:gap-y-6"
       >
         {categories.map((category) => (
           <StarBorder
@@ -1368,15 +1379,15 @@ function CategoryGrid({
             key={category.id}
             onClick={() => onSelect(category)}
             className="w-full h-full"
-            innerClassName="group relative min-h-[190px] p-6 sm:p-7 bg-sand/30 hover:bg-white text-left transition-all hover:shadow-xl overflow-hidden cursor-pointer w-full h-full flex flex-col items-start justify-start"
+            innerClassName="group relative min-h-[150px] p-5 sm:p-6 bg-sand/30 hover:bg-white text-left transition-all hover:shadow-xl overflow-hidden cursor-pointer w-full h-full flex flex-col items-start justify-start"
             color="rgb(255, 0, 128)" // Pink
             speed="5s"
           >
-            <div className={clsx("relative z-10 w-12 h-12 rounded-2xl flex items-center justify-center mb-5 text-2xl transition-colors", category.color)}>
+            <div className={clsx("relative z-10 w-11 h-11 rounded-2xl flex items-center justify-center mb-4 text-2xl transition-colors", category.color)}>
               <category.icon size={25} />
             </div>
 
-            <h3 className="relative z-10 text-xl md:text-2xl font-bold text-ink mb-2">{category.name}</h3>
+            <h3 className="relative z-10 text-xl font-bold text-ink mb-2">{category.name}</h3>
             <p className="relative z-10 text-sm leading-relaxed text-ink/60">{category.description}</p>
 
             <div className="absolute bottom-5 right-5 opacity-0 group-hover:opacity-100 transform translate-x-4 group-hover:translate-x-0 transition-all z-10">
@@ -1394,6 +1405,7 @@ function CategoryGrid({
 function IndustryList({
   selectedIndustry,
   onSelect,
+  onCloseModal,
   onBack,
   industries,
   loading,
@@ -1401,23 +1413,13 @@ function IndustryList({
 }: {
   selectedIndustry: PortfolioIndustry | null;
   onSelect: (i: PortfolioIndustry) => void;
+  onCloseModal: () => void;
   onBack: () => void;
   industries: PortfolioIndustry[];
   loading: boolean;
   error: string | null;
 }) {
-  const [itemHeight, setItemHeight] = useState(100);
-
-  useEffect(() => {
-    const updateHeight = () => {
-      // 70px for mobile, 100px for desktop
-      setItemHeight(window.innerWidth < 768 ? 70 : 100);
-    };
-
-    updateHeight();
-    window.addEventListener("resize", updateHeight);
-    return () => window.removeEventListener("resize", updateHeight);
-  }, []);
+  const [hoveredIndustryId, setHoveredIndustryId] = useState<string | null>(null);
 
   return (
     <div className="w-full">
@@ -1425,53 +1427,457 @@ function IndustryList({
         <ArrowLeft size={20} /> Back to Categories
       </button>
 
-      <div className="relative rounded-[28px] border border-ink/10 overflow-hidden bg-white shadow-[0_25px_80px_-45px_rgba(6,0,16,0.25)] flex flex-col">
+      <div className="relative">
         {loading && (
-          <div className="p-6 text-sm text-ink/50">Loading industries...</div>
+          <div className="rounded-[28px] border border-ink/10 bg-white p-6 text-sm text-ink/50 shadow-[0_25px_80px_-45px_rgba(6,0,16,0.25)]">
+            Loading industries...
+          </div>
         )}
         {error && !loading && (
-          <div className="p-6 text-sm text-red-500">{error}</div>
+          <div className="rounded-[28px] border border-red-200 bg-white p-6 text-sm text-red-500 shadow-[0_25px_80px_-45px_rgba(6,0,16,0.25)]">
+            {error}
+          </div>
         )}
         {!loading && !error && industries.length === 0 && (
-          <div className="p-6 text-sm text-ink/50">No industries available yet.</div>
+          <div className="rounded-[28px] border border-ink/10 bg-white p-6 text-sm text-ink/50 shadow-[0_25px_80px_-45px_rgba(6,0,16,0.25)]">
+            No industries available yet.
+          </div>
         )}
-        {!loading && !error && industries.map((industry, index) => {
-          const isSelected = selectedIndustry?.id === industry.id;
-          return (
-            <div key={industry.id} className="flex flex-col">
-              <MenuItem
-                link="#"
-                text={industry.name}
-                image={industry.projects[0]?.image ?? "/images/About.png"}
-                speed={14}
-                textColor="#b08968"
-                marqueeBgColor="#7a563b"
-                marqueeTextColor="#ffffff"
-                borderColor="rgba(0,0,0,0.1)"
-                itemHeight={itemHeight}
-                isFirst={index === 0}
-                onItemClick={() => onSelect(industry)}
-              />
-              <AnimatePresence>
-                {isSelected && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.3, ease: "easeInOut" }}
-                    className="overflow-hidden bg-sand/10"
-                  >
-                    <IndustryGallery
-                      industry={industry}
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
+        {!loading && !error && industries.length > 0 && (
+          <>
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+              {industries.map((industry, index) => (
+                <GraphicIndustryCard
+                  key={industry.id}
+                  industry={industry}
+                  index={index}
+                  isSelected={selectedIndustry?.id === industry.id}
+                  isHovered={hoveredIndustryId === industry.id}
+                  hoveredIndustryId={hoveredIndustryId}
+                  onHoverStart={() => setHoveredIndustryId(industry.id)}
+                  onHoverEnd={() => {
+                    setHoveredIndustryId((currentId) => currentId === industry.id ? null : currentId);
+                  }}
+                  onSelect={() => onSelect(industry)}
+                />
+              ))}
             </div>
-          );
-        })}
+
+            <GraphicDesignModal industry={selectedIndustry} onClose={onCloseModal} />
+          </>
+        )}
       </div>
     </div>
+  );
+}
+
+function GraphicIndustryCard({
+  industry,
+  index,
+  isSelected,
+  isHovered,
+  hoveredIndustryId,
+  onHoverStart,
+  onHoverEnd,
+  onSelect,
+}: {
+  industry: PortfolioIndustry;
+  index: number;
+  isSelected: boolean;
+  isHovered: boolean;
+  hoveredIndustryId: string | null;
+  onHoverStart: () => void;
+  onHoverEnd: () => void;
+  onSelect: () => void;
+}) {
+  const cardRef = useRef<HTMLButtonElement>(null);
+  const marqueeRef = useRef<HTMLDivElement>(null);
+  const marqueeInnerRef = useRef<HTMLDivElement>(null);
+  const marqueeAnimationRef = useRef<gsap.core.Tween | null>(null);
+  const hoverTimelineRef = useRef<gsap.core.Timeline | null>(null);
+  const [repetitions, setRepetitions] = useState(3);
+
+  const images = useMemo(() => {
+    const projectImages = industry.projects
+      .map((project) => project.image)
+      .filter(Boolean);
+
+    return projectImages.length > 0 ? projectImages.slice(0, 8) : [""];
+  }, [industry.projects]);
+
+  const pieceCount = industry.projects.length;
+
+  const findClosestEdge = (mouseX: number, mouseY: number, width: number, height: number): "top" | "bottom" => {
+    const topEdgeDist = Math.pow(mouseX - width / 2, 2) + Math.pow(mouseY, 2);
+    const bottomEdgeDist = Math.pow(mouseX - width / 2, 2) + Math.pow(mouseY - height, 2);
+    return topEdgeDist < bottomEdgeDist ? "top" : "bottom";
+  };
+
+  useEffect(() => {
+    const calculateRepetitions = () => {
+      if (!cardRef.current || !marqueeInnerRef.current) return;
+      const marqueeContent = marqueeInnerRef.current.querySelector(".graphics-card-marquee-segment") as HTMLElement | null;
+      if (!marqueeContent) return;
+
+      const contentWidth = marqueeContent.offsetWidth;
+      if (contentWidth === 0) return;
+
+      const needed = Math.ceil(cardRef.current.offsetWidth / contentWidth) + 2;
+      setRepetitions(Math.max(3, needed));
+    };
+
+    calculateRepetitions();
+    window.addEventListener("resize", calculateRepetitions);
+    return () => window.removeEventListener("resize", calculateRepetitions);
+  }, [images]);
+
+  useEffect(() => {
+    const setupMarquee = () => {
+      if (!marqueeInnerRef.current) return;
+      const marqueeContent = marqueeInnerRef.current.querySelector(".graphics-card-marquee-segment") as HTMLElement | null;
+      if (!marqueeContent) return;
+
+      const contentWidth = marqueeContent.offsetWidth;
+      if (contentWidth === 0) return;
+
+      marqueeAnimationRef.current?.kill();
+      marqueeAnimationRef.current = gsap.to(marqueeInnerRef.current, {
+        x: -contentWidth,
+        duration: 18,
+        ease: "none",
+        repeat: -1,
+      });
+    };
+
+    const timer = window.setTimeout(setupMarquee, 60);
+    return () => {
+      window.clearTimeout(timer);
+      marqueeAnimationRef.current?.kill();
+      hoverTimelineRef.current?.kill();
+    };
+  }, [images, repetitions]);
+
+  useEffect(() => {
+    if (!marqueeRef.current || !marqueeInnerRef.current) return;
+
+    if (isSelected) {
+      gsap.to([marqueeRef.current, marqueeInnerRef.current], {
+        y: "0%",
+        duration: 0.45,
+        ease: "expo.out",
+      });
+    } else {
+      gsap.set(marqueeRef.current, { y: "101%" });
+      gsap.set(marqueeInnerRef.current, { y: "-101%" });
+    }
+  }, [isSelected]);
+
+  useEffect(() => {
+    if (isSelected || isHovered || hoveredIndustryId === null) return;
+    if (!marqueeRef.current || !marqueeInnerRef.current) return;
+
+    hoverTimelineRef.current?.kill();
+    hoverTimelineRef.current = null;
+    gsap.set(marqueeRef.current, { y: "101%" });
+    gsap.set(marqueeInnerRef.current, { y: "-101%" });
+  }, [hoveredIndustryId, isHovered, isSelected]);
+
+  const showMarquee = (event: MouseEvent<HTMLButtonElement>) => {
+    if (!cardRef.current || !marqueeRef.current || !marqueeInnerRef.current) return;
+    onHoverStart();
+    const rect = cardRef.current.getBoundingClientRect();
+    const edge = findClosestEdge(event.clientX - rect.left, event.clientY - rect.top, rect.width, rect.height);
+
+    hoverTimelineRef.current?.kill();
+    hoverTimelineRef.current = gsap
+      .timeline({
+        defaults: { duration: 0.6, ease: "expo.out" },
+        onComplete: () => {
+          hoverTimelineRef.current = null;
+        },
+      })
+      .set(marqueeRef.current, { y: edge === "top" ? "-101%" : "101%" }, 0)
+      .set(marqueeInnerRef.current, { y: edge === "top" ? "101%" : "-101%" }, 0)
+      .to([marqueeRef.current, marqueeInnerRef.current], { y: "0%" }, 0);
+  };
+
+  const hideMarquee = (event: MouseEvent<HTMLButtonElement>) => {
+    onHoverEnd();
+    if (isSelected || !cardRef.current || !marqueeRef.current || !marqueeInnerRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const edge = findClosestEdge(event.clientX - rect.left, event.clientY - rect.top, rect.width, rect.height);
+
+    hoverTimelineRef.current?.kill();
+    hoverTimelineRef.current = gsap
+      .timeline({
+        defaults: { duration: 0.6, ease: "expo.out" },
+        onComplete: () => {
+          hoverTimelineRef.current = null;
+        },
+      })
+      .to(marqueeRef.current, { y: edge === "top" ? "-101%" : "101%" }, 0)
+      .to(marqueeInnerRef.current, { y: edge === "top" ? "101%" : "-101%" }, 0);
+  };
+
+  return (
+    <motion.button
+      ref={cardRef}
+      type="button"
+      layout
+      onClick={onSelect}
+      onMouseEnter={showMarquee}
+      onMouseLeave={hideMarquee}
+      className={clsx(
+        "no-scale group relative min-h-[268px] overflow-hidden rounded-[28px] border p-5 text-left shadow-[0_25px_70px_-50px_rgba(6,0,16,0.34)] transition-all duration-300 ease-out hover:-translate-y-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#c98465] sm:min-h-[286px] sm:p-6",
+        isSelected
+          ? "border-[#7a563b]/70 bg-[#7a563b] text-white shadow-[0_30px_90px_-48px_rgba(122,86,59,0.72)]"
+          : "border-ink/10 bg-white text-ink hover:border-[#7a563b]/50 hover:bg-[#7a563b] hover:text-white"
+      )}
+      aria-pressed={isSelected}
+    >
+      <div
+        ref={marqueeRef}
+        className="pointer-events-none absolute inset-0 overflow-hidden bg-[#7a563b] translate-y-[101%]"
+      >
+        <div className="absolute inset-0 bg-black/10" />
+        <div className="absolute inset-x-0 top-6 h-px bg-white/20" />
+        <div className="absolute inset-x-0 bottom-6 h-px bg-white/20" />
+        <div
+          ref={marqueeInnerRef}
+          className="relative flex h-full w-fit items-center gap-4 px-4"
+        >
+          {Array.from({ length: repetitions }).map((_, repetitionIndex) => (
+            <div
+              className="graphics-card-marquee-segment flex shrink-0 items-center gap-4 pr-4"
+              key={`marquee-${industry.id}-${repetitionIndex}`}
+            >
+              {images.map((image, imageIndex) => (
+                <GraphicCardImage
+                  key={`${image}-${imageIndex}`}
+                  src={image}
+                  alt=""
+                  className="h-28 w-20 shrink-0 rounded-2xl border border-white/20 object-cover shadow-[0_18px_35px_-24px_rgba(0,0,0,0.9)] sm:h-36 sm:w-24"
+                  loading={repetitionIndex === 0 ? "eager" : "lazy"}
+                  decoding="async"
+                />
+              ))}
+            </div>
+          ))}
+        </div>
+        <div className="absolute inset-0 bg-gradient-to-t from-[#3f2818]/80 via-[#7a563b]/35 to-[#7a563b]/20" />
+      </div>
+
+      <div className="relative z-10 flex min-h-[228px] flex-col justify-between sm:min-h-[238px]">
+        <div className="flex items-start justify-between gap-4">
+          <span className={clsx(
+            "rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] transition-colors",
+            isSelected
+              ? "border-white/35 bg-white/10 text-white"
+              : "border-ink/10 bg-sand/60 text-ink/55 group-hover:border-white/35 group-hover:bg-white/10 group-hover:text-white/85"
+          )}>
+            {String(index + 1).padStart(2, "0")}
+          </span>
+          <span className={clsx(
+            "text-xs font-semibold uppercase tracking-[0.2em] transition-colors",
+            isSelected ? "text-white/75" : "text-ink/45 group-hover:text-white/75"
+          )}>
+            {pieceCount} {pieceCount === 1 ? "piece" : "pieces"}
+          </span>
+        </div>
+
+        <div>
+          <h3 className="max-w-[12ch] text-3xl font-bold leading-[1.05] sm:text-4xl">{industry.name}</h3>
+        </div>
+
+        <div className="flex items-center justify-between gap-4">
+          <span className={clsx(
+            "text-sm font-semibold transition-colors",
+            isSelected ? "text-white" : "text-[#7a563b] group-hover:text-white"
+          )}>
+            View Samples
+          </span>
+          <span className={clsx(
+            "flex h-11 w-11 items-center justify-center rounded-full transition-all duration-300",
+            isSelected
+              ? "bg-white text-[#7a563b]"
+              : "bg-ink text-white group-hover:bg-white group-hover:text-[#7a563b]"
+          )}>
+            <ArrowLeft className={clsx("transition-transform", isSelected ? "-rotate-90" : "rotate-180 group-hover:translate-x-0.5")} size={18} />
+          </span>
+        </div>
+      </div>
+    </motion.button>
+  );
+}
+
+function GraphicDesignModal({
+  industry,
+  onClose,
+}: {
+  industry: PortfolioIndustry | null;
+  onClose: () => void;
+}) {
+  const modalTitleId = industry ? `graphic-design-modal-${industry.id}` : "graphic-design-modal-title";
+  const heroImages = useMemo(() => {
+    if (!industry) return [];
+
+    const seen = new Set<string>();
+    return industry.projects
+      .map((project) => project.image)
+      .filter((image) => {
+        if (!image || seen.has(image)) return false;
+        seen.add(image);
+        return true;
+      })
+      .slice(0, 6);
+  }, [industry]);
+
+  const clientCount = useMemo(() => {
+    if (!industry) return 0;
+    return new Set(industry.projects.map((project) => project.clientName || project.title || project.id)).size;
+  }, [industry]);
+
+  useEffect(() => {
+    if (!industry) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    stopSmoothScroll();
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+      startSmoothScroll();
+    };
+  }, [industry, onClose]);
+
+  return (
+    <AnimatePresence>
+      {industry && (
+        <motion.div
+          className="fixed inset-0 z-[999] flex items-center justify-center bg-ink/70 p-3 backdrop-blur-md sm:p-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onMouseDown={onClose}
+        >
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={modalTitleId}
+            className="relative flex max-h-[calc(100vh-1.5rem)] w-full max-w-6xl flex-col overflow-hidden rounded-[30px] bg-[#fbf7f2] text-ink shadow-[0_32px_120px_-42px_rgba(0,0,0,0.75)] sm:max-h-[calc(100vh-3rem)]"
+            initial={{ opacity: 0, y: 26, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.98 }}
+            transition={{ duration: 0.28, ease: "easeOut" }}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="relative shrink-0 overflow-hidden bg-[#7a563b] px-5 py-6 text-white sm:px-7 md:px-8 md:py-7">
+              <div className="absolute inset-y-0 right-0 hidden w-1/2 overflow-hidden opacity-55 md:block">
+                <div className="flex h-full translate-x-16 items-center gap-4">
+                  {heroImages.map((image, index) => (
+                    <GraphicCardImage
+                      key={`modal-hero-${image}-${index}`}
+                      src={image}
+                      alt=""
+                      className="h-40 w-28 shrink-0 rounded-[22px] border border-white/20 object-cover shadow-[0_24px_50px_-32px_rgba(0,0,0,0.85)]"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  ))}
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-r from-[#7a563b] via-[#7a563b]/80 to-transparent" />
+              </div>
+
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close graphic design samples"
+                className="no-scale absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-white/12 text-white shadow-lg backdrop-blur transition-colors hover:bg-white hover:text-[#7a563b]"
+              >
+                <X size={19} />
+              </button>
+
+              <div className="relative z-10 max-w-2xl">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/65">Graphic Design Samples</p>
+                <h3 id={modalTitleId} className="mt-3 text-3xl font-bold leading-tight sm:text-4xl md:text-5xl">
+                  {industry.name}
+                </h3>
+                <div className="mt-5 flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/78">
+                  <span className="rounded-full border border-white/25 bg-white/10 px-3 py-1.5">
+                    {industry.projects.length} {industry.projects.length === 1 ? "piece" : "pieces"}
+                  </span>
+                  <span className="rounded-full border border-white/25 bg-white/10 px-3 py-1.5">
+                    {clientCount} {clientCount === 1 ? "collection" : "collections"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="min-h-0 overflow-y-auto px-4 py-5 sm:px-6 md:px-8 md:py-7">
+              <IndustryGallery industry={industry} variant="modal" />
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function GraphicCardImage({
+  src,
+  alt,
+  className,
+  loading,
+  decoding,
+}: {
+  src: string;
+  alt: string;
+  className: string;
+  loading?: "eager" | "lazy";
+  decoding?: "async" | "sync" | "auto";
+}) {
+  const [hasError, setHasError] = useState(!src);
+
+  if (hasError) {
+    return (
+      <div
+        role="img"
+        aria-label={alt ? `${alt} image source unavailable` : "Image source unavailable"}
+        title="Source image unavailable"
+        className={clsx(
+          className,
+          "relative flex flex-col items-center justify-center overflow-hidden bg-[#f3e7dc] text-center text-[#7a563b]"
+        )}
+      >
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(122,86,59,0.18)_0%,rgba(255,255,255,0.42)_48%,rgba(201,132,101,0.2)_100%)]" />
+        <div className="absolute inset-0 opacity-35 [background-image:radial-gradient(circle_at_1px_1px,rgba(122,86,59,0.25)_1px,transparent_0)] [background-size:12px_12px]" />
+        <div className="relative z-10 flex h-8 w-8 items-center justify-center rounded-full border border-[#7a563b]/20 bg-white/70 shadow-sm">
+          <ImageOff size={15} />
+        </div>
+        <span className="relative z-10 mt-2 max-w-[8rem] px-2 text-[9px] font-bold uppercase leading-tight tracking-[0.12em]">
+          Source unavailable
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <MediaImage
+      src={src}
+      alt={alt}
+      className={className}
+      loading={loading}
+      decoding={decoding}
+      onError={() => setHasError(true)}
+    />
   );
 }
 
@@ -1508,7 +1914,7 @@ function CopywritingGallery({ industry, onBack }: { industry: PortfolioIndustry,
                 }
               }}
             >
-              <img
+              <MediaImage
                 src={project.image}
                 alt={project.title || "Copywriting sample"}
                 className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105"
@@ -1536,7 +1942,7 @@ function CopywritingGallery({ industry, onBack }: { industry: PortfolioIndustry,
               onClick={(e) => e.stopPropagation()}
             >
               <div className="w-full bg-sand/20 relative">
-                <img
+                <MediaImage
                   src={selectedImage.image}
                   alt="Copywriting sample"
                   className="w-full h-full max-h-[85vh] object-contain p-4"
@@ -1558,12 +1964,20 @@ function CopywritingGallery({ industry, onBack }: { industry: PortfolioIndustry,
   );
 }
 
-function IndustryGallery({ industry }: { industry: PortfolioIndustry }) {
+function IndustryGallery({
+  industry,
+  variant = "section",
+}: {
+  industry: PortfolioIndustry;
+  variant?: "section" | "modal";
+}) {
   const [selectedMedia, setSelectedMedia] = useState<{ image: string; text: string } | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [selectedClientName, setSelectedClientName] = useState<string>("all");
   const swipeStartX = useRef<number | null>(null);
   const swipeStartY = useRef<number | null>(null);
   const selectedIndexRef = useRef<number>(0);
+  const isModal = variant === "modal";
 
   const galleries = useMemo(
     () =>
@@ -1583,6 +1997,34 @@ function IndustryGallery({ industry }: { industry: PortfolioIndustry }) {
         .sort((a, b) => a.order - b.order),
     [galleries]
   );
+
+  const flatGalleryItems = useMemo(
+    () =>
+      galleryList.flatMap((gallery) =>
+        gallery.items.map((item) => ({ ...item, clientName: gallery.clientName }))
+      ),
+    [galleryList]
+  );
+
+  const activeClientName =
+    selectedClientName === "all" || galleryList.some((gallery) => gallery.clientName === selectedClientName)
+      ? selectedClientName
+      : "all";
+
+  const activeGalleryItems = useMemo(() => {
+    if (activeClientName === "all") {
+      return flatGalleryItems;
+    }
+
+    const activeGallery = galleryList.find((gallery) => gallery.clientName === activeClientName);
+    if (!activeGallery) {
+      return flatGalleryItems;
+    }
+
+    return activeGallery.items.map((item) => ({ ...item, clientName: activeGallery.clientName }));
+  }, [activeClientName, flatGalleryItems, galleryList]);
+
+  const activePieceCount = activeGalleryItems.length;
 
   useEffect(() => {
     if (selectedIndex !== null) {
@@ -1611,6 +2053,37 @@ function IndustryGallery({ industry }: { industry: PortfolioIndustry }) {
     setSelectedMedia(allItems[nextIndex]);
   }, [galleryList, getCurrentIndex]);
 
+  const openGalleryItem = useCallback((galleryClientName: string, item: GalleryItem, index: number) => {
+    setSelectedMedia({
+      image: item.fullImage ?? item.image,
+      text: item.text,
+    });
+
+    const galleryIndex = galleryList.findIndex((gallery) => gallery.clientName === galleryClientName);
+    const offset = galleryList
+      .slice(0, galleryIndex >= 0 ? galleryIndex : 0)
+      .reduce((count, gallery) => count + gallery.items.length, 0);
+    const total = galleryList.reduce((count, gallery) => count + gallery.items.length, 0);
+    const nextIndex = (offset + index) % Math.max(total, 1);
+    selectedIndexRef.current = nextIndex;
+    setSelectedIndex(nextIndex);
+  }, [galleryList]);
+
+  const openFlatGalleryItem = useCallback((item: GalleryItem & { clientName?: string }, index: number) => {
+    setSelectedMedia({
+      image: item.fullImage ?? item.image,
+      text: item.text,
+    });
+    const flatIndex = flatGalleryItems.findIndex((flatItem) =>
+      flatItem.image === item.image &&
+      flatItem.text === item.text &&
+      flatItem.clientName === item.clientName
+    );
+    const nextIndex = flatIndex >= 0 ? flatIndex : index;
+    selectedIndexRef.current = nextIndex;
+    setSelectedIndex(nextIndex);
+  }, [flatGalleryItems]);
+
   useEffect(() => {
     if (!selectedMedia) return;
     stopSmoothScroll();
@@ -1622,59 +2095,128 @@ function IndustryGallery({ industry }: { industry: PortfolioIndustry }) {
     window.addEventListener("keydown", onKeyDown);
     return () => {
       window.removeEventListener("keydown", onKeyDown);
-      startSmoothScroll();
+      if (!isModal) {
+        startSmoothScroll();
+      }
     };
-  }, [selectedMedia, showNext]);
+  }, [isModal, selectedMedia, showNext]);
 
   return (
-    <div className="w-full p-4 md:p-8">
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <div>
-          <h3 className="text-2xl font-bold text-ink">{industry.name} Gallery</h3>
-          <p className="text-sm text-ink/60">Showcasing selected works from {industry.name}</p>
+    <div className={clsx("w-full", isModal ? "p-0" : "p-4 md:p-8")}>
+      {!isModal && (
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <div>
+            <h3 className="text-2xl font-bold text-ink">{industry.name} Gallery</h3>
+            <p className="text-sm text-ink/60">Showcasing selected works from {industry.name}</p>
+          </div>
+          <div className="text-xs uppercase tracking-[0.25em] text-ink/50">
+            {galleryList.reduce((count, gallery) => count + gallery.items.length, 0)} pieces
+          </div>
         </div>
-        <div className="text-xs uppercase tracking-[0.25em] text-ink/50">
-          {galleryList.reduce((count, gallery) => count + gallery.items.length, 0)} pieces
-        </div>
-      </div>
+      )}
       {galleryList.length > 0 ? (
-        <div className="space-y-8">
-          {galleryList.map((gallery) => (
-            <div key={gallery.clientName} className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="text-lg font-bold text-ink">{gallery.clientName}</h4>
-                <span className="text-xs uppercase tracking-[0.2em] text-ink/50">
-                  {gallery.items.length} images
+        isModal ? (
+          <div className="space-y-5">
+            <div className="flex flex-col gap-3 border-b border-ink/10 pb-4">
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ink/45">Client Selection</p>
+                  <h4 className="mt-1 text-xl font-bold text-ink">Choose a client collection</h4>
+                </div>
+                <span className="shrink-0 text-xs font-semibold uppercase tracking-[0.18em] text-ink/45">
+                  {activePieceCount} {activePieceCount === 1 ? "piece" : "pieces"}
                 </span>
               </div>
-              <div className="h-[320px] md:h-[420px] overflow-hidden rounded-[24px] border border-ink/10 bg-sand/60 flex items-center justify-center">
-                <GalleryCarousel
-                  items={gallery.items.map((item) => ({
-                    ...item,
-                    image: item.image,
-                    fullImage: item.image
-                  }))}
-                  onItemClick={(item: GalleryItem, index: number) => {
-                    if (gallery.items.length === 0) return;
-                    setSelectedMedia({
-                      image: item.fullImage ?? item.image,
-                      text: item.text
-                    });
-                    const offset = galleryList
-                      .slice(0, galleryList.findIndex((g) => g.clientName === gallery.clientName))
-                      .reduce((count, g) => count + g.items.length, 0);
-                    const total = galleryList.reduce((count, g) => count + g.items.length, 0);
-                    const nextIndex = (offset + index) % Math.max(total, 1);
-                    selectedIndexRef.current = nextIndex;
-                    setSelectedIndex(nextIndex);
-                  }}
-                />
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedClientName("all")}
+                  className={clsx(
+                    "no-scale shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition-colors",
+                    activeClientName === "all"
+                      ? "border-[#7a563b] bg-[#7a563b] text-white"
+                      : "border-ink/10 bg-white text-ink/65 hover:border-[#7a563b]/35 hover:text-[#7a563b]"
+                  )}
+                >
+                  All Clients
+                </button>
+                {galleryList.map((gallery) => (
+                  <button
+                    type="button"
+                    key={`client-filter-${gallery.clientName}`}
+                    onClick={() => setSelectedClientName(gallery.clientName)}
+                    className={clsx(
+                      "no-scale shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition-colors",
+                      activeClientName === gallery.clientName
+                        ? "border-[#7a563b] bg-[#7a563b] text-white"
+                        : "border-ink/10 bg-white text-ink/65 hover:border-[#7a563b]/35 hover:text-[#7a563b]"
+                    )}
+                  >
+                    {gallery.clientName}
+                  </button>
+                ))}
               </div>
             </div>
-          ))}
-        </div>
+
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+              {activeGalleryItems.map((item, index) => (
+                <button
+                  type="button"
+                  key={`${item.clientName}-${item.image}-${index}`}
+                  className="no-scale group relative aspect-[4/5] overflow-hidden rounded-2xl border border-ink/10 bg-white text-left shadow-[0_18px_45px_-36px_rgba(6,0,16,0.45)] transition-all duration-300 hover:-translate-y-1 hover:border-[#7a563b]/35 hover:shadow-xl"
+                  onClick={() => openFlatGalleryItem(item, index)}
+                >
+                  <GraphicCardImage
+                    src={item.image}
+                    alt={item.text}
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    loading={isModal ? "eager" : "lazy"}
+                    decoding="async"
+                  />
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent p-3 pt-12">
+                    {activeClientName === "all" && (
+                      <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.16em] text-white/70">
+                        {item.clientName}
+                      </span>
+                    )}
+                    <span className="line-clamp-2 text-sm font-semibold leading-tight text-white">{item.text}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {galleryList.map((gallery) => (
+              <div key={gallery.clientName} className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-lg font-bold text-ink">{gallery.clientName}</h4>
+                  <span className="text-xs uppercase tracking-[0.2em] text-ink/50">
+                    {gallery.items.length} images
+                  </span>
+                </div>
+                <div className="h-[320px] overflow-hidden rounded-[24px] border border-ink/10 bg-sand/60 flex items-center justify-center md:h-[420px]">
+                  <GalleryCarousel
+                    items={gallery.items.map((item) => ({
+                      ...item,
+                      image: item.image,
+                      fullImage: item.image
+                    }))}
+                    onItemClick={(item: GalleryItem, index: number) => {
+                      if (gallery.items.length === 0) return;
+                      openGalleryItem(gallery.clientName, item, index);
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )
       ) : (
-        <div className="flex h-[320px] items-center justify-center text-sm text-ink/60 rounded-[24px] border border-ink/10 bg-sand/60">
+        <div className={clsx(
+          "flex items-center justify-center text-sm text-ink/60 rounded-[24px] border border-ink/10 bg-sand/60",
+          isModal ? "h-[260px]" : "h-[320px]"
+        )}>
           No images available.
         </div>
       )}
@@ -1682,7 +2224,7 @@ function IndustryGallery({ industry }: { industry: PortfolioIndustry }) {
       <AnimatePresence>
         {selectedMedia && (
           <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6"
+            className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4 sm:p-6"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -1755,7 +2297,7 @@ function IndustryGallery({ industry }: { industry: PortfolioIndustry }) {
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.25, ease: "easeOut" }}
                   >
-                    <img
+                    <GraphicCardImage
                       src={selectedMedia.image}
                       alt={selectedMedia.text}
                       className="h-full w-full object-contain"

@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { motion, PanInfo, useMotionValue, useTransform, MotionValue, Transition } from 'framer-motion';
-import React, { JSX } from 'react';
+﻿import { type CSSProperties, type JSX, useEffect, useMemo, useRef, useState } from 'react';
+import { motion, type MotionValue, type PanInfo, type Transition, useMotionValue, useTransform } from 'framer-motion';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { MediaImage } from './MediaImage';
 
 export interface CarouselItemData {
   id: string;
@@ -32,36 +32,39 @@ interface CarouselItemProps {
   trackItemOffset: number;
   x: MotionValue<number>;
   transition: Transition;
+  round: boolean;
 }
 
-function CarouselItem({ item, index, itemWidth, trackItemOffset, x, transition }: CarouselItemProps) {
+function CarouselItem({ item, index, itemWidth, trackItemOffset, x, transition, round }: CarouselItemProps) {
   const range = [-(index + 1) * trackItemOffset, -index * trackItemOffset, -(index - 1) * trackItemOffset];
   const outputRange = [90, 0, -90];
   const rotateY = useTransform(x, range, outputRange, { clamp: false });
+  const cardRadius = round ? '9999px' : '12px';
 
   return (
     <motion.div
       key={`${item.id}-${index}`}
-      className={`relative shrink-0 flex flex-col items-center justify-center bg-transparent overflow-hidden cursor-grab active:cursor-grabbing select-none`}
+      className="relative shrink-0 flex flex-col items-center justify-center bg-transparent overflow-hidden cursor-grab active:cursor-grabbing select-none"
       style={{
         width: itemWidth,
-        height: itemWidth * 1.25, // 4:5 aspect ratio
+        height: round ? itemWidth : itemWidth * 1.25,
         rotateY: rotateY,
-        borderRadius: '12px', // Rounded corners
+        borderRadius: cardRadius,
       }}
       transition={transition}
     >
         <div 
-          className="relative w-full h-full overflow-hidden rounded-xl bg-sand/20 border border-ink/10"
+          className="relative w-full h-full overflow-hidden bg-sand/20 border border-ink/10"
+          style={{ borderRadius: cardRadius }}
           onClick={(e) => e.stopPropagation()}
         >
             {item.image ? (
-                <img 
+                <MediaImage
                     src={item.image} 
                     alt={item.title} 
                     className="w-full h-full object-cover pointer-events-none select-none" 
                     draggable={false}
-                    style={{ userSelect: "none", WebkitUserDrag: "none" } as React.CSSProperties & { WebkitUserDrag: string }}
+                    style={{ userSelect: "none", WebkitUserDrag: "none" } as CSSProperties & { WebkitUserDrag: string }}
                 />
             ) : (
                 <div className="flex items-center justify-center w-full h-full text-ink/50 text-sm">
@@ -80,7 +83,6 @@ export default function Carousel({
   autoplayDelay = 3000,
   pauseOnHover = false,
   loop = false,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   round = false
 }: CarouselProps): JSX.Element {
   const containerPadding = 16;
@@ -100,7 +102,7 @@ export default function Carousel({
   const [isAnimating, setIsAnimating] = useState<boolean>(false);
 
   // Track previous items length to detect resets
-  const prevItemsLengthRef = React.useRef(items.length);
+  const prevItemsLengthRef = useRef(items.length);
 
   const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -233,10 +235,10 @@ export default function Carousel({
   return (
     <div
       ref={containerRef}
-      className={`relative p-4`}
+      className="relative p-4"
       style={{
         width: `${baseWidth}px`,
-        height: `${baseWidth * 1.25 + 100}px` // Height for 4:5 aspect ratio + controls/padding
+        height: `${(round ? baseWidth : baseWidth * 1.25) + 100}px`
       }}
     >
       <div className="relative overflow-hidden">
@@ -266,6 +268,7 @@ export default function Carousel({
               trackItemOffset={trackItemOffset}
               x={x}
               transition={effectiveTransition}
+              round={round}
             />
           ))}
         </motion.div>
@@ -290,12 +293,14 @@ export default function Carousel({
           </button>
         </>
       )}
-      <div className={`flex w-full justify-center`}>
+      <div className="flex w-full justify-center">
         <div className="mt-8 flex w-[150px] justify-between px-8">
           {items.map((_, index) => (
-            <motion.div
+            <motion.button
+              type="button"
               key={index}
-              className={`h-2 w-2 rounded-full cursor-pointer transition-colors duration-150 ${
+              aria-label={`Go to slide ${index + 1}`}
+              className={`h-2 w-2 rounded-full cursor-pointer transition-colors duration-150 no-scale ${
                 activeIndex === index
                   ? 'bg-ink'
                   : 'bg-ink/20'

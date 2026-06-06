@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 
 const CACHE_PREFIX = "portfolio-assets-";
-const CURRENT_CACHE = "portfolio-assets-v4";
+const CURRENT_CACHE = "portfolio-assets-v5";
 const LEGACY_CACHE = "portfolio-assets-v3";
 
 export default function ServiceWorker() {
@@ -41,15 +41,15 @@ export default function ServiceWorker() {
 
     if (document.readyState === "complete") {
       void register();
-    } else {
-      window.addEventListener(
-        "load",
-        () => {
-          void register();
-        },
-        { once: true }
-      );
+      return;
     }
+
+    const handleLoad = () => {
+      void register();
+    };
+
+    window.addEventListener("load", handleLoad, { once: true });
+    return () => window.removeEventListener("load", handleLoad);
   }, []);
 
   return null;

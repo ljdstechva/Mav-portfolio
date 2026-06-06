@@ -90,6 +90,7 @@ export function About() {
             <div className="pt-6">
               <Magnet padding={50} magnetStrength={5}>
                 <button 
+                  type="button"
                   onClick={() => setIsBookingOpen(true)}
                   className="px-8 py-3 bg-ink text-sand rounded-full font-medium hover:bg-ink/90 transition-all hover:shadow-lg transform hover:-translate-y-1 cursor-pointer"
                 >

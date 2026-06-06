@@ -146,13 +146,19 @@ export async function POST(request: Request) {
   const supabase = createSupabaseServerClient();
 
   if (requestContentType.includes("application/json")) {
-    const body = (await request.json()) as {
+    let body: {
       table?: AllowedTable;
       field?: string;
       fileName?: string;
       contentType?: string;
       size?: number;
     };
+
+    try {
+      body = (await request.json()) as typeof body;
+    } catch {
+      return NextResponse.json({ message: "Invalid JSON payload." }, { status: 400 });
+    }
 
     const table = String(body.table ?? "").trim() as AllowedTable;
     const field = String(body.field ?? "").trim();
@@ -219,7 +225,12 @@ export async function POST(request: Request) {
     });
   }
 
-  const formData = await request.formData();
+  let formData: FormData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return NextResponse.json({ message: "Invalid form payload." }, { status: 400 });
+  }
   const table = String(formData.get("table") ?? "").trim() as AllowedTable;
   const field = String(formData.get("field") ?? "").trim();
   const file = formData.get("file");

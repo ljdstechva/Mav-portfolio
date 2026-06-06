@@ -69,10 +69,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
   }
 
-  const body = (await request.json()) as {
+  let body: {
     table?: AllowedTable;
     values?: Record<string, unknown>;
   };
+
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return NextResponse.json({ message: "Invalid JSON payload." }, { status: 400 });
+  }
 
   const table = body.table;
   if (!table || !TABLE_COLUMNS[table]) {

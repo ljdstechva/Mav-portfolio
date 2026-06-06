@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
@@ -6,6 +6,7 @@ import { Play, Quote, Star } from "lucide-react";
 import { getSupabaseClient, getSupabaseConfigError } from "@/lib/supabaseClient";
 import { formatTestimonialAttribution, getTestimonialMediaKind } from "@/lib/testimonialMedia";
 import BookingModal from "./BookingModal";
+import { MediaImage } from "./MediaImage";
 
 type Testimonial = {
   id: string;
@@ -571,8 +572,7 @@ function TestimonialMediaFrame({
         </div>
       ) : (
         <div className={`relative w-full ${aspectClass}`}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <MediaImage
             src={mediaUrl}
             alt={`${clientName} testimonial media`}
             onLoad={(event) => {

@@ -19,11 +19,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
   }
 
-  const body = (await request.json()) as {
+  let body: {
     table?: AllowedTable;
     order?: { id?: string; sort_order?: number }[];
     items?: { id?: string; sort_order?: number }[];
   };
+
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return NextResponse.json({ message: "Invalid JSON payload." }, { status: 400 });
+  }
 
   if (!body.table || !ORDERABLE_TABLES.includes(body.table)) {
     return NextResponse.json({ message: "Invalid request." }, { status: 400 });

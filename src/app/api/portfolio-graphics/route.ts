@@ -3,6 +3,11 @@ import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
 export const runtime = "nodejs";
 
+type TableResult<T> = {
+  data: T[] | null;
+  error: { message: string } | null;
+};
+
 export async function GET() {
   const supabase = createSupabaseServerClient();
 
@@ -20,7 +25,8 @@ export async function GET() {
     supabase.from("industries").select("id, name").order("created_at", { ascending: true }),
     supabase
       .from("clients")
-      .select("id, industry_id, name, image_url, created_at")
+      .select("id, industry_id, name, image_url, sort_order, created_at")
+      .order("sort_order", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: true }),
     supabase
       .from("carousels")
@@ -74,21 +80,34 @@ export async function GET() {
     storiesData = [];
   }
 
-  const error = industries.error ?? clients.error ?? carousels.error ?? copywriting.error ?? reels.error ?? photoEditing.error;
-  if (error) {
-    return NextResponse.json({ message: error.message }, { status: 500 });
+  const graphicDesignError = industries.error ?? clients.error;
+  if (graphicDesignError) {
+    return NextResponse.json({ message: graphicDesignError.message }, { status: 500 });
   }
+
+  const setupWarnings = [
+    carousels.error ? `Carousels table: ${carousels.error.message}` : null,
+    copywriting.error ? `Copywriting table: ${copywriting.error.message}` : null,
+    reels.error ? `Reels table: ${reels.error.message}` : null,
+    photoEditing.error ? `Photo editing table: ${photoEditing.error.message}` : null,
+    aiImages.error ? `AI images table: ${aiImages.error.message}` : null,
+    aiVideos.error ? `AI videos table: ${aiVideos.error.message}` : null,
+    portfolioCategoryOrder.error ? `Portfolio category order table: ${portfolioCategoryOrder.error.message}` : null,
+  ].filter((message): message is string => Boolean(message));
+
+  const optionalRows = <T>(result: TableResult<T>) => (result.error ? [] : (result.data ?? []));
 
   return NextResponse.json({
     industries: industries.data ?? [],
     clients: clients.data ?? [],
-    carousels: carousels.data ?? [],
-    copywriting: copywriting.data ?? [],
-    reels: reels.data ?? [],
+    carousels: optionalRows(carousels),
+    copywriting: optionalRows(copywriting),
+    reels: optionalRows(reels),
     stories: storiesData,
-    photoEditing: photoEditing.data ?? [],
-    aiImages: aiImages.error ? [] : (aiImages.data ?? []),
-    aiVideos: aiVideos.error ? [] : (aiVideos.data ?? []),
-    portfolioCategoryOrder: portfolioCategoryOrder.error ? [] : (portfolioCategoryOrder.data ?? []),
+    photoEditing: optionalRows(photoEditing),
+    aiImages: optionalRows(aiImages),
+    aiVideos: optionalRows(aiVideos),
+    portfolioCategoryOrder: optionalRows(portfolioCategoryOrder),
+    setupWarnings,
   });
 }

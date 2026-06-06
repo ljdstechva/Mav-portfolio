@@ -4,6 +4,20 @@ import { ensureSupabaseAuthed } from "@/lib/supabaseAdminAuth";
 
 export const runtime = "nodejs";
 
+type TableResult<T> = {
+  data: T[] | null;
+  error: { message: string } | null;
+};
+
+function rowsOrWarning<T>(label: string, result: TableResult<T>, warnings: string[]) {
+  if (result.error) {
+    warnings.push(`${label}: ${result.error.message}`);
+    return [];
+  }
+
+  return result.data ?? [];
+}
+
 export async function GET(request: Request) {
   if (!(await ensureSupabaseAuthed(request))) {
     return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
@@ -76,41 +90,48 @@ export async function GET(request: Request) {
       .order("category_id", { ascending: true }),
   ]);
 
-  const error =
-    industries.error ??
-    clients.error ??
-    carousels.error ??
-    reels.error ??
-    stories.error ??
-    copywriting.error ??
-    photoEditing.error ??
-    testimonials.error;
+  const graphicDesignSetupWarnings: string[] = [];
+  const portfolioSetupWarnings: string[] = [];
+  const aiMediaSetupWarnings: string[] = [];
+  const categoryOrderWarnings: string[] = [];
 
-  if (error) {
-    return NextResponse.json({ message: error.message }, { status: 500 });
-  }
+  const industryRows = rowsOrWarning("Industries table", industries, graphicDesignSetupWarnings);
+  const clientRows = rowsOrWarning("Graphic design clients table", clients, graphicDesignSetupWarnings);
+  const carouselRows = rowsOrWarning("Carousels table", carousels, portfolioSetupWarnings);
+  const reelRows = rowsOrWarning("Reels table", reels, portfolioSetupWarnings);
+  const storyRows = rowsOrWarning("Stories table", stories, portfolioSetupWarnings);
+  const copywritingRows = rowsOrWarning("Copywriting table", copywriting, portfolioSetupWarnings);
+  const photoEditingRows = rowsOrWarning("Photo editing table", photoEditing, portfolioSetupWarnings);
+  const testimonialRows = rowsOrWarning("Testimonials table", testimonials, portfolioSetupWarnings);
+  const aiImageRows = rowsOrWarning("AI Images table", aiImages, aiMediaSetupWarnings);
+  const aiVideoRows = rowsOrWarning("AI Videos table", aiVideos, aiMediaSetupWarnings);
+  const portfolioCategoryOrderRows = rowsOrWarning(
+    "Portfolio category order table",
+    portfolioCategoryOrder,
+    categoryOrderWarnings
+  );
 
-  const aiMediaSetupWarnings = [
-    aiImages.error ? `AI Images table: ${aiImages.error.message}` : null,
-    aiVideos.error ? `AI Videos table: ${aiVideos.error.message}` : null,
-  ].filter((message): message is string => Boolean(message));
-
-  const categoryOrderWarnings = [
-    portfolioCategoryOrder.error ? `Portfolio category order table: ${portfolioCategoryOrder.error.message}` : null,
-  ].filter((message): message is string => Boolean(message));
+  const databaseSetupWarnings = [
+    ...graphicDesignSetupWarnings,
+    ...portfolioSetupWarnings,
+    ...aiMediaSetupWarnings,
+    ...categoryOrderWarnings,
+  ];
 
   const response = NextResponse.json({
-    industries: industries.data ?? [],
-    clients: clients.data ?? [],
-    carousels: carousels.data ?? [],
-    reels: reels.data ?? [],
-    stories: stories.data ?? [],
-    copywriting: copywriting.data ?? [],
-    photoEditing: photoEditing.data ?? [],
-    testimonials: testimonials.data ?? [],
-    aiImages: aiImages.error ? [] : (aiImages.data ?? []),
-    aiVideos: aiVideos.error ? [] : (aiVideos.data ?? []),
-    portfolioCategoryOrder: portfolioCategoryOrder.error ? [] : (portfolioCategoryOrder.data ?? []),
+    industries: industryRows,
+    clients: clientRows,
+    carousels: carouselRows,
+    reels: reelRows,
+    stories: storyRows,
+    copywriting: copywritingRows,
+    photoEditing: photoEditingRows,
+    testimonials: testimonialRows,
+    aiImages: aiImageRows,
+    aiVideos: aiVideoRows,
+    portfolioCategoryOrder: portfolioCategoryOrderRows,
+    graphicDesignSetupWarnings,
+    databaseSetupWarnings,
     aiMediaSetupWarnings,
     categoryOrderWarnings,
   });

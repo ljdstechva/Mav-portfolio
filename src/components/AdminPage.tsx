@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { getSupabaseClient, getSupabaseConfigError } from "@/lib/supabaseClient";
 import { formatTestimonialAttribution, getTestimonialMediaKind } from "@/lib/testimonialMedia";
+import { MediaImage } from "@/components/MediaImage";
 import {
   applyPortfolioCategoryOrder,
   PORTFOLIO_CATEGORIES,
@@ -406,8 +407,7 @@ function TestimonialMediaPreview({
 
   return (
     <div className={clsx("overflow-hidden rounded-2xl bg-sand", className)}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      <MediaImage
         src={mediaUrl}
         alt={`${clientName} testimonial media`}
         className="h-full w-full object-cover"
@@ -458,6 +458,7 @@ export function AdminPage() {
 
   const [adminLoaded, setAdminLoaded] = useState(false);
   const [adminDataError, setAdminDataError] = useState<string | null>(null);
+  const [graphicDesignSetupWarnings, setGraphicDesignSetupWarnings] = useState<string[]>([]);
   const [aiMediaSetupWarnings, setAiMediaSetupWarnings] = useState<string[]>([]);
   const [categoryOrderWarnings, setCategoryOrderWarnings] = useState<string[]>([]);
 
@@ -629,6 +630,7 @@ export function AdminPage() {
       setPortfolioCategoryOrderDirty(false);
       setPortfolioCategoryOrderState("idle");
       setPortfolioCategoryOrderMessage("");
+      setGraphicDesignSetupWarnings(Array.isArray(data.graphicDesignSetupWarnings) ? data.graphicDesignSetupWarnings : []);
       setAiMediaSetupWarnings(Array.isArray(data.aiMediaSetupWarnings) ? data.aiMediaSetupWarnings : []);
       setCategoryOrderWarnings(Array.isArray(data.categoryOrderWarnings) ? data.categoryOrderWarnings : []);
 
@@ -725,6 +727,7 @@ export function AdminPage() {
     setPortfolioCategoryOrderDirty(false);
     setPortfolioCategoryOrderState("idle");
     setPortfolioCategoryOrderMessage("");
+    setGraphicDesignSetupWarnings([]);
     setAiMediaSetupWarnings([]);
     setCategoryOrderWarnings([]);
     setAdminLoaded(false);
@@ -2203,7 +2206,7 @@ export function AdminPage() {
               {mediaUrl ? (
                 isImageTable ? (
                   <div className="aspect-[4/5] w-full overflow-hidden rounded-2xl border border-ink/5 bg-white">
-                    <img
+                    <MediaImage
                       src={previewImage ?? mediaUrl}
                       alt={(item as AiImageItem).alt_text || mediaLabel}
                       className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-[1.02]"
@@ -2674,6 +2677,20 @@ export function AdminPage() {
             </div>
           )}
 
+          {["dashboard", "industries", "clients"].includes(selectedTable) && graphicDesignSetupWarnings.length > 0 && (
+            <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
+              <p className="font-semibold">Graphic Design tables need the database setup.</p>
+              <p className="mt-1">
+                Run <span className="font-mono">data/supabase-portfolio-graphics.sql</span> in Supabase, then refresh this dashboard.
+              </p>
+              <ul className="mt-2 list-inside list-disc text-xs text-amber-700">
+                {graphicDesignSetupWarnings.map((warning) => (
+                  <li key={warning}>{warning}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {(selectedTable === "ai_images" || selectedTable === "ai_videos") && aiMediaSetupWarnings.length > 0 && (
             <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
               <p className="font-semibold">AI media tables need the updated permissions script.</p>
@@ -3019,7 +3036,7 @@ export function AdminPage() {
                                 className="group relative overflow-hidden rounded-2xl border border-ink/10 bg-white hover:border-ink/20 transition-colors"
                               >
                                 {clientImage.image_url ? (
-                                  <img
+                                  <MediaImage
                                     src={clientImage.image_url}
                                     alt={clientImage.name}
                                     className="h-28 w-full object-cover"
@@ -3156,7 +3173,7 @@ export function AdminPage() {
                         <div className="grid grid-cols-4 gap-2">
                           {carouselBatchImages.map((image) => (
                             <div key={image.id} className="relative rounded-lg overflow-hidden border border-ink/10">
-                              <img src={image.url} alt="New carousel" className="h-16 w-full object-cover" />
+                              <MediaImage src={image.url} alt="New carousel" className="h-16 w-full object-cover" />
                               <button
                                 type="button"
                                 onClick={() => setCarouselBatchImages((prev) => prev.filter((item) => item.id !== image.id))}
@@ -3214,7 +3231,7 @@ export function AdminPage() {
                         className="relative rounded-xl overflow-hidden bg-sand border border-ink/10 group"
                       >
                         {image.image_url ? (
-                          <img
+                          <MediaImage
                             src={image.image_url}
                             alt={selectedCarouselClient ?? "Carousel image"}
                             className="w-full h-full object-cover aspect-[4/5]"
@@ -3498,7 +3515,7 @@ export function AdminPage() {
                             className="group relative rounded-2xl overflow-hidden border border-ink/10 bg-sand/40"
                           >
                             {item.before_image_url ? (
-                              <img
+                              <MediaImage
                                 src={item.before_image_url}
                                 alt="Before"
                                 className="w-full h-36 object-cover transition-transform duration-300 group-hover:scale-[1.02]"
@@ -3524,7 +3541,7 @@ export function AdminPage() {
                             className="group relative rounded-2xl overflow-hidden border border-ink/10 bg-sand/40"
                           >
                             {item.after_image_url ? (
-                              <img
+                              <MediaImage
                                 src={item.after_image_url}
                                 alt="After"
                                 className="w-full h-36 object-cover transition-transform duration-300 group-hover:scale-[1.02]"
@@ -3914,7 +3931,7 @@ export function AdminPage() {
                                   }}
                                   className="aspect-video w-full bg-sand rounded-2xl mb-4 overflow-hidden relative group"
                                 >
-                                  <img
+                                  <MediaImage
                                     src={imageSrc}
                                     alt="Copywriting preview"
                                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
@@ -3990,7 +4007,7 @@ export function AdminPage() {
                                 }}
                                 className="aspect-video w-full bg-sand rounded-2xl mb-4 overflow-hidden relative group"
                               >
-                                <img
+                                <MediaImage
                                   src={imageSrc}
                                   alt="Preview"
                                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
@@ -4105,7 +4122,7 @@ export function AdminPage() {
                       <p className="text-xs font-bold uppercase tracking-widest text-ink/50">Before</p>
                       <div className="rounded-2xl overflow-hidden bg-white border border-ink/10">
                         {previewModal.before ? (
-                          <img src={previewModal.before} alt="Before" className="w-full h-full object-cover" />
+                          <MediaImage src={previewModal.before} alt="Before" className="w-full h-full object-cover" />
                         ) : (
                           <div className="flex items-center justify-center h-64 text-sm text-ink/40">No image</div>
                         )}
@@ -4115,7 +4132,7 @@ export function AdminPage() {
                       <p className="text-xs font-bold uppercase tracking-widest text-ink/50">After</p>
                       <div className="rounded-2xl overflow-hidden bg-white border border-ink/10">
                         {previewModal.after ? (
-                          <img src={previewModal.after} alt="After" className="w-full h-full object-cover" />
+                          <MediaImage src={previewModal.after} alt="After" className="w-full h-full object-cover" />
                         ) : (
                           <div className="flex items-center justify-center h-64 text-sm text-ink/40">No image</div>
                         )}
@@ -4155,7 +4172,7 @@ export function AdminPage() {
                   <div className="p-6 bg-sand/20">
                     <div className="rounded-2xl overflow-hidden bg-white border border-ink/10">
                       {previewModal.image ? (
-                        <img src={previewModal.image} alt="Preview" className="w-full h-full object-contain max-h-[70vh]" />
+                        <MediaImage src={previewModal.image} alt="Preview" className="w-full h-full object-contain max-h-[70vh]" />
                       ) : (
                         <div className="flex items-center justify-center h-64 text-sm text-ink/40">No image</div>
                       )}
@@ -4287,7 +4304,7 @@ export function AdminPage() {
                               >
                                 <Trash2 size={14} />
                               </button>
-                              <img src={image.url} alt="Preview" className="h-32 w-full object-cover" />
+                              <MediaImage src={image.url} alt="Preview" className="h-32 w-full object-cover" />
                             </div>
                           ))}
                         </div>
@@ -4359,7 +4376,7 @@ export function AdminPage() {
                             {batchImages.map((image) => (
                               <Reorder.Item key={image.id} value={image} className="bg-white p-3 rounded-xl border border-ink/5 flex items-center gap-4 cursor-grab active:cursor-grabbing shadow-sm">
                                 <div className="w-16 h-12 bg-sand rounded-lg overflow-hidden flex-shrink-0">
-                                  <img src={image.url} className="w-full h-full object-cover" alt="preview" />
+                                  <MediaImage src={image.url} className="w-full h-full object-cover" alt="preview" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-xs text-ink/40 truncate">{image.url.split("/").pop()}</p>
@@ -4422,7 +4439,7 @@ export function AdminPage() {
 
                         {imagePreview.image_url ? (
                           <div className="relative rounded-lg overflow-hidden group">
-                            <img src={imagePreview.image_url} alt="Preview" className="w-full h-48 object-cover" />
+                            <MediaImage src={imagePreview.image_url} alt="Preview" className="w-full h-48 object-cover" />
                             <button
                               type="button"
                               onClick={(event) => {
@@ -4694,7 +4711,7 @@ export function AdminPage() {
 
                             {imagePreview[field.name] ? (
                               <div className="relative rounded-lg overflow-hidden group">
-                                <img src={imagePreview[field.name]} alt="Preview" className="w-full h-48 object-cover" />
+                                <MediaImage src={imagePreview[field.name]} alt="Preview" className="w-full h-48 object-cover" />
                                 <button
                                   type="button"
                                   onClick={(event) => {
@@ -4798,7 +4815,7 @@ export function AdminPage() {
                                   isAiImageFile ? "aspect-[4/5] bg-white" : "aspect-video bg-black"
                                 )}>
                                   {isAiImageFile ? (
-                                    <img src={imagePreview[field.name]} alt="AI upload preview" className="h-full w-full object-contain" />
+                                    <MediaImage src={imagePreview[field.name]} alt="AI upload preview" className="h-full w-full object-contain" />
                                   ) : (
                                     <video
                                       src={imagePreview[field.name]}
@@ -5057,7 +5074,7 @@ export function AdminPage() {
                                             >
                                               <Trash2 size={14} />
                                             </button>
-                                            <img src={image.url} alt="Preview" className="h-32 w-full object-cover" />
+                                            <MediaImage src={image.url} alt="Preview" className="h-32 w-full object-cover" />
                                           </div>
                                         ))}
                                         <button
@@ -5088,7 +5105,7 @@ export function AdminPage() {
                                     )
                                   ) : imagePreview[field.name] ? (
                                     <div className="relative rounded-lg overflow-hidden group">
-                                      <img src={imagePreview[field.name]} alt="Preview" className="w-full h-48 object-cover" />
+                                      <MediaImage src={imagePreview[field.name]} alt="Preview" className="w-full h-48 object-cover" />
                                       <button
                                         type="button"
                                         onClick={() => {
@@ -5377,7 +5394,7 @@ export function AdminPage() {
               onClick={(event) => event.stopPropagation()}
             >
               <div className="relative w-full overflow-hidden rounded-2xl bg-sand">
-                <img
+                <MediaImage
                   src={selectedClientImage}
                   alt="Client preview"
                   className="w-full h-auto object-contain"

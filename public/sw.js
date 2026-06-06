@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "portfolio-assets-";
-const CACHE_NAME = "portfolio-assets-v4";
+const CACHE_NAME = "portfolio-assets-v5";
 
 self.addEventListener("install", () => {
   self.skipWaiting();

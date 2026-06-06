@@ -6,7 +6,7 @@ import { scrollToTarget } from "@/lib/smoothScroll";
 
 export default function NavigationDock() {
   const scrollToSection = (id: string) => {
-    scrollToTarget(`#${id}`);
+    scrollToTarget(`#${id}`, id === "portfolio" ? -72 : -24);
   };
 
   const items = [

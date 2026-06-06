@@ -19,23 +19,16 @@ export default function Magnet({
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (disabled) return;
+    if (!ref.current) return;
 
     const { clientX, clientY } = e;
-    const { left, top, width, height } = ref.current!.getBoundingClientRect();
-    
-    // Calculate distance from center
+    const { left, top, width, height } = ref.current.getBoundingClientRect();
+
     const deltaX = clientX - (left + width / 2);
     const deltaY = clientY - (top + height / 2);
-    
-    // Apply magnet strength (damping)
-    // If strength is 1, it follows mouse exactly. If > 1, it lags/dampens.
-    // We'll treat the passed prop as a divisor for subtle effect.
-    // In Hero, we passed 30. That's a lot of damping. 
-    // Let's adjust the logic: 
-    // If we want it to "reach" for the mouse, we usually move it a fraction of the distance.
     const x = deltaX / (magnetStrength > 0 ? magnetStrength : 1);
     const y = deltaY / (magnetStrength > 0 ? magnetStrength : 1);
-    
+
     setPosition({ x, y });
   };
 

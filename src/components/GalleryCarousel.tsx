@@ -1,8 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { MediaImage } from "./MediaImage";
 
 export type GalleryItem = {
     image: string;
@@ -93,7 +94,7 @@ export default function GalleryCarousel({ items, onItemClick }: GalleryCarouselP
                             onClick={() => onItemClick(item, index)}
                             whileHover={{ y: -5 }}
                         >
-                            <img
+                            <MediaImage
                                 src={item.image}
                                 alt={item.text}
                                 className="h-full w-full object-cover transition-transform duration-500 group-hover/item:scale-110"
@@ -111,6 +112,7 @@ export default function GalleryCarousel({ items, onItemClick }: GalleryCarouselP
             {items.length > itemsPerView && (
                 <>
                     <button
+                        type="button"
                         onClick={(e) => { e.stopPropagation(); prevSlide(); }}
                         className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/80 border border-ink/10 text-ink shadow-lg hover:bg-white hover:scale-110 transition-all z-10 cursor-pointer"
                         aria-label="Previous"
@@ -119,6 +121,7 @@ export default function GalleryCarousel({ items, onItemClick }: GalleryCarouselP
                     </button>
 
                     <button
+                        type="button"
                         onClick={(e) => { e.stopPropagation(); nextSlide(); }}
                         className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/80 border border-ink/10 text-ink shadow-lg hover:bg-white hover:scale-110 transition-all z-10 cursor-pointer"
                         aria-label="Next"
